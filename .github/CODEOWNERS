@@ -1,0 +1,14 @@
+# Pessoas mantenedoras notificadas automaticamente em cada PR.
+
+* @eduardovpessoa
+
+# Arquitetura, segurança e o que protege dado pessoal exigem atenção redobrada.
+/docs/                          @eduardovpessoa
+/supabase/migrations/           @eduardovpessoa
+/src/features/certificate/      @eduardovpessoa
+/src/features/import/           @eduardovpessoa
+/src/db/queries/public-lookup.ts @eduardovpessoa
+/src/lib/security-headers.ts    @eduardovpessoa
+/public/fonts/cert/             @eduardovpessoa
+/tests/fixtures/csv/            @eduardovpessoa
+/.github/workflows/             @eduardovpessoa

@@ -1,0 +1,60 @@
+name: 🐛 Bug
+description: Algo que não funciona como deveria
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ Não cole dados reais de participantes
+
+        Nome, CPF, e-mail, data de nascimento, planilha, certificado ou print
+        com alguém de verdade **não entram aqui**. Issues são públicas, e o
+        que é publicado não se apaga de forks e caches.
+
+        Reproduza com o seed local, que já vem com participantes fictícios.
+        Se o problema é com o **seu** certificado, use a própria plataforma:
+        https://eventos.codingferpa.org/
+
+  - type: textarea
+    id: reproduzir
+    attributes:
+      label: Como reproduzir
+      description: Os passos mínimos, na ordem.
+      placeholder: |
+        1. Abrir /eventos/evento-de-demonstracao
+        2. Buscar por nome completo
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+
+  - type: textarea
+    id: observado
+    attributes:
+      label: O que aconteceu
+      description: Mensagem de erro, código do erro na tela, print. Sem dado real.
+    validations:
+      required: true
+
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente
+      description: Navegador, sistema, celular ou computador, e o commit em que reproduziu.
+      placeholder: Chrome 140, Android 14, commit abc1234
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: sem-dado-pessoal
+    attributes:
+      label: Confirmação
+      options:
+        - label: Não há dado real de participante nesta issue, nem em texto, nem em print, nem em arquivo anexo.
+          required: true

@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Mantém um PR de release aberto agregando os Conventional Commits; o merge
+# gera tag semver, CHANGELOG.md e GitHub Release (doc 12). Sem publicação npm.
+#
+# **A organização pode barrar isto**, e barra por padrão: com "Allow GitHub
+# Actions to create and approve pull requests" desligado, o `GITHUB_TOKEN`
+# recebe `GitHub Actions is not permitted to create or approve pull requests` ao
+# abrir o PR. Essa política é de organização e nenhum `permissions:` no workflow
+# a contorna.
+#
+# Saídas, nesta ordem de preferência:
+#
+# 1. O admin da organização liga a opção (Settings → Actions → General).
+# 2. Um Personal Access Token em `secrets.RELEASE_PLEASE_TOKEN`, com escopo
+#    `contents: write` e `pull requests: write` no repositório. O PR passa a ser
+#    aberto pela conta dona do token, e não pelo bot.
+#
+# O `||` abaixo faz o workflow usar o PAT quando ele existe e cair no token
+# padrão quando não existe, sem exigir que cada fork configure segredo.
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        with:
+          release-type: node
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}

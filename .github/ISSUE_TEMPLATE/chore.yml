@@ -1,0 +1,18 @@
+name: 🧹 Manutenção
+description: Dependência, tooling, CI, refatoração ou documentação
+labels: [chore]
+body:
+  - type: textarea
+    id: o-que
+    attributes:
+      label: O que precisa ser feito
+    validations:
+      required: true
+
+  - type: textarea
+    id: por-que
+    attributes:
+      label: Por quê
+      description: O que quebra, atrasa ou confunde hoje por causa disso.
+    validations:
+      required: true

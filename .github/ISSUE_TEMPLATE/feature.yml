@@ -1,0 +1,31 @@
+name: ✨ Funcionalidade
+description: Uma ideia de melhoria
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A arquitetura está decidida em `docs/`, e o escopo de cada fase está no
+        [roadmap](../blob/main/docs/13-roadmap.md). Ideia que contradiz um
+        documento é bem-vinda, e vira ADR antes de virar código.
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qual é o problema
+      description: O problema antes da solução. Quem sofre com isso hoje, e como resolve na falta desta funcionalidade?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposta
+    attributes:
+      label: O que você propõe
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: O que você considerou e descartou
+      description: Opcional, mas é o que costuma encurtar a conversa.

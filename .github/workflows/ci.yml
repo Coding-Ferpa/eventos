@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+
+# O doc 12 descreve o CI completo. Os jobs chegam junto com o que eles
+# verificam, e cada ausência está anotada abaixo com o milestone dela: job que
+# roda contra diretório vazio passa por vacuidade e dá falsa segurança.
+#
+# Faltam, e onde entram:
+#   db          M1  migrations, pgTAP da matriz de RLS, check:schema, integração
+#   e2e         M3  Playwright, quando existirem as primeiras specs
+#   lighthouse  M3  orçamento de performance, quando existir página com dado
+#
+# Nenhum job usa secret: tudo fala com o ambiente local, então PR de fork roda
+# a bateria inteira.
+jobs:
+  quality:
+    name: Lint, tipos e formatação
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - name: .env.example em sincronia com o schema de env
+        run: pnpm check:env
+      # Entram aqui: check:migrations no M1 e check:fonts no M5.
+      #
+      # Bloqueia no que vai para produção (doc 08, A06). Avisos em dependência
+      # de desenvolvimento aparecem no passo seguinte sem derrubar o PR.
+      - name: Auditoria de dependências de produção
+        run: pnpm audit --prod --audit-level high
+      - name: Auditoria completa (informativa)
+        continue-on-error: true
+        run: pnpm audit --audit-level high
+
+  commitlint:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Valida as mensagens de commit do PR
+        run: >
+          pnpm commitlint
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+          --verbose
+
+  test:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Os dois gates inegociáveis do doc 12 entram aqui como passos
+      # nomeados: test:gate:pdf no M5 e test:gate:csv no M7. PR que os
+      # remova, marque com .skip ou afrouxe é recusado.
+      - run: pnpm test:coverage
