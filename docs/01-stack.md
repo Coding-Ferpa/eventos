@@ -28,6 +28,8 @@ O CF Eventos é o segundo projeto da casa. A stack é a do CF Jobs, versão por 
 | Licença | MIT |
 | Deploy | Vercel (funções em `gru1`), Supabase em `sa-east-1` |
 
+**Uma divergência deliberada de arquivo herdado:** o `engines` deste projeto é `>=24.15 <25`, e não o `>=24.15` do CF Jobs. O intervalo aberto aceita o Node 26 e não expressa a decisão da tabela acima, que é a série 24 LTS; com o teto, quem desenvolve em outra série descobre no `pnpm install` e não no PR. O `.npmrc` mantém `engine-strict=true`, sem o qual o teto viraria aviso, e um `.nvmrc` com a série 24 fixa a versão de quem clona.
+
 ADRs do CF Jobs que valem aqui sem reescrita estão listados no [ADR-0001](adr/0001-heranca-do-cf-jobs.md).
 
 **O que o CF Jobs tem e este projeto não leva:** Vercel AI SDK, `linkedom`, `@mozilla/readability`, `turndown` (pipeline de IA), `zod-openapi` e Scalar (não há API pública versionada, [doc 07](07-apis-e-actions.md)).

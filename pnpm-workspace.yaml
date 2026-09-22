@@ -1,0 +1,24 @@
+# Configuração do pnpm 11. Do 11 em diante ele não lê mais o campo `pnpm` do
+# package.json: overrides e política de supply chain moram aqui (doc 01).
+#
+# Não há `packages:` porque o projeto não é monorepo: este arquivo existe pela
+# configuração, não pelo workspace.
+
+# Espera mínima antes de aceitar um pacote recém-publicado, em minutos. Zero
+# significa sem espera, a mesma decisão do CF Jobs (ADR-0019 de lá): a defesa
+# de integridade de dependências (doc 08, A08) se apoia no `pnpm audit --prod`
+# bloqueante, no lockfile commitado e na revisão de PR.
+minimumReleaseAge: 0
+
+# Script de instalação só roda com autorização explícita: é a defesa contra o
+# pacote que executa código na máquina de quem instala. O pnpm 11 exige decisão
+# por pacote, e a lista cresce conforme as dependências chegam.
+allowBuilds:
+  # Binário nativo do Tailwind v4; sem ele o CSS não compila.
+  '@tailwindcss/oxide': true
+  # Compilador do vite e do tsx: todo o tooling de teste depende dele.
+  esbuild: true
+  # Processamento de imagem do `next/image`.
+  sharp: true
+  # Resolvedor nativo usado pelo ESLint.
+  unrs-resolver: true
