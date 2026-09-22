@@ -1,0 +1,64 @@
+# CF Eventos
+
+Plataforma de certificados dos eventos da comunidade **Coding Ferpa**
+(Fernandópolis/SP). A organização cadastra o evento, sobe a arte do
+certificado, posiciona os campos sobre ela e importa a lista de participantes
+por CSV. O aluno acha o certificado sem cadastro, confere o nome na prévia e
+baixa o PDF gerado na hora, com QR que leva a uma página pública de validação.
+
+`eventos.codingferpa.org` · licença MIT · segundo projeto da casa, depois do
+[CF Jobs](https://github.com/Coding-Ferpa/cf-jobs).
+
+> **Em construção.** A arquitetura está fechada e documentada; a
+> implementação avança por milestones ([doc 13](docs/13-roadmap.md)).
+
+## Documentação
+
+A arquitetura é canônica: nenhuma decisão de implementação a contradiz sem um
+ADR aprovado. Comece pelo [índice](docs/README.md). Quem quer entender o
+sistema em meia hora lê a [visão geral](docs/00-visao-geral.md), a
+[arquitetura](docs/02-arquitetura.md) e o
+[motor de certificados](docs/05-motor-de-certificados.md).
+
+O documento de produto é o [PRD](docs/spec-produto.md).
+
+## Stack
+
+Next.js 16 (App Router, RSC) · TypeScript strict · Tailwind CSS v4 ·
+shadcn/ui · Drizzle ORM · Supabase (Postgres, Auth, Storage) · Zod 4 ·
+pnpm 11 · Node 24 LTS · Vitest, Testing Library, Playwright e pgTAP · deploy
+na Vercel. O porquê de cada escolha, e de cada dependência nova, está no
+[doc 01](docs/01-stack.md).
+
+## Rodando localmente
+
+Pré-requisitos: Node 24 LTS (há um `.nvmrc`), pnpm 11, Git e Docker (o Docker
+entra no M1, com o banco).
+
+```bash
+git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos
+pnpm install
+cp .env.example .env
+pnpm dev
+```
+
+## Scripts
+
+| Comando                             | O que faz                                     |
+| ----------------------------------- | --------------------------------------------- |
+| `pnpm dev`                          | servidor de desenvolvimento                   |
+| `pnpm build`                        | build de produção                             |
+| `pnpm lint` · `pnpm typecheck`      | ESLint e TypeScript                           |
+| `pnpm format` · `pnpm format:check` | Prettier                                      |
+| `pnpm test` · `pnpm test:coverage`  | Vitest                                        |
+| `pnpm test:e2e`                     | Playwright                                    |
+| `pnpm check:env`                    | confere `.env.example` contra o schema de env |
+
+## Contribuindo
+
+Leia o [guia de contribuição](CONTRIBUTING.md) e o
+[Código de Conduta](CODE_OF_CONDUCT.md). Vulnerabilidade tem canal próprio, e
+nunca é issue pública: veja a [política de segurança](SECURITY.md).
+
+Uma regra vale para qualquer contribuição: **nenhum dado real de participante
+entra no repositório**, nem em fixture, issue, screenshot ou log colado.
