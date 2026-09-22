@@ -1,0 +1,18 @@
+# A documentação de arquitetura é canônica: não reformatar (evita ruído em diffs).
+docs/
+
+.next/
+coverage/
+node_modules/
+out/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+
+# Fixtures reproduzem byte a byte o que ferramentas reais produzem, inclusive o
+# que está malformado (docs 05 e 06): formatá-las conserta justamente o defeito
+# que o teste precisa exercitar.
+tests/fixtures/
+
+# Gerado pelo Release Please a cada release, a partir dos Conventional Commits.
+CHANGELOG.md
