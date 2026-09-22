@@ -1,6 +1,6 @@
 # 14 · Prompt de execução para o Claude Opus 5
 
-> Copie tudo abaixo da linha como prompt inicial da sessão de implementação. Ele pressupõe o repositório `Coding-Ferpa/cf-eventos` com o diretório `docs/` e o arquivo `spec-produto-cf-eventos.md` presentes. Ao retomar o trabalho em uma sessão nova, cole o mesmo prompt e diga em qual milestone parou.
+> Copie tudo abaixo da linha como prompt inicial da sessão de implementação. Ele pressupõe o repositório `Coding-Ferpa/eventos` com o diretório `docs/` e o arquivo `docs/spec-produto.md` presentes. Ao retomar o trabalho em uma sessão nova, cole o mesmo prompt e diga em qual milestone parou.
 
 ---
 

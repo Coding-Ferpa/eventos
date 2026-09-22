@@ -1,7 +1,7 @@
-# CF Eventos — Especificação de Produto (PRD)
+# CF Eventos · Especificação de Produto (PRD)
 
 > Plataforma de emissão, busca, download e validação de certificados dos eventos da comunidade **Coding Ferpa** (Fernandópolis/SP).
-> Domínio previsto: `eventos.codingferpa.org` · Repositório: `Coding-Ferpa/cf-eventos` · Licença MIT.
+> Domínio previsto: `eventos.codingferpa.org` · Repositório: `Coding-Ferpa/eventos` · Licença MIT.
 > Versão 1.1 · Documento de produto. Decisões de arquitetura ficam em `docs/`. As mudanças da 1.0 para a 1.1 saíram da revisão de arquitetura e estão listadas na seção 11.
 
 ---
@@ -82,7 +82,7 @@ Não resolver significa manter um gargalo que cresce junto com os eventos: o esf
 
 ## 6. Requisitos
 
-### P0 — sem isso não vai ao ar
+### P0 · sem isso não vai ao ar
 
 #### R1. Catálogo de eventos (público)
 
@@ -198,7 +198,7 @@ Supabase Auth com e-mail/senha e GitHub OAuth. Papéis `admin` e `editor`. Toda 
 
 Design system do cf-jobs aplicado por inteiro: mesmos tokens, Poppins e JetBrains Mono, tema escuro como padrão com alternador para claro persistido em cookie, header com logo mais alternador de tema mais "Entrar", footer da comunidade. Detalhe em `docs/03-design-system.md`.
 
-### P1 — entra logo depois, não segura o lançamento
+### P1 · entra logo depois, não segura o lançamento
 
 #### R10. Envio de e-mail em massa
 
@@ -230,9 +230,9 @@ XLSX de participantes, XLSX de retiradas e PDF de relatório de evento para a co
 
 #### R16. LinkedIn "Add to profile"
 
-Botão na tela de retirada. Formato oficial: `https://www.linkedin.com/profile/add` com `pfCertificationName`, `pfCertificationUrl` (a URL de validação), `pfLicenseNo` (o código), `pfCertStartDate` (AAAAMM) e o token `_ed`, obtido em um cadastro único da organização em `addtoprofile.linkedin.com`. Exige que a Coding Ferpa exista como página de empresa no LinkedIn: é um pré-requisito operacional, não de código.
+Botão na tela de retirada. Formato vigente, conferido no gerador oficial `addtoprofile.linkedin.com` em 2026-09-21: `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME` com `name`, `organizationId` (ou `organizationName`, mutuamente exclusivos), `issueYear`, `issueMonth`, `certId` (o código de validação) e `certUrl` (a URL de validação). O formato antigo com `pfCertificationName` e token `_ed` é legado e foi descartado. A Coding Ferpa já tem página no LinkedIn (`https://www.linkedin.com/company/coding-ferpa/`), então o `organizationId` está disponível e é o caminho recomendado. Detalhe de implementação no [doc 09](09-frontend-e-seo.md).
 
-### P2 — arquitetura deve permitir, não vamos construir agora
+### P2 · arquitetura deve permitir, não vamos construir agora
 
 - Cache oportunista do PDF gerado no Storage (gerar uma vez, servir o cacheado nas próximas, invalidando quando o modelo ou o dado mudar). Só vira necessário com volume que hoje não existe.
 - Check-in no dia do evento alimentando a lista de presença.
@@ -280,11 +280,11 @@ Botão na tela de retirada. Formato oficial: `https://www.linkedin.com/profile/a
 
 ## 9. Faseamento
 
-**Fase 1 — o Ferpa Tech Day precisa disso e nada mais.** R1 a R9. Uma entrega que funciona ponta a ponta para um evento real: catálogo, busca, PDF, editor de campos, CSV, validação, admin.
+**Fase 1, o Ferpa Tech Day precisa disso e nada mais.** R1 a R9. Uma entrega que funciona ponta a ponta para um evento real: catálogo, busca, PDF, editor de campos, CSV, validação, admin.
 
-**Fase 2 — o que o primeiro evento vai provar que falta.** R10 a R13 (e-mail, correção de nome, revogação, meus certificados).
+**Fase 2, o que o primeiro evento vai provar que falta.** R10 a R13 (e-mail, correção de nome, revogação, meus certificados).
 
-**Fase 3 — operação madura.** R14 a R16 (dashboard, exportações, LinkedIn).
+**Fase 3, operação madura.** R14 a R16 (dashboard, exportações, LinkedIn).
 
 **Prazo real**: a Fase 1 precisa estar de pé antes da data em que os certificados do Ferpa Tech Day forem prometidos. Esse é o único prazo duro do projeto, e ele deve ser confirmado com a organização antes de a arquitetura começar.
 

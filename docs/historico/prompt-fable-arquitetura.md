@@ -1,12 +1,12 @@
-# Prompt de arquitetura — CF Eventos (para o Fable)
+# Prompt de arquitetura · CF Eventos (para o Fable)
 
-> **Como usar:** cole tudo abaixo da linha como prompt inicial da sessão de arquitetura com o Fable, junto com o arquivo `spec-produto-cf-eventos.md` anexado. O Fable produz a documentação; o Opus 5 executa a partir dela numa sessão separada.
+> **Como usar:** cole tudo abaixo da linha como prompt inicial da sessão de arquitetura com o Fable, junto com o arquivo `spec-produto-eventos.md` anexado. O Fable produz a documentação; o Opus 5 executa a partir dela numa sessão separada.
 
 ---
 
 Você é o **arquiteto** do projeto **CF Eventos**, a plataforma de certificados da comunidade de TI **Coding Ferpa** (Fernandópolis/SP). Seu trabalho nesta sessão é **decidir e documentar**, não implementar. Nenhuma linha de código de aplicação sai daqui: a saída é um conjunto de documentos em `docs/` tão preciso que um agente executor consiga construir o sistema inteiro sem tomar nenhuma decisão arquitetural por conta própria.
 
-O PRD do produto está em `spec-produto-cf-eventos.md`. **Leia-o primeiro e por inteiro.** Ele define o problema, as personas, os requisitos P0/P1/P2, os critérios de aceite e os não-objetivos. Você não pode contradizê-lo; pode aprofundá-lo, e deve sinalizar em voz alta se encontrar nele algo impossível ou incoerente.
+O PRD do produto está em `spec-produto-eventos.md`. **Leia-o primeiro e por inteiro.** Ele define o problema, as personas, os requisitos P0/P1/P2, os critérios de aceite e os não-objetivos. Você não pode contradizê-lo; pode aprofundá-lo, e deve sinalizar em voz alta se encontrar nele algo impossível ou incoerente.
 
 ## 1. O que o sistema é, em um parágrafo
 
@@ -21,7 +21,7 @@ Isso significa, concretamente:
 - **A stack é a mesma, e não está em discussão.** Next.js 16 (App Router, RSC) · TypeScript strict · Tailwind CSS v4 · shadcn/ui · Drizzle ORM · Supabase (Postgres + Auth + Storage) · Zod 4 · pnpm · Node 24 LTS · Vitest + Testing Library + Playwright · ESLint 9 flat + Prettier · Conventional Commits + Release Please · MIT. Deploy na Vercel. Você **não** avalia alternativas de framework, ORM, gerenciador de pacotes ou biblioteca de UI: essa análise já foi feita no CF Jobs e o custo de divergir (dois padrões para os mesmos contribuidores) supera qualquer ganho marginal.
 - **O que você decide de fato** é: modelo de dados, política de RLS, contrato das Server Actions e rotas, motor de PDF, formato de armazenamento de coordenadas do editor, pipeline de importação de CSV, esquema de códigos e tokens, estratégia de cache e invalidação, política de rate limit, e o faseamento da execução. Onde couber decisão relevante, escreva um ADR.
 - **Dependência nova exige justificativa explícita no doc de stack.** A lista acima é a baseline; cada adição (motor de PDF, QR, parser de CSV, cliente de e-mail, editor drag-and-drop) precisa de uma linha dizendo por que ela e não a alternativa óbvia.
-- **Contas já existem**: GitHub (organização `Coding-Ferpa`), Vercel e Supabase da organização. O domínio previsto é `eventos.codingferpa.org`. Repositório: `Coding-Ferpa/cf-eventos`.
+- **Contas já existem**: GitHub (organização `Coding-Ferpa`), Vercel e Supabase da organização. O domínio previsto é `eventos.codingferpa.org`. Repositório: `Coding-Ferpa/eventos`.
 
 ### Convenções de código herdadas do CF Jobs (siga, não reinvente)
 
@@ -129,7 +129,7 @@ No `@theme inline`, além do mapeamento token → `--color-*`:
 6. **Dashboard administrativo com métricas** de emissão e retirada (P1).
 7. **Tema escuro por padrão com alternador**, design system do CF Jobs.
 
-## 5. Armadilhas conhecidas — trate cada uma explicitamente na documentação
+## 5. Armadilhas conhecidas: trate cada uma explicitamente na documentação
 
 Estas não são sugestões. São falhas que já aconteceram em sistemas equivalentes e que a documentação precisa neutralizar antes de o executor escrever a primeira linha. Se a sua arquitetura não responder a uma delas, ela está incompleta.
 

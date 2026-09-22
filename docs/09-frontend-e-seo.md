@@ -87,7 +87,11 @@ Botão na tela de retirada, um por certificado. URL montada no servidor:
 
 `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name={nome do certificado}&organizationId={LINKEDIN_ORGANIZATION_ID}&issueYear={aaaa}&issueMonth={m}&certUrl={URL de validação}&certId={código}`
 
-Sem `LINKEDIN_ORGANIZATION_ID`, usa `organizationName=Coding Ferpa`. O PRD descreve o formato legado (`pfCertificationName`, `_ed`); **conferir a documentação vigente do LinkedIn no M12 antes de implementar** e registrar o resultado em ADR se for diferente dos dois. `name` = `{participation.label}: {event.title}`. `certUrl` é a URL de validação, que é o que dá valor ao item no perfil.
+**Formato conferido em 2026-09-21** no gerador oficial (`addtoprofile.linkedin.com`), que produz exatamente esses parâmetros e aceita ainda `expirationYear` e `expirationMonth`. O formato `pfCertificationName` com token `_ed`, que o PRD citava, é o legado e não deve ser usado; o PRD foi corrigido. Não é preciso reconferir no M12.
+
+`organizationId` e `organizationName` são mutuamente exclusivos, e o próprio gerador recomenda o `organizationId` quando a organização tem página. A Coding Ferpa tem: `https://www.linkedin.com/company/coding-ferpa/`. O `organizationId` é numérico e sai do próprio gerador (ele busca a organização pelo nome e preenche o campo) ou da URL de administração da página. Enquanto ele não estiver em `LINKEDIN_ORGANIZATION_ID`, o código usa `organizationName=Coding Ferpa`, que funciona mas não vincula o item à página.
+
+`name` = `{participation.label}: {event.title}`. `certUrl` é a URL de validação, que é o que dá valor ao item no perfil.
 
 ## Acessibilidade
 

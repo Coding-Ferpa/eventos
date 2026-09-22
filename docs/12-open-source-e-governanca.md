@@ -4,7 +4,7 @@ A governança é a do CF Jobs (`Coding-Ferpa/cf-jobs`), copiada arquivo a arquiv
 
 ## 1. Repositório público desde o commit inicial
 
-Fecha a questão aberta 8 do PRD: `Coding-Ferpa/cf-eventos` nasce público, como o CF Jobs. Nada no repositório é segredo: pepper, chaves e participantes ficam em env e no banco; schema, RLS e algoritmo de hash são públicos de propósito (a segurança está no pepper, não em esconder o método). Rejeitado: privado até o primeiro evento, porque abrir depois custa uma auditoria de histórico. Ligados no commit zero: secret scanning com push protection, private vulnerability reporting e a regra da seção 6.
+Fecha a questão aberta 8 do PRD: `Coding-Ferpa/eventos` nasce público, como o CF Jobs. Nada no repositório é segredo: pepper, chaves e participantes ficam em env e no banco; schema, RLS e algoritmo de hash são públicos de propósito (a segurança está no pepper, não em esconder o método). Rejeitado: privado até o primeiro evento, porque abrir depois custa uma auditoria de histórico. Ligados no commit zero: secret scanning com push protection, private vulnerability reporting e a regra da seção 6.
 
 ## 2. Licença
 
@@ -112,7 +112,7 @@ Escopo opcional, sem `scope-enum`. Sugeridos: `events`, `templates`, `pdf`, `imp
 `CONTRIBUTING.md` segue o do CF Jobs. Pré-requisitos: Node 24 LTS, pnpm 11, Git, Docker.
 
 ```bash
-git clone git@github.com:Coding-Ferpa/cf-eventos.git && cd cf-eventos
+git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos
 pnpm install
 cp .env.example .env    # valores impressos por `pnpm db:start`
 pnpm db:start && pnpm db:reset
@@ -131,7 +131,7 @@ Scripts com os nomes do CF Jobs, mais `check:fonts`, `test:gate:pdf`, `test:gate
 
 ## 12. SECURITY.md e Código de Conduta
 
-`SECURITY.md` replica o do CF Jobs: nunca issue pública; relato em `https://github.com/Coding-Ferpa/cf-eventos/security/advisories/new` (Discord em privado como alternativa); confirmação em 3 dias úteis, avaliação em 7 corridos; divulgação só após a correção. Escopo: falha de RLS ou papel, enumeração de participantes pela busca, qualquer caminho que revele CPF, e-mail ou data de nascimento, forja de token, XSS por campo de CSV, injeção de fórmula nas exportações XLSX, upload malicioso de arte ou fonte.
+`SECURITY.md` replica o do CF Jobs: nunca issue pública; relato em `https://github.com/Coding-Ferpa/eventos/security/advisories/new` (Discord em privado como alternativa); confirmação em 3 dias úteis, avaliação em 7 corridos; divulgação só após a correção. Escopo: falha de RLS ou papel, enumeração de participantes pela busca, qualquer caminho que revele CPF, e-mail ou data de nascimento, forja de token, XSS por campo de CSV, injeção de fórmula nas exportações XLSX, upload malicioso de arte ou fonte.
 
 Vazamento de dado pessoal: o relato **não inclui dado real** (descreve o caminho, não cola o resultado), quem pesquisa acessa o mínimo para provar, e dado exposto no próprio repositório entra pelo mesmo canal. Confirmado, segue o procedimento de incidente do doc 08.
 

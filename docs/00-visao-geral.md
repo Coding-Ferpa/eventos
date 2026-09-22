@@ -4,7 +4,7 @@
 
 O CF Eventos entrega certificados dos eventos da Coding Ferpa (Fernandópolis/SP) sem trabalho manual por aluno. A organização cadastra o evento, sobe a arte do certificado, posiciona os campos sobre ela e importa a lista de participantes por CSV. O aluno, sem login, encontra o certificado com um dado que já tem na cabeça, confere o nome em uma prévia e baixa o PDF gerado na hora. Qualquer secretaria confere a autenticidade em uma página pública, pelo código ou pelo QR.
 
-O documento de produto é o [PRD](../spec-produto-cf-eventos.md). Este conjunto de documentos é a arquitetura: aqui se decide **como**.
+O documento de produto é o [PRD](spec-produto.md). Este conjunto de documentos é a arquitetura: aqui se decide **como**.
 
 ## O problema, em uma frase
 

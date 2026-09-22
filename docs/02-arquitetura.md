@@ -173,7 +173,7 @@ features/certificate, features/import  →  nada de next/*, nada de db/, nada de
 ## Estrutura de pastas
 
 ```
-cf-eventos/
+eventos/
 ├── docs/                              # esta documentação
 │   └── adr/
 ├── public/

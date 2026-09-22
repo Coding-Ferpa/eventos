@@ -1,9 +1,9 @@
 # CF Eventos · Documentação de arquitetura
 
-> Especificação técnica completa da plataforma de certificados da comunidade **Coding Ferpa** (`eventos.codingferpa.org`, repositório `Coding-Ferpa/cf-eventos`, MIT).
+> Especificação técnica completa da plataforma de certificados da comunidade **Coding Ferpa** (`eventos.codingferpa.org`, repositório `Coding-Ferpa/eventos`, MIT).
 > Produzida como fase de arquitetura, em setembro de 2026. Nenhuma decisão de implementação deve contradizer estes documentos sem um ADR aprovado.
 
-O documento de produto é o [PRD](../spec-produto-cf-eventos.md) (versão 1.1, já com os ajustes aprovados na revisão de arquitetura). O PRD diz **o quê e por quê**; esta pasta diz **como**.
+O documento de produto é o [PRD](spec-produto.md) (versão 1.1, já com os ajustes aprovados na revisão de arquitetura). O PRD diz **o quê e por quê**; esta pasta diz **como**.
 
 ## Como ler
 
