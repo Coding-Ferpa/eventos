@@ -1,0 +1,10 @@
+# Normaliza fim de linha para LF no repositório (contribuidores em Windows/macOS/Linux).
+* text=auto eol=lf
+
+pnpm-lock.yaml linguist-generated=true
+
+# As fixtures de CSV reproduzem byte a byte o que o Excel pt-BR e o Google
+# Sheets produzem, inclusive CRLF e BOM (doc 06). Normalizar o fim de linha
+# faria o gate `test:gate:csv` exercitar um arquivo que nenhuma planilha real
+# gerou, que é justamente a armadilha 2 do doc 14.
+tests/fixtures/csv/** -text

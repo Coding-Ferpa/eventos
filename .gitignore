@@ -1,0 +1,47 @@
+# dependências
+node_modules/
+.pnpm-store/
+
+# build do Next.js
+.next/
+out/
+next-env.d.ts
+
+# testes
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# ambiente (nunca commitar segredos: ver .env.example)
+.env
+.env.*
+!.env.example
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Planilha real de evento: o único lugar onde ela pode existir na máquina de
+# quem opera, e nunca no repositório (doc 12). A fixture sai daqui anonimizada
+# por `pnpm fixtures:anonymize`.
+/local/
+
+# editores, ferramentas e SO
+.vscode/*
+!.vscode/extensions.json
+.claude/
+Claude outputs/
+.idea/
+.DS_Store
+Thumbs.db
+
+# diversos
+*.log
+.vercel
+.turbo
+tsconfig.tsbuildinfo
+
+# Relatórios do Lighthouse CI (gerados por `lhci autorun`).
+.lighthouseci/
