@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
