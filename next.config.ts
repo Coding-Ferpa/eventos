@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next'
 
+import { staticSecurityHeaders } from './src/lib/security-headers'
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -8,6 +10,9 @@ const nextConfig: NextConfig = {
   // garante que lê. Casar todos os user agents devolve a metadata bloqueante
   // para todo mundo (ADR-0013 do CF Jobs, herdado pelo ADR-0001).
   htmlLimitedBots: /.*/,
+  async headers() {
+    return [{ source: '/:path*', headers: staticSecurityHeaders }]
+  },
 }
 
 export default nextConfig
