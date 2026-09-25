@@ -11,6 +11,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const POOLER =
   'postgresql://postgres.abc:senha@aws-0-sa-east-1.pooler.supabase.com:6543/postgres'
 
+/** Ambiente de servidor completo e válido, como o de produção. */
+function stubServidorValido() {
+  vi.stubEnv('DATABASE_URL', POOLER)
+  vi.stubEnv('DEVICE_COOKIE_SECRET', 'Zm9ybWF0by1kZS1vcGVuc3NsLXJhbmQtYmFzZTY0LTMy')
+  vi.stubEnv('IP_HASH_SECRET', 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns')
+}
+
 async function envNovo() {
   vi.resetModules()
   return import('./env')
@@ -22,7 +29,7 @@ afterEach(() => {
 
 describe('serverEnv no servidor', () => {
   it('lê e valida as variáveis de servidor', async () => {
-    vi.stubEnv('DATABASE_URL', POOLER)
+    stubServidorValido()
     const { serverEnv } = await envNovo()
 
     expect(serverEnv().DATABASE_URL).toBe(POOLER)
@@ -38,7 +45,7 @@ describe('serverEnv no servidor', () => {
 
 describe('isGithubOAuthEnabled', () => {
   it('fica desligado sem as credenciais do OAuth App', async () => {
-    vi.stubEnv('DATABASE_URL', POOLER)
+    stubServidorValido()
     vi.stubEnv('SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID', '')
     const { isGithubOAuthEnabled } = await envNovo()
 
@@ -46,7 +53,7 @@ describe('isGithubOAuthEnabled', () => {
   })
 
   it('liga quando o id do OAuth App existe', async () => {
-    vi.stubEnv('DATABASE_URL', POOLER)
+    stubServidorValido()
     vi.stubEnv('SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID', 'id-do-app')
     const { isGithubOAuthEnabled } = await envNovo()
 

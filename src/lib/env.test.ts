@@ -90,16 +90,20 @@ describe('parseSupabaseEnv', () => {
 })
 
 describe('parseServerEnv', () => {
-  const POOLER =
-    'postgresql://postgres.abc:senha@aws-0-sa-east-1.pooler.supabase.com:6543/postgres'
+  const SERVIDOR_VALIDO = {
+    DATABASE_URL:
+      'postgresql://postgres.abc:senha@aws-0-sa-east-1.pooler.supabase.com:6543/postgres',
+    DEVICE_COOKIE_SECRET: 'Zm9ybWF0by1kZS1vcGVuc3NsLXJhbmQtYmFzZTY0LTMy',
+    IP_HASH_SECRET: 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns',
+  }
 
-  it('aceita a URL do pooler, sem exigir o GitHub', () => {
-    expect(parseServerEnv({ DATABASE_URL: POOLER })).toEqual({ DATABASE_URL: POOLER })
+  it('aceita o pooler e os segredos, sem exigir o GitHub', () => {
+    expect(parseServerEnv(SERVIDOR_VALIDO)).toEqual(SERVIDOR_VALIDO)
   })
 
   it('aceita as credenciais do GitHub quando existem', () => {
     const env = parseServerEnv({
-      DATABASE_URL: POOLER,
+      ...SERVIDOR_VALIDO,
       SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID: 'id',
       SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET: 'segredo',
     })
@@ -116,9 +120,35 @@ describe('parseServerEnv', () => {
 
     expect(() =>
       parseServerEnv({
+        ...SERVIDOR_VALIDO,
         DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54422/postgres',
       }),
     ).toThrowError(/Transaction pooler/)
+  })
+
+  it('recusa segredo curto demais para um HMAC', () => {
+    expect(() =>
+      parseServerEnv({ ...SERVIDOR_VALIDO, DEVICE_COOKIE_SECRET: 'curto' }),
+    ).toThrowError(/DEVICE_COOKIE_SECRET/)
+  })
+
+  describe('valor de desenvolvimento do .env.example', () => {
+    const DE_DESENVOLVIMENTO = {
+      ...SERVIDOR_VALIDO,
+      IP_HASH_SECRET: 'desenvolvimento-local-hash-diario-de-ip-e-dispositivo',
+    }
+
+    it('passa fora da Vercel, que é para isso que ele existe', () => {
+      expect(() => parseServerEnv(DE_DESENVOLVIMENTO)).not.toThrow()
+    })
+
+    it('é recusado dentro da Vercel: ele é público, está no repositório', () => {
+      vi.stubEnv('VERCEL', '1')
+
+      expect(() => parseServerEnv(DE_DESENVOLVIMENTO)).toThrowError(
+        /IP_HASH_SECRET[\s\S]*openssl rand -base64 32/,
+      )
+    })
   })
 })
 

@@ -69,6 +69,34 @@ function recusarEnderecoLocal(
 // banco (doc 02) e serve para revisar a UI: o que toda página precisa, a URL
 // do site, não pode depender do que só o login e o admin usam, o Supabase.
 // Juntos, um layout que só queria a URL derrubava o build da Preview.
+/**
+ * Prefixo dos segredos de desenvolvimento do `.env.example`. Eles estão no
+ * repositório, então são públicos: na Vercel, um segredo com este prefixo foi
+ * colado do arquivo de exemplo por engano, e deixaria qualquer um forjar o
+ * cookie de dispositivo ou recalcular um hash diário.
+ */
+const PREFIXO_DE_DESENVOLVIMENTO = 'desenvolvimento-local-'
+
+function segredo() {
+  return z.string().min(32, 'curto demais para um HMAC: use 32 caracteres ou mais.')
+}
+
+function recusarSegredoDeDesenvolvimento(
+  chave: string,
+  valor: string | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  if (!naVercel() || !valor?.startsWith(PREFIXO_DE_DESENVOLVIMENTO)) return
+
+  ctx.addIssue({
+    code: 'custom',
+    path: [chave],
+    message:
+      'é o valor de desenvolvimento do .env.example, que é público. ' +
+      'Gere um com `openssl rand -base64 32`.',
+  })
+}
+
 export const siteEnvSchema = z
   .object({
     NEXT_PUBLIC_SITE_URL: z.url(),
@@ -110,6 +138,11 @@ export const serverEnvSchema = z
     // par configura o provider local e a detecção do recurso na aplicação.
     SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID: z.string().min(1).optional(),
     SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET: z.string().min(1).optional(),
+
+    // M3: HMAC do cookie de dispositivo e hash diário de IP e de dispositivo
+    // (doc 08). Sem banco, fora da produção, ninguém os lê (ADR-0014).
+    DEVICE_COOKIE_SECRET: segredo(),
+    IP_HASH_SECRET: segredo(),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(
@@ -118,6 +151,8 @@ export const serverEnvSchema = z
       ctx,
       'Copie de Supabase, Connect, Transaction pooler (porta 6543).',
     )
+    recusarSegredoDeDesenvolvimento('DEVICE_COOKIE_SECRET', env.DEVICE_COOKIE_SECRET, ctx)
+    recusarSegredoDeDesenvolvimento('IP_HASH_SECRET', env.IP_HASH_SECRET, ctx)
   })
 
 export type SiteEnv = z.infer<typeof siteEnvSchema>

@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { supabaseEnv } from '@/lib/env'
+import { semBanco } from '@/lib/ambiente'
+import {
+  COOKIE_DE_DISPOSITIVO,
+  OPCOES_DO_COOKIE_DE_DISPOSITIVO,
+  criarCookieDeDispositivo,
+  lerCookieDeDispositivo,
+} from '@/lib/cookies/device'
+import { serverEnv, supabaseEnv } from '@/lib/env'
 import { buildContentSecurityPolicy } from '@/lib/security-headers'
 
 /**
@@ -11,9 +18,16 @@ import { buildContentSecurityPolicy } from '@/lib/security-headers'
  *
  * A área pública fica de fora de propósito: ela é estática ou ISR e não
  * precisa de sessão, então não vale pagar uma ida ao serviço de auth por
- * visita. O cookie de dispositivo da área pública chega no M3.
+ * visita.
  */
 const ROTAS_DINAMICAS = ['/admin', '/login']
+
+/**
+ * Páginas em que o cookie de dispositivo nasce (doc 08): as que levam à
+ * busca. O proxy só acrescenta o `Set-Cookie`, e a página continua saindo do
+ * cache de ISR.
+ */
+const ROTAS_COM_DISPOSITIVO = /^\/($|eventos\/|validar(\/|$)|meus-certificados(\/|$))/
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -35,6 +49,7 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: requestHeaders } })
 
   if (!rotaDinamica) {
+    garantirDispositivo(request, response)
     response.headers.set('content-security-policy', csp)
     return response
   }
@@ -85,6 +100,27 @@ export async function proxy(request: NextRequest) {
 
   response.headers.set('content-security-policy', csp)
   return response
+}
+
+/**
+ * Emite o cookie de dispositivo quando ele falta ou não vale mais (vencido,
+ * forjado, segredo trocado). Na primeira visita, e não na primeira busca: se
+ * nascesse com a busca, a primeira tentativa de todo mundo cairia no balde de
+ * IP, justo no pico do evento (ADR-0006).
+ */
+function garantirDispositivo(request: NextRequest, response: NextResponse) {
+  // Sem banco não há busca nem rate limit para o cookie servir (ADR-0014).
+  if (semBanco() || !ROTAS_COM_DISPOSITIVO.test(request.nextUrl.pathname)) return
+
+  const segredo = serverEnv().DEVICE_COOKIE_SECRET
+  const atual = request.cookies.get(COOKIE_DE_DISPOSITIVO)?.value
+  if (lerCookieDeDispositivo(atual, segredo)) return
+
+  response.cookies.set(
+    COOKIE_DE_DISPOSITIVO,
+    criarCookieDeDispositivo(segredo),
+    OPCOES_DO_COOKIE_DE_DISPOSITIVO,
+  )
 }
 
 /** Leva junto os cookies renovados: perdê-los derrubaria a sessão recém-criada. */
