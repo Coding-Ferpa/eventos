@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatarLocal, formatarPeriodo, isoEmSaoPaulo } from './format'
+import {
+  dataHoraDeSaoPauloParaUtc,
+  formatarLocal,
+  formatarPeriodo,
+  isoEmSaoPaulo,
+  utcParaDataHoraDeSaoPaulo,
+} from './format'
 
 describe('formatarPeriodo', () => {
   it('evento de um dia: a data longa, no fuso de São Paulo', () => {
@@ -81,5 +87,31 @@ describe('isoEmSaoPaulo', () => {
     expect(isoEmSaoPaulo(new Date('2026-10-24T01:00:00Z'))).toBe(
       '2026-10-23T22:00:00-03:00',
     )
+  })
+})
+
+describe('campo de data e hora do formulário', () => {
+  it('o que se digita é hora de São Paulo, e o banco guarda UTC', () => {
+    expect(dataHoraDeSaoPauloParaUtc('2026-09-12T08:00').toISOString()).toBe(
+      '2026-09-12T11:00:00.000Z',
+    )
+  })
+
+  it('22h em São Paulo já é o dia seguinte em UTC', () => {
+    expect(dataHoraDeSaoPauloParaUtc('2026-10-23T22:00').toISOString()).toBe(
+      '2026-10-24T01:00:00.000Z',
+    )
+  })
+
+  it('volta para o campo como a pessoa digitou', () => {
+    expect(utcParaDataHoraDeSaoPaulo(new Date('2026-10-24T01:00:00Z'))).toBe(
+      '2026-10-23T22:00',
+    )
+  })
+
+  it('ida e volta não perde nada', () => {
+    for (const local of ['2026-01-01T00:00', '2026-06-15T13:45', '2026-12-31T23:59']) {
+      expect(utcParaDataHoraDeSaoPaulo(dataHoraDeSaoPauloParaUtc(local))).toBe(local)
+    }
   })
 })

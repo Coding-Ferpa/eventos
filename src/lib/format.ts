@@ -85,3 +85,44 @@ export function isoEmSaoPaulo(data: Date): string {
     `T${valor('hour')}:${valor('minute')}:${valor('second')}${deslocamento}`
   )
 }
+
+/** Deslocamento de São Paulo naquele instante, em minutos (-180 hoje). */
+function deslocamentoDeSaoPaulo(instante: Date): number {
+  const nome =
+    PARTES_ISO.formatToParts(instante).find((parte) => parte.type === 'timeZoneName')
+      ?.value ?? 'GMT'
+  const casamento = /GMT([+-])(\d{2}):(\d{2})/.exec(nome)
+  if (!casamento) return 0
+
+  const sinal = casamento[1] === '-' ? -1 : 1
+  return sinal * (Number(casamento[2]) * 60 + Number(casamento[3]))
+}
+
+/**
+ * O valor de um `<input type="datetime-local">` ("2026-09-12T08:00") é hora de
+ * parede, sem fuso. Aqui ele é lido como hora de São Paulo, que é onde o
+ * evento acontece, e vira o instante em UTC que o banco guarda.
+ */
+export function dataHoraDeSaoPauloParaUtc(local: string): Date {
+  const [data = '', hora = ''] = local.split('T')
+  const [ano, mes, dia] = data.split('-').map(Number)
+  const [horas, minutos] = hora.split(':').map(Number)
+
+  const comoSeFosseUtc = Date.UTC(
+    ano ?? 0,
+    (mes ?? 1) - 1,
+    dia ?? 1,
+    horas ?? 0,
+    minutos ?? 0,
+  )
+  // O deslocamento é o do instante resultante, e não o do palpite: numa virada
+  // de horário de verão os dois diferem, e a segunda conta acerta.
+  const palpite =
+    comoSeFosseUtc - deslocamentoDeSaoPaulo(new Date(comoSeFosseUtc)) * 60_000
+  return new Date(comoSeFosseUtc - deslocamentoDeSaoPaulo(new Date(palpite)) * 60_000)
+}
+
+/** O inverso: o instante em UTC, como o campo `datetime-local` o mostra. */
+export function utcParaDataHoraDeSaoPaulo(instante: Date): string {
+  return isoEmSaoPaulo(instante).slice(0, 16)
+}
