@@ -56,7 +56,8 @@ update public.profiles set role = 'admin' where id = 'ad000000-0000-4000-8000-00
 update public.profiles set role = 'editor' where id = 'ad000000-0000-4000-8000-000000000002';
 
 -- ---------------------------------------------------------------------------
--- Três eventos, em estados diferentes
+-- Seis eventos, um em cada estado. Com o arquivado do seed de produção, os
+-- sete estados do bloco de ação (doc 09) aparecem na tela e nas E2E.
 -- ---------------------------------------------------------------------------
 
 insert into public.events (
@@ -65,7 +66,15 @@ insert into public.events (
   contact_email, certificates_released_at, created_by
 ) values
   ('de000000-0000-4000-8000-00000000e001', 'ferpa-tech-day-2026', 'Ferpa Tech Day 2026',
-   'Um dia inteiro de palestras e oficinas sobre desenvolvimento, dados e carreira.',
+   E'Um dia inteiro de palestras e oficinas sobre desenvolvimento, dados e carreira.
+
+## Programação
+
+- Abertura e palestra principal
+- Oficinas à tarde, em três salas
+- Encerramento com a comunidade
+
+Dúvidas? Veja o [site da comunidade](https://codingferpa.org/).',
    '2026-09-12 11:00:00+00', '2026-09-12 21:00:00+00', 'Auditório da Faculdade', 'Fernandópolis', 'SP',
    null, 'certificates_available', true, true, true,
    'contato@example.com', '2026-09-14 15:00:00+00', 'ad000000-0000-4000-8000-000000000001'),
@@ -78,6 +87,21 @@ insert into public.events (
    'Três horas de mão na massa: commit, branch e pull request.',
    '2026-09-05 12:00:00+00', '2026-09-05 15:00:00+00', 'Laboratório 3', 'Fernandópolis', 'SP',
    null, 'completed', true, false, false,
+   'contato@example.com', null, 'ad000000-0000-4000-8000-000000000002'),
+  ('de000000-0000-4000-8000-00000000e004', 'hackathon-ferpa-2026', 'Hackathon Ferpa 2026',
+   'Ainda em preparação: não pode aparecer na área pública.',
+   '2026-11-21 12:00:00+00', '2026-11-22 21:00:00+00', 'Ginásio', 'Fernandópolis', 'SP',
+   null, 'draft', false, false, false,
+   'contato@example.com', null, 'ad000000-0000-4000-8000-000000000002'),
+  ('de000000-0000-4000-8000-00000000e005', 'meetup-de-dados', 'Meetup de Dados',
+   'Uma noite sobre engenharia de dados, com duas palestras curtas.',
+   '2026-10-08 22:00:00+00', '2026-10-09 01:00:00+00', null, null, null,
+   null, 'registration_closed', false, false, false,
+   'contato@example.com', null, 'ad000000-0000-4000-8000-000000000002'),
+  ('de000000-0000-4000-8000-00000000e006', 'workshop-de-acessibilidade', 'Workshop de Acessibilidade na Web',
+   'Leitor de tela, contraste e teclado, na prática.',
+   '2026-09-24 12:00:00+00', '2026-09-26 21:00:00+00', 'Laboratório 1', 'Fernandópolis', 'SP',
+   null, 'in_progress', false, false, false,
    'contato@example.com', null, 'ad000000-0000-4000-8000-000000000002')
 on conflict (id) do nothing;
 
