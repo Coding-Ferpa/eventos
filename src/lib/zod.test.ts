@@ -8,8 +8,9 @@ import { z } from './zod'
  *
  * 1. Alguém move a configuração para o bootstrap, ou importa `zod` direto num
  *    schema, e a mensagem volta ao inglês (ADR-0016 do CF Jobs).
- * 2. O Zod muda o que cada locale significa. Aconteceu na 4.6: o `pt` passou a
- *    ser o de Portugal, e o do Brasil virou `pt-BR`.
+ * 2. O Zod muda o que cada locale significa. Aconteceu na 4.5.0: o `pt`, que
+ *    até a 4.4.3 era brasileiro, passou a ser o de Portugal, e o do Brasil
+ *    virou `pt-BR`.
  *
  * As asserções são sobre essas duas propriedades, e não sobre a frase exata,
  * que é do Zod e muda entre versões menores. A primeira versão deste teste
@@ -19,7 +20,7 @@ import { z } from './zod'
 
 const INGLES = /invalid|expected|received|too (big|small)/i
 // Marcas do português de Portugal que o `pt` do Zod passou a usar.
-const PORTUGAL = /demasiado/i
+const PORTUGAL = /demasiado|ficheiro|registo|tuplo/i
 
 function mensagem(resultado: { error?: { issues: { message: string }[] } }) {
   return resultado.error?.issues[0]?.message ?? ''

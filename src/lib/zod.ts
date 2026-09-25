@@ -21,8 +21,11 @@ import ptBR from 'zod/v4/locales/pt-BR.js'
  * o nome está igual ao da inscrição." orienta; "Pequeno demais: esperava que o
  * texto tivesse >= 3 caracteres" apenas descreve.
  *
- * O locale é o `pt-BR`, e não o `pt`: a partir da 4.6 o Zod separou os dois, e
- * o `pt` passou a ser o de Portugal ("Demasiado grande"). O arquivo é
+ * O locale é o `pt-BR`, e não o `pt`. Até a 4.4.3 só existia o `pt`, e ele era
+ * brasileiro ("Muito grande"). Na 4.5.0 o `pt` foi reescrito em português de
+ * Portugal ("Demasiado grande", "ficheiro", "registo") e nasceu o `pt-BR`,
+ * com "arquivo". Quem sobe o Zod de 4.4 para 4.5 sem trocar o locale passa a
+ * mostrar "ficheiro" para o participante. O arquivo é
  * importado direto, e não por `z.locales`, porque `z.locales` é um barril com
  * todos os idiomas do Zod, e nenhum empacotador consegue podá-lo.
  */
