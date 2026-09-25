@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import pt from 'zod/v4/locales/pt.js'
+import ptBR from 'zod/v4/locales/pt-BR.js'
 
 /**
  * O Zod do projeto, com o locale pt-BR já aplicado (doc 02).
@@ -18,12 +18,14 @@ import pt from 'zod/v4/locales/pt.js'
  * ela, um schema novo voltaria a falar inglês sem ninguém perceber.
  *
  * Mensagem manual continua valendo onde ela diz mais que o locale. "Confira se
- * o nome está igual ao da inscrição." orienta; "Muito pequeno: esperado que
- * string tivesse >=1 caracteres" apenas descreve.
+ * o nome está igual ao da inscrição." orienta; "Pequeno demais: esperava que o
+ * texto tivesse >= 3 caracteres" apenas descreve.
  *
- * O locale vem do arquivo dele, e não de `z.locales.pt()`: `z.locales` é um
- * barril com todos os idiomas do Zod, e nenhum empacotador consegue podá-lo.
+ * O locale é o `pt-BR`, e não o `pt`: a partir da 4.6 o Zod separou os dois, e
+ * o `pt` passou a ser o de Portugal ("Demasiado grande"). O arquivo é
+ * importado direto, e não por `z.locales`, porque `z.locales` é um barril com
+ * todos os idiomas do Zod, e nenhum empacotador consegue podá-lo.
  */
-z.config(pt())
+z.config(ptBR())
 
 export { z }
