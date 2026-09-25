@@ -21,7 +21,7 @@ export default function PublicError({
       </p>
 
       <button
-        className="bg-primary-solid mt-2 min-h-11 rounded-full px-6 font-semibold text-white transition duration-150"
+        className="bg-primary-solid text-primary-foreground mt-2 min-h-11 rounded-full px-6 font-semibold transition duration-150"
         onClick={reset}
         type="button"
       >

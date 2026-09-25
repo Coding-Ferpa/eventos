@@ -67,7 +67,7 @@ export function LoginForm({ proximo }: { proximo: string }) {
       </p>
 
       <button
-        className="bg-primary-solid rounded-full px-6 py-2.5 font-semibold text-white transition duration-150 disabled:opacity-60"
+        className="bg-primary-solid text-primary-foreground rounded-full px-6 py-2.5 font-semibold transition duration-150 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={pendente}
         name="intencao"
         type="submit"
@@ -77,7 +77,7 @@ export function LoginForm({ proximo }: { proximo: string }) {
       </button>
 
       <button
-        className="border-border hover:border-primary-muted rounded-full border px-6 py-2.5 font-semibold transition duration-150 disabled:opacity-60"
+        className="border-border hover:border-primary-muted rounded-full border px-6 py-2.5 font-semibold transition duration-150 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={pendente}
         name="intencao"
         type="submit"

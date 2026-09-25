@@ -13,7 +13,7 @@ export default function NotFound() {
       <p className="text-body text-muted-foreground">Que tal ver os eventos?</p>
 
       <Link
-        className="bg-primary-solid mt-2 inline-flex min-h-11 items-center rounded-full px-6 font-semibold text-white transition duration-150"
+        className="bg-primary-solid text-primary-foreground mt-2 inline-flex min-h-11 items-center rounded-full px-6 font-semibold transition duration-150"
         href="/"
       >
         Ver eventos

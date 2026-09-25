@@ -18,7 +18,7 @@ export default function AdminError({
         O problema é do nosso lado. Tente de novo em instantes.
       </p>
       <button
-        className="bg-primary-solid rounded-full px-5 py-2 font-semibold text-white transition duration-150"
+        className="bg-primary-solid text-primary-foreground rounded-full px-5 py-2 font-semibold transition duration-150"
         onClick={reset}
         type="button"
       >
