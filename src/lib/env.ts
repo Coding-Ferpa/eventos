@@ -80,7 +80,23 @@ export const clientEnvSchema = z
     )
   })
 
+export const serverEnvSchema = z
+  .object({
+    // Pooler Supavisor em modo transaction, usado pelo Drizzle (doc 01). O
+    // primeiro a ler é o `check:schema`; a aplicação passa a ler no M3.
+    DATABASE_URL: z.string().min(1),
+  })
+  .superRefine((env, ctx) => {
+    recusarEnderecoLocal(
+      'DATABASE_URL',
+      env.DATABASE_URL,
+      ctx,
+      'Copie de Supabase, Connect, Transaction pooler (porta 6543).',
+    )
+  })
+
 export type ClientEnv = z.infer<typeof clientEnvSchema>
+export type ServerEnv = z.infer<typeof serverEnvSchema>
 
 /**
  * `VARIAVEL=` em um arquivo .env significa "não informei", não "informei
@@ -113,6 +129,10 @@ function parse<T extends z.ZodType>(schema: T, source: unknown, scope: string) {
 
 export function parseClientEnv(source: unknown): ClientEnv {
   return parse(clientEnvSchema, source, 'cliente')
+}
+
+export function parseServerEnv(source: unknown): ServerEnv {
+  return parse(serverEnvSchema, source, 'servidor')
 }
 
 // O Next só substitui `process.env.NEXT_PUBLIC_*` em build quando o acesso é

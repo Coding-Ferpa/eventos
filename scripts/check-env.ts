@@ -2,14 +2,11 @@
  * Garante que `.env.example` documenta exatamente as variáveis do schema Zod
  * (doc 01). Roda no CI: variável nova sem documentação quebra o build, e
  * variável documentada que ninguém lê também.
- *
- * O schema de servidor entra no M1, junto com a conexão ao banco, e passa a
- * ser somado aqui.
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { clientEnvSchema } from '../src/lib/env'
+import { clientEnvSchema, serverEnvSchema } from '../src/lib/env'
 
 const EXAMPLE_PATH = resolve(process.cwd(), '.env.example')
 
@@ -23,7 +20,10 @@ function keysFromExample(contents: string): string[] {
 }
 
 function main(): void {
-  const schemaKeys = [...Object.keys(clientEnvSchema.shape)].sort()
+  const schemaKeys = [
+    ...Object.keys(clientEnvSchema.shape),
+    ...Object.keys(serverEnvSchema.shape),
+  ].sort()
 
   const exampleKeys = keysFromExample(readFileSync(EXAMPLE_PATH, 'utf8'))
   const duplicated = exampleKeys.filter(

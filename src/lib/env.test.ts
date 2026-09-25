@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { parseClientEnv } from './env'
+import { parseClientEnv, parseServerEnv } from './env'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -54,5 +54,28 @@ describe('parseClientEnv', () => {
         parseClientEnv({ NEXT_PUBLIC_SITE_URL: 'https://eventos.codingferpa.org' }),
       ).not.toThrow()
     })
+  })
+})
+
+describe('parseServerEnv', () => {
+  const POOLER =
+    'postgresql://postgres.abc:senha@aws-0-sa-east-1.pooler.supabase.com:6543/postgres'
+
+  it('aceita a URL do pooler', () => {
+    expect(parseServerEnv({ DATABASE_URL: POOLER })).toEqual({ DATABASE_URL: POOLER })
+  })
+
+  it('recusa sem a URL do banco, dizendo qual variável falta', () => {
+    expect(() => parseServerEnv({})).toThrowError(/servidor[\s\S]*DATABASE_URL/)
+  })
+
+  it('recusa o banco local dentro da Vercel, dizendo de onde copiar', () => {
+    vi.stubEnv('VERCEL', '1')
+
+    expect(() =>
+      parseServerEnv({
+        DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54422/postgres',
+      }),
+    ).toThrowError(/Transaction pooler/)
   })
 })

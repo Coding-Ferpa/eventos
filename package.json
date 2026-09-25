@@ -27,12 +27,15 @@
     "db:stop": "supabase stop",
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
-    "db:test": "supabase test db"
+    "db:test": "supabase test db",
+    "check:schema": "tsx --env-file-if-exists=.env scripts/check-schema.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "0.45.3",
     "next": "16.3.6",
+    "postgres": "3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwind-merge": "^3.6.0",
