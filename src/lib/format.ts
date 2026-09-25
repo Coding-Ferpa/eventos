@@ -55,3 +55,33 @@ export function formatarLocal(local: { city: string | null; state: string | null
   const estado = local.state?.trim()
   return estado ? `${cidade}, ${estado}` : cidade
 }
+
+const PARTES_ISO = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+  timeZone: FUSO,
+  timeZoneName: 'longOffset',
+})
+
+/**
+ * "2026-09-12T08:00:00-03:00": a hora como o evento a anuncia, com o
+ * deslocamento explícito, que é como o schema.org mostra datas de evento. O
+ * deslocamento vem do Intl, e não de um "-03:00" fixo, para sobreviver a uma
+ * volta do horário de verão.
+ */
+export function isoEmSaoPaulo(data: Date): string {
+  const partes = PARTES_ISO.formatToParts(data)
+  const valor = (tipo: Intl.DateTimeFormatPartTypes) =>
+    partes.find((parte) => parte.type === tipo)?.value ?? ''
+
+  const deslocamento = valor('timeZoneName').replace('GMT', '') || '+00:00'
+  return (
+    `${valor('year')}-${valor('month')}-${valor('day')}` +
+    `T${valor('hour')}:${valor('minute')}:${valor('second')}${deslocamento}`
+  )
+}

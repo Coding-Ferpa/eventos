@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatarLocal, formatarPeriodo } from './format'
+import { formatarLocal, formatarPeriodo, isoEmSaoPaulo } from './format'
 
 describe('formatarPeriodo', () => {
   it('evento de um dia: a data longa, no fuso de São Paulo', () => {
@@ -67,5 +67,19 @@ describe('formatarLocal', () => {
   it('sem cidade, o evento é on-line', () => {
     expect(formatarLocal({ city: null, state: null })).toBe('On-line')
     expect(formatarLocal({ city: '  ', state: 'SP' })).toBe('On-line')
+  })
+})
+
+describe('isoEmSaoPaulo', () => {
+  it('a hora local de São Paulo, com o deslocamento explícito', () => {
+    expect(isoEmSaoPaulo(new Date('2026-09-12T11:00:00Z'))).toBe(
+      '2026-09-12T08:00:00-03:00',
+    )
+  })
+
+  it('vira o dia quando São Paulo ainda está no dia anterior', () => {
+    expect(isoEmSaoPaulo(new Date('2026-10-24T01:00:00Z'))).toBe(
+      '2026-10-23T22:00:00-03:00',
+    )
   })
 })
