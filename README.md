@@ -43,11 +43,15 @@ pnpm db:reset   # migrations do zero e os dois seeds
 pnpm dev
 ```
 
+Os valores do `.env` saem de `pnpm db:status` (URL da API, chave anônima e
+URL do banco); cada variável está comentada no `.env.example`.
+
 O Supabase local deste projeto usa portas deslocadas em +100 (API em 54421,
 banco em 54422, Studio em 54423, e-mails de teste em 54424), para conviver
-com o do CF Jobs na mesma máquina. O seed de desenvolvimento cria
-`admin@cfeventos.local` e `editor@cfeventos.local`, com a senha
-`cfeventos-local`, que só existe localmente.
+com o do CF Jobs na mesma máquina. O seed de desenvolvimento cria três contas
+com a senha `cfeventos-local`, que só existe localmente: `admin@cfeventos.local`,
+`editor@cfeventos.local` e `reader@cfeventos.local`, esta sem acesso ao
+painel, como todo cadastro novo.
 
 ## Scripts
 

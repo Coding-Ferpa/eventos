@@ -38,10 +38,11 @@ pnpm db:start && pnpm db:reset
 pnpm dev
 ```
 
-As portas do Supabase local são as padrão deslocadas em +100 (banco em
-54422), para conviver com o CF Jobs. As contas `admin@cfeventos.local` e
-`editor@cfeventos.local`, senha `cfeventos-local`, vêm do seed e só existem
-localmente.
+Os valores do `.env` saem de `pnpm db:status`. As portas do Supabase local
+são as padrão deslocadas em +100 (banco em 54422), para conviver com o CF
+Jobs. As contas `admin@`, `editor@` e `reader@cfeventos.local`, senha
+`cfeventos-local`, vêm do seed e só existem localmente; a `reader` não entra no
+painel, como todo cadastro novo.
 
 O `.env.example` cresce por milestone e diz, em comentário, onde cada grupo de
 variáveis entra. Variável nova exige atualizar os dois lados no mesmo commit:
