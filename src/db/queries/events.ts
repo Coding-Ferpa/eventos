@@ -12,8 +12,11 @@ import { semBanco } from '@/lib/ambiente'
  * RLS valha de fato: rascunho não sai daqui nem se um filtro for esquecido.
  *
  * Sem banco, fora da produção (ADR-0014), cada uma devolve o que devolveria sem
- * nenhum evento, antes de abrir conexão: é o que permite à Preview e ao build
- * do CI renderizarem o site vazio.
+ * nenhum evento: é o que permite à Preview e ao build do CI renderizarem o
+ * site vazio. A pergunta vem antes do cache de dados, e não dentro dele: o
+ * `.next/cache` sobrevive entre builds, na máquina e no cache de build da
+ * Vercel, e um build sem banco não pode servir o que um build com banco
+ * guardou lá.
  *
  * As datas saem como texto ISO, e não como `Date`: o cache do Next guarda o
  * resultado em JSON, e um `Date` voltaria do cache como texto de qualquer
@@ -70,11 +73,8 @@ function paraCatalogo(linha: {
   }
 }
 
-/** Catálogo: fora de rascunho e de arquivado, mais recentes primeiro. */
-export const listarCatalogo = unstable_cache(
+const catalogoEmCache = unstable_cache(
   async (): Promise<EventoDoCatalogo[]> => {
-    if (semBanco()) return []
-
     const linhas = await queryAsAnon((tx) =>
       tx
         .select(colunasDoCatalogo)
@@ -88,12 +88,17 @@ export const listarCatalogo = unstable_cache(
   { revalidate: UMA_HORA, tags: ['events'] },
 )
 
+/** Catálogo: fora de rascunho e de arquivado, mais recentes primeiro. */
+export async function listarCatalogo(): Promise<EventoDoCatalogo[]> {
+  return semBanco() ? [] : catalogoEmCache()
+}
+
 /** Página do evento: qualquer status menos rascunho, que é 404 (doc 09). */
 export async function buscarEventoPublico(slug: string): Promise<EventoPublico | null> {
+  if (semBanco()) return null
+
   const buscar = unstable_cache(
     async (): Promise<EventoPublico | null> => {
-      if (semBanco()) return null
-
       const [linha] = await queryAsAnon((tx) =>
         tx
           .select({
@@ -126,14 +131,8 @@ export async function buscarEventoPublico(slug: string): Promise<EventoPublico |
 
 export type EventoDoSitemap = { slug: string; updatedAt: string }
 
-/**
- * Eventos que o sitemap lista: os mesmos do catálogo. O arquivado continua no
- * ar para quem tem o link, mas não é mais oferecido a buscador (doc 09).
- */
-export const listarEventosDoSitemap = unstable_cache(
+const sitemapEmCache = unstable_cache(
   async (): Promise<EventoDoSitemap[]> => {
-    if (semBanco()) return []
-
     const linhas = await queryAsAnon((tx) =>
       tx
         .select({ slug: events.slug, updatedAt: events.updatedAt })
@@ -148,6 +147,14 @@ export const listarEventosDoSitemap = unstable_cache(
   ['sitemap'],
   { revalidate: UMA_HORA, tags: ['events'] },
 )
+
+/**
+ * Eventos que o sitemap lista: os mesmos do catálogo. O arquivado continua no
+ * ar para quem tem o link, mas não é mais oferecido a buscador (doc 09).
+ */
+export async function listarEventosDoSitemap(): Promise<EventoDoSitemap[]> {
+  return semBanco() ? [] : sitemapEmCache()
+}
 
 /** Slugs pré-renderizados no build: todo evento que tem página pública. */
 export async function listarSlugsPublicos(): Promise<string[]> {

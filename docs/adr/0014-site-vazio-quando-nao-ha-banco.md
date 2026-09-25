@@ -10,7 +10,7 @@ O [doc 02](../02-arquitetura.md) decide que a Preview da Vercel sobe sem banco: 
 ## Decisão
 **Fora da produção, a falta de `DATABASE_URL` é um modo, e não um erro: as leituras públicas voltam vazias e o site renderiza o que renderizaria sem nenhum evento.** Um predicado só decide: `semBanco()`, em `src/lib/ambiente.ts`, verdadeiro quando `DATABASE_URL` falta **e** `VERCEL_ENV` não é `production`.
 
-Nesse modo, antes de abrir qualquer conexão:
+Nesse modo, antes de abrir qualquer conexão e antes de consultar o cache de dados do Next (o `.next/cache` sobrevive entre builds, na máquina e no cache de build da Vercel, e um build sem banco não pode servir o que um build com banco guardou; foi assim que o M3 flagrou o catálogo de um build anterior aparecendo num build sem banco):
 - as consultas públicas de `src/db/queries` devolvem lista vazia ou `null`: `/` mostra o estado vazio do [doc 03](../03-design-system.md), `/eventos/[slug]` responde 404, `generateStaticParams` devolve `[]`, e o sitemap lista só as páginas fixas;
 - o beacon de visita responde 204 sem gravar;
 - o proxy não emite o cookie de dispositivo, porque sem banco não há busca nem rate limit para ele servir. Por isso `DEVICE_COOKIE_SECRET` também não é exigido nesse modo.
