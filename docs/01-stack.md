@@ -105,7 +105,7 @@ Validadas por Zod em `src/lib/env.ts`. `pnpm check:env` (herdado) falha o CI se 
 | `DIRECT_URL` | servidor e CI | sim | migrations |
 | `CPF_PEPPER` | servidor | sim | 32 bytes em base64. **Nunca rotacionar, nunca perder** ([doc 08](08-seguranca-e-lgpd.md)). |
 | `RETRIEVAL_COOKIE_KEY` | servidor | sim | 32 bytes em base64, AES-256-GCM do cookie de retirada |
-| `DEVICE_COOKIE_SECRET` | servidor | sim | HMAC do cookie de dispositivo |
+| `DEVICE_COOKIE_SECRET` | servidor | sim | HMAC do cookie de dispositivo. Fora da produção e sem banco, o proxy não emite o cookie e não a exige ([ADR-0014](adr/0014-site-vazio-quando-nao-ha-banco.md)). |
 | `IP_HASH_SECRET` | servidor | sim | HMAC diário de IP e de dispositivo |
 | `CRON_SECRET` | servidor | sim | rotas `/api/internal/*` |
 | `RESEND_API_KEY` | servidor | preguiçosa | validada no ponto de uso, como as chaves NVIDIA do CF Jobs: sem ela o app sobe, o pedido de correção é gravado e só a notificação não sai (com log) |

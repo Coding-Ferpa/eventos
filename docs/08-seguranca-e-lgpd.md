@@ -88,6 +88,8 @@ O pico honesto estimado é de 200 buscas em 5 minutos com 15% de falha: 6 falhas
 
 `cf-dispositivo = v1.{id de 128 bits}.{emitido_em}.{HMAC com DEVICE_COOKIE_SECRET}`, `HttpOnly`, `Secure`, `SameSite=Lax`, 30 dias. **É emitido pelo `proxy.ts` na primeira resposta de `/`, `/eventos/*`, `/validar*` e `/meus-certificados`**, e não na primeira busca. Se nascesse junto com a primeira tentativa, a primeira requisição de todo mundo cairia no balde de IP, exatamente no pico que ele existe para cobrir. O proxy só acrescenta `Set-Cookie` à resposta: a página continua estática e servida do cache de ISR (mesmo mecanismo com que o CF Jobs já injeta a CSP em rota pública).
 
+Fora da produção e sem banco (a Preview da Vercel), o proxy não emite o cookie: sem banco não há busca nem rate limit para ele servir ([ADR-0014](adr/0014-site-vazio-quando-nao-ha-banco.md)).
+
 Requisição de busca sem cookie válido (curl, cookies bloqueados, assinatura inválida) usa como chave de dispositivo `nocookie:{ip_hash}`: os limites estreitos do PRD, compartilhados por IP. Navegador honesto nunca chega aí, porque passou por uma página antes. É cookie estritamente necessário de segurança: não pede banner de consentimento, e está descrito em `/privacidade`.
 
 `device_hash = HMAC(IP_HASH_SECRET, id + dia UTC)` e `ip_hash = HMAC(IP_HASH_SECRET, ip + dia UTC)`: giram a cada dia, então servem para limitar e para correlacionar tentativas dentro de um dia, e não para seguir alguém por semanas. O IP vem de `x-forwarded-for` (primeiro endereço), que na Vercel é confiável. IP bruto nunca é persistido.

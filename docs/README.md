@@ -26,7 +26,7 @@ Os documentos estão numerados na ordem recomendada de leitura. Cada um é autoc
 | [12 · Open source e governança](12-open-source-e-governanca.md) | repositório, CI, smoke diário, templates, releases, licença, contribuição |
 | [13 · Roadmap](13-roadmap.md) | fases, milestones, critérios de pronto, ordem de corte, riscos |
 | [14 · Prompt de execução](14-prompt-de-execucao-opus-5.md) | **o entregável final**: o prompt que o mantenedor cola na sessão do Claude Opus 5 |
-| [adr/](adr/) | template e os 13 ADRs desta sessão |
+| [adr/](adr/) | template, os 13 ADRs da sessão de arquitetura e os da execução, a partir do 0014 |
 
 ## Resumo executivo das decisões
 
@@ -39,7 +39,7 @@ Os documentos estão numerados na ordem recomendada de leitura. Cada um é autoc
 - **Importação de CSV:** um arquivo por tipo de participação; colunas dinâmicas validadas contra o modelo de cada linha; encoding decidido por BOM, UTF-8 estrito e Windows-1252; o arquivo nunca é persistido; conciliação em cascata e aplicação em uma transação SQL com lock por evento e recálculo do diff. Importação nunca remove: remoção é manual, por lote, auditada. ([ADR-0011](adr/0011-staging-e-diff-em-sql.md), [ADR-0007](adr/0007-upsert-only-e-remocao-manual.md))
 - **Código de validação:** 10 símbolos Crockford Base32 (50 bits), imutável; correção de nome incrementa a versão. `/validar/[codigo]` é dinâmica, com estados válido, revogado, removido a pedido do titular, não encontrado e malformado.
 - **LGPD:** base legal do art. 7º, V; minimização no desenho; retenção de 5 anos para os dados de busca; eliminação deixa uma lápide sem dado pessoal; pedido de correção gravado na plataforma desde a fase 1.
-- **Operação:** Vercel em `gru1`, Supabase em `sa-east-1`, sem staging com banco; smoke diário que consulta a validação e impede a pausa do Supabase; e-mail em massa por fila em tabela com teto diário (fase 2).
+- **Operação:** Vercel em `gru1`, Supabase em `sa-east-1`, sem staging com banco (a Preview mostra o site vazio: [ADR-0014](adr/0014-site-vazio-quando-nao-ha-banco.md)); smoke diário que consulta a validação e impede a pausa do Supabase; e-mail em massa por fila em tabela com teto diário (fase 2).
 - **Execução:** M0 a M12, com o motor (M5) antes do editor (M6), CSV (M7) antes da busca (M8), e **produção no M9**, antes de qualquer conforto. ([ADR-0013](adr/0013-ordem-dos-milestones.md))
 
 ## O que ainda depende da organização
