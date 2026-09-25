@@ -37,7 +37,7 @@ erDiagram
 
 ## Extensões
 
-`pgcrypto` (bytes aleatórios do código de validação), `pg_trgm` (similaridade de nomes, só no admin), `pg_cron`, `pg_net`, `supabase_vault` (segredo do cron, herdado do ADR-0018 do CF Jobs), `pgtap` (testes). `unaccent` **não** é usada: ela é `STABLE`, não serve em coluna gerada sem wrapper, e o mapa explícito de `translate` abaixo é imutável de verdade e legível.
+`pgcrypto` (bytes aleatórios do código de validação), `pg_trgm` (similaridade de nomes, só no admin), `pg_cron`, `pg_net`, `supabase_vault` (segredo do cron, herdado do ADR-0018 do CF Jobs), `pgtap` (testes). A `0001` cria só as três primeiras: `pg_net` e o Vault chegam no M11, com o despacho da fila de e-mail, que é a primeira vez que o banco chama a aplicação; `pgtap` é criada pelos próprios arquivos de teste. `unaccent` **não** é usada: ela é `STABLE`, não serve em coluna gerada sem wrapper, e o mapa explícito de `translate` abaixo é imutável de verdade e legível.
 
 ## Enums
 
@@ -129,7 +129,7 @@ Editar um modelo publicado mexe só na cópia de trabalho. Os downloads em produ
 | `full_name` | text | not null, 3 a 120 após trim, espaços internos colapsados |
 | `full_name_normalized` | text | `generated always as (normalize_person_name(full_name)) stored`; check `length >= 3` |
 | `cpf_hash` | text | null; 64 hex. `HMAC-SHA256(CPF_PEPPER, cpf_salt + ':' + cpf)` |
-| `cpf_last3` | char(3) | null; check `(cpf_hash is null) = (cpf_last3 is null)` |
+| `cpf_last3` | text | null; check `^[0-9]{3}$` e `(cpf_hash is null) = (cpf_last3 is null)`. `text` com check, e não `char(3)`: mesmo comportamento, sem a semântica de preenchimento do `char`. |
 | `birth_date` | date | null; check entre `1900-01-01` e `current_date` |
 | `email` | text | null; gravado em minúsculas e com trim; check `email = lower(btrim(email))` |
 | `created_by_batch_id` | uuid | FK import_batches, null |
@@ -143,7 +143,7 @@ Unique `(id, event_id)` (alvo da FK composta de `certificates`). Espaço reserva
 | `event_id` | uuid | not null |
 | `participant_id` | uuid | null só quando `erased`. FK composta `(participant_id, event_id)` → `participants(id, event_id)` `on delete set null (participant_id)` |
 | `participation_type_id` | uuid | FK participation_types, not null, `on delete restrict` |
-| `code` | char(10) | unique, not null, `^[0-9A-HJKMNP-TV-Z]{10}$`. Gerado por `generate_certificate_code()`. **Imutável** (trigger rejeita update). |
+| `code` | text | unique, not null, check `^[0-9A-HJKMNP-TV-Z]{10}$`. Default `generate_certificate_code()`. **Imutável** (trigger rejeita update). |
 | `sequence_number` | int | not null. Sequencial por evento, atribuído na criação. Unique `(event_id, sequence_number)`. |
 | `hours` | numeric(5,1) | not null, `>= 0`. Padrão: `default_hours` do tipo. |
 | `data` | jsonb | not null default `'{}'`. Conteúdo dinâmico, validado contra `data_fields` do modelo na escrita. |
@@ -215,8 +215,9 @@ Unique `(participant_id, participation_type_id)`. Check `(status = 'erased') = (
 | `compute_import_diff(batch uuid)` | function | preenche `action`, `matched_*` e `match_rule` de cada `import_rows` ([doc 06](06-importacao-csv.md)) |
 | `apply_import(batch uuid, expected_digest text)` | function | lock, recálculo, comparação com a prévia, escrita. Tudo em uma transação. |
 | `check_rate_limit(key, max, window, increment default 1)` | function | a do CF Jobs com um parâmetro a mais: `increment = 0` consulta sem consumir ([doc 08](08-seguranca-e-lgpd.md)) |
-| `erase_participant(participant uuid, actor uuid)` | function | eliminação LGPD: lápide nos certificados, apaga o participante, tokens, pedidos e linhas de staging, e limpa o `diff` dos `audit_logs` daquela pessoa |
-| `rollup_event_stats(day date)` | function pg_cron | agrega logs crus em `event_stats_daily` |
+| `erase_participant(participant uuid)` | function | eliminação LGPD: lápide nos certificados, apaga o participante, tokens, pedidos e linhas de staging, e limpa o `diff` dos `audit_logs` daquela pessoa. Sem parâmetro de ator: a entrada de auditoria da eliminação é escrita pelo `defineAction`, como a de toda mutação. Pessoa inexistente é erro `P0002`. |
+| `rollup_event_stats(day date)` | function pg_cron | agrega logs crus em `event_stats_daily`. O dia é o de São Paulo, e não o UTC: é o que o agendamento das 03:30 UTC pressupõe ([doc 10](10-observabilidade.md)). Não reescreve `pdf_failures`, que a rota de download incrementa na hora. |
+| `prune_rate_limits()` | function pg_cron | acréscimo do M1: remove baldes com mais de dois dias. A limpeza por chave, dentro de `check_rate_limit`, não alcança chave que nunca mais volta, e as chaves de IP e de dispositivo giram todo dia. |
 | `prune_observability()` | function pg_cron | apaga `search_attempts`, `validation_checks` e `event_visits` com mais de 90 dias já agregados |
 | `prune_import_staging()` | function pg_cron | regras de expiração de `import_rows` acima |
 | `minimize_old_participants()` | function pg_cron | 5 anos após `ends_at`: zera `cpf_hash`, `cpf_last3`, `birth_date`, `email`. O certificado segue validável por código. |
@@ -287,14 +288,15 @@ Upload sempre direto do navegador para o Storage com URL assinada emitida por Se
 
 - `v_event_summary`: por evento, contagem de participantes, certificados `active`, emitidos, retirados (`first_downloaded_at is not null`), taxa de retirada, pedidos de correção pendentes, taxa de busca sem resultado dos últimos 7 dias.
 - `v_admin_overview`: totais gerais (eventos por status, certificados, retirada média).
-- `v_pending_downloads`: certificados `active` sem download, com nome e e-mail, para a exportação "quem ainda não baixou". `security_invoker = true` em todas.
+- `v_pending_downloads`: certificados `active` sem download, com nome e e-mail, para a exportação "quem ainda não baixou". `security_invoker = true` em todas, sem filtro de papel dentro da view: a conexão do servidor não carrega JWT, e um `authorize('editor')` ali esconderia os dados do próprio dashboard. `anon` perde o `select` nas três; para `reader`, a RLS das tabelas já zera tudo.
 
 ## Agendamentos pg_cron (UTC)
 
 | Horário | Job |
 |---|---|
-| `30 3 * * *` | `rollup_event_stats(yesterday)` |
+| `30 3 * * *` | `rollup_event_stats(yesterday)`, com "ontem" no fuso de São Paulo |
 | `0 4 * * *` | `prune_import_staging()` |
+| `45 4 * * *` | `prune_rate_limits()` |
 | `15 4 * * 0` | `prune_observability()` |
 | `0 5 1 * *` | `minimize_old_participants()` |
 | `*/10 * * * *` (P1) | `pg_net` → `POST /api/internal/email/dispatch` com o segredo lido do Vault |

@@ -32,27 +32,39 @@ na Vercel. O porquê de cada escolha, e de cada dependência nova, está no
 
 ## Rodando localmente
 
-Pré-requisitos: Node 24 LTS (há um `.nvmrc`), pnpm 11, Git e Docker (o Docker
-entra no M1, com o banco).
+Pré-requisitos: Node 24 LTS (há um `.nvmrc`), pnpm 11, Git e Docker.
 
 ```bash
 git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos
 pnpm install
 cp .env.example .env
+pnpm db:start   # Supabase local; a primeira vez baixa as imagens
+pnpm db:reset   # migrations do zero e os dois seeds
 pnpm dev
 ```
 
+O Supabase local deste projeto usa portas deslocadas em +100 (API em 54421,
+banco em 54422, Studio em 54423, e-mails de teste em 54424), para conviver
+com o do CF Jobs na mesma máquina. O seed de desenvolvimento cria
+`admin@cfeventos.local` e `editor@cfeventos.local`, com a senha
+`cfeventos-local`, que só existe localmente.
+
 ## Scripts
 
-| Comando                             | O que faz                                     |
-| ----------------------------------- | --------------------------------------------- |
-| `pnpm dev`                          | servidor de desenvolvimento                   |
-| `pnpm build`                        | build de produção                             |
-| `pnpm lint` · `pnpm typecheck`      | ESLint e TypeScript                           |
-| `pnpm format` · `pnpm format:check` | Prettier                                      |
-| `pnpm test` · `pnpm test:coverage`  | Vitest                                        |
-| `pnpm test:e2e`                     | Playwright                                    |
-| `pnpm check:env`                    | confere `.env.example` contra o schema de env |
+| Comando                                             | O que faz                                                  |
+| --------------------------------------------------- | ---------------------------------------------------------- |
+| `pnpm dev`                                          | servidor de desenvolvimento                                |
+| `pnpm build`                                        | build de produção                                          |
+| `pnpm lint` · `pnpm typecheck`                      | ESLint e TypeScript                                        |
+| `pnpm format` · `pnpm format:check`                 | Prettier                                                   |
+| `pnpm test` · `pnpm test:coverage`                  | Vitest                                                     |
+| `pnpm test:e2e`                                     | Playwright                                                 |
+| `pnpm check:env`                                    | confere `.env.example` contra o schema de env              |
+| `pnpm db:start` · `pnpm db:stop` · `pnpm db:status` | Supabase local                                             |
+| `pnpm db:reset`                                     | aplica as migrations do zero e os seeds                    |
+| `pnpm db:test`                                      | pgTAP: matriz de RLS, funções e guardas                    |
+| `pnpm check:schema`                                 | confere o schema Drizzle contra o banco, nas duas direções |
+| `pnpm check:migrations`                             | gate de expand/contract nas migrations                     |
 
 ## Contribuindo
 

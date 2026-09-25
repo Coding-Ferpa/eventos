@@ -27,15 +27,21 @@ ADR.
 
 ## Ambiente
 
-Pré-requisitos: Node 24 LTS, pnpm 11, Git e Docker (o Docker entra no M1, com
-o banco). O `.nvmrc` fixa a série do Node; o `engines` recusa outra.
+Pré-requisitos: Node 24 LTS, pnpm 11, Git e Docker. O `.nvmrc` fixa a série
+do Node; o `engines` recusa outra.
 
 ```bash
 git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos
 pnpm install
 cp .env.example .env
+pnpm db:start && pnpm db:reset
 pnpm dev
 ```
+
+As portas do Supabase local são as padrão deslocadas em +100 (banco em
+54422), para conviver com o CF Jobs. As contas `admin@cfeventos.local` e
+`editor@cfeventos.local`, senha `cfeventos-local`, vêm do seed e só existem
+localmente.
 
 O `.env.example` cresce por milestone e diz, em comentário, onde cada grupo de
 variáveis entra. Variável nova exige atualizar os dois lados no mesmo commit:

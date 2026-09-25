@@ -29,7 +29,7 @@ Como o "tempo até o download" é medido sem rastrear ninguém: a página do eve
 
 ## Agregação
 
-`rollup_event_stats(day)` roda às 03:30 UTC e consolida o dia anterior em `event_stats_daily` (`visits`, `searches`, `searches_not_found`, `first_downloads`, `downloads`, `validations`, `correction_requests`, `pdf_failures`). Os logs crus (`search_attempts`, `validation_checks`, `event_visits`) são podados após 90 dias, **só depois de agregados**. `certificate_downloads` fica: é o histórico de retirada que a exportação usa.
+`rollup_event_stats(day)` roda às 03:30 UTC, que é 00:30 em São Paulo, e consolida o dia anterior **de São Paulo** em `event_stats_daily` (`visits`, `searches`, `searches_not_found`, `first_downloads`, `downloads`, `validations`, `correction_requests`, `pdf_failures`). Os logs crus (`search_attempts`, `validation_checks`, `event_visits`) são podados após 90 dias, **só depois de agregados**. `certificate_downloads` fica: é o histórico de retirada que a exportação usa.
 
 O dia de evento é lido ao vivo (consulta direta aos logs do dia corrente, que são pequenos); o histórico vem do agregado.
 
