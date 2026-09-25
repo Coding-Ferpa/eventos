@@ -93,7 +93,7 @@ Check: `status <> 'certificates_available' or (search_by_cpf or search_by_email 
 
 `event_id` FK cascade · `slug text` (`participante`, `palestrante`, `organizador`, `monitor`, extensível) · `label text not null` · `aliases text[] default '{}'` (valores que a coluna de tipo do CSV pode trazer: `ouvinte`, `speaker`) · `default_hours numeric(5,1) not null check (default_hours >= 0)` · `certificate_template_id uuid` FK `certificate_templates` null · `sort_order int`. Unique `(event_id, slug)`.
 
-Os quatro tipos padrão são criados pela action `createEvent`, na mesma transação do evento (não por trigger: o admin pode apagar os que não usa). Vários tipos podem apontar para o mesmo modelo. Não existe modelo padrão do evento: um tipo com certificados e sem modelo publicado bloqueia a liberação. Uma regra a menos para explicar.
+Os quatro tipos padrão são criados pela action `createEvent`, na mesma transação do evento (não por trigger: o admin pode apagar os que não usa): `participante` (apelido `ouvinte`), `palestrante` (`speaker`), `organizador` (`organizacao`) e `monitor`, todos com `default_hours = 0`. O zero quer dizer "a definir", e a tela de tipos marca assim: um número inventado sairia impresso no certificado de quem ninguém conferiu. Vários tipos podem apontar para o mesmo modelo. Não existe modelo padrão do evento: um tipo com certificados e sem modelo publicado bloqueia a liberação. Uma regra a menos para explicar.
 
 ### `custom_fonts`
 

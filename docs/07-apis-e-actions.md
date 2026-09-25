@@ -44,12 +44,12 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 | Action | Entrada | Efeito | Tags |
 |---|---|---|---|
 | `createEvent` (editor) | `{ title, slug?, starts_at, ends_at?, location_name?, city?, state?, external_url?, description_md? }` | cria em `draft`, gera `cpf_salt`, cria os 4 tipos de participação padrão na mesma transação | `events` |
-| `updateEvent` (editor) | `{ id, ...parciais }` | `slug` só muda em `draft`; configuração de busca validada (ao menos uma chave independente para liberar) | `events`, `event:{slug}` |
-| `setEventStatus` (editor) | `{ id, status }` | transições livres entre os estados, **exceto** entrar em `certificates_available`, que só acontece por `releaseCertificates` | `events`, `event:{slug}` |
+| `updateEvent` (editor) | `{ id, ...parciais }` | só o que veio muda; campo apagado no formulário chega como `null` e apaga, ausente não muda. `slug` só muda em `draft` (`slug_locked`); término conferido contra o início do banco; configuração de busca validada pelo ADR-0009 (ao menos uma chave independente para liberar). `cover_path` só aponta para a pasta do próprio evento e é conferido pelos primeiros bytes (JPEG, PNG ou WebP); arquivo disfarçado é apagado do bucket | `events`, `event:{slug}` |
+| `setEventStatus` (editor) | `{ id, status }` | transições livres entre os estados, **exceto** entrar em `certificates_available`, que só acontece por `releaseCertificates`, e **voltar para `draft`**: o trigger do banco só trava o `slug` fora do rascunho, e voltar a ele destravaria a troca de um endereço que já pode estar em cartaz e em QR. Para tirar um evento do catálogo, arquiva-se (decisão do M4) | `events`, `event:{slug}` |
 | `releaseCertificates` (editor) | `{ id }` | pré-condições: ≥ 1 certificado ativo; todo tipo com certificados tem modelo **publicado**; ao menos uma chave de busca habilitada. Efeito: `status = certificates_available`, `certificates_released_at = now()`, `issued_at = now()` onde for null | `events`, `event:{slug}` |
 | `cloneEvent` (editor, M11) | `{ source_id, title, slug, starts_at }` | copia evento (em `draft`, `cpf_salt` **novo**), tipos, modelos (arte, `base.pdf`, prévias copiados no Storage; snapshot preservado; `column_mapping` junto) e configuração de busca. Não copia participantes nem certificados. | `events` |
 | `deleteEvent` (admin) | `{ id }` | só `draft` sem certificados | `events` |
-| `createCoverUploadUrl` (editor) | `{ event_id, content_type, size }` | URL assinada de upload no bucket `covers` | nenhuma |
+| `createCoverUploadUrl` (editor) | `{ event_id, content_type, size }` | URL assinada de upload no bucket `covers`, no caminho `{event_id}/{uuid}.{extensão}`; até 5 MB, o teto do bucket. O navegador sobe direto ao Storage, e a origem do Supabase entra no `connect-src` da CSP só nas rotas dinâmicas | nenhuma |
 
 ### Tipos de participação (`actions/participation-types.ts`)
 
@@ -190,7 +190,7 @@ A UI mapeia cada `code` para uma mensagem em pt-BR acionável ([doc 03](03-desig
 | Tela de retirada, validação, busca, download | **dinâmico** | `no-store` (PDF: `private, no-cache` com ETag) |
 | Admin | dinâmico | `force-dynamic` no layout |
 | `base.pdf` e fontes | cache de módulo da função | chave = sha256; nunca fica obsoleto porque conteúdo novo tem hash novo |
-| Fundo da prévia (WebP), capas | CDN do Storage | nome do objeto inclui o sha256: `immutable`, 1 ano |
+| Fundo da prévia (WebP), capas | CDN do Storage | nome do objeto único (o sha256 no fundo da prévia, um uuid na capa): `immutable`, 1 ano. Capa trocada deixa o objeto anterior sem referência no bucket, sem custo para a página |
 
 `updateTag` (e não `revalidateTag`) dentro de Server Action, pelo motivo do ADR-0014 do CF Jobs: leitura das próprias escritas. `revalidateTag` só na rota interna chamada de fora.
 

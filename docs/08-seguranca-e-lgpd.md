@@ -146,7 +146,7 @@ Sha256 simples basta aqui (ao contrário do CPF) porque o token tem 256 bits de 
 | A02 Cryptographic Failures | CPF só em HMAC; tokens só em hash; cookie de retirada em AES-GCM; segredos com 32 bytes do CSPRNG; TLS de ponta a ponta |
 | A03 Injection | Drizzle parametriza; Zod em toda entrada; Markdown do evento sanitizado (`rehype-sanitize`); **injeção de fórmula em planilha**: exportações XLSX escrevem texto como texto e prefixam com `'` valores que começam com `=`, `+`, `-` ou `@` |
 | A04 Insecure Design | resultado 0 ou 1; nascimento nunca é chave; dois baldes; importação com prévia e transação única; código imutável |
-| A05 Security Misconfiguration | cabeçalhos herdados (CSP com nonce nas rotas dinâmicas, HSTS, `frame-ancestors 'none'`); Data API desligada; buckets privados para arte e fontes |
+| A05 Security Misconfiguration | cabeçalhos herdados (CSP com nonce nas rotas dinâmicas, HSTS, `frame-ancestors 'none'`); o `connect-src` libera a origem do Supabase só nas rotas dinâmicas, onde o admin sobe arquivo por URL assinada; `upgrade-insecure-requests` fora de localhost; Data API desligada; buckets privados para arte e fontes |
 | A06 Vulnerable Components | Dependabot e `pnpm audit --prod` bloqueante, herdados |
 | A07 Auth Failures | Supabase Auth; cookies `HttpOnly`; nada em `localStorage` |
 | A08 Integrity | lockfile; arte do admin normalizada por `embedPage` (JavaScript e formulários do PDF original não chegam ao certificado); fonte enviada é parseada e validada antes de aceita; webhook do Resend com verificação de assinatura |

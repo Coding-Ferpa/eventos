@@ -46,8 +46,8 @@ export default async function HomePage() {
           </p>
         ) : (
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-            {eventos.map((evento) => (
-              <EventCard evento={evento} key={evento.slug} />
+            {eventos.map((evento, indice) => (
+              <EventCard evento={evento} key={evento.slug} primeiro={indice === 0} />
             ))}
           </ul>
         )}

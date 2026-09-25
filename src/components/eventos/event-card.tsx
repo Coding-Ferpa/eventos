@@ -14,7 +14,18 @@ import { StatusBadge } from './status-badge'
  * a intenção da pessoa (`HoverPrefetchLink`), em vez de baixar cada evento
  * que aparece na tela.
  */
-export function EventCard({ evento }: { evento: EventoDoCatalogo }) {
+export function EventCard({
+  evento,
+  primeiro = false,
+}: {
+  evento: EventoDoCatalogo
+  /**
+   * No celular, a capa do primeiro card é o maior elemento da primeira tela, e
+   * portanto o LCP: ela vem com prioridade, e as demais continuam `lazy`
+   * (ADR-0015, medido com A/B).
+   */
+  primeiro?: boolean
+}) {
   const periodo = formatarPeriodo(
     new Date(evento.startsAt),
     evento.endsAt ? new Date(evento.endsAt) : null,
@@ -31,6 +42,7 @@ export function EventCard({ evento }: { evento: EventoDoCatalogo }) {
             alt=""
             className="object-cover"
             fill
+            priority={primeiro}
             sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             src={srcDaCapa(evento)}
           />

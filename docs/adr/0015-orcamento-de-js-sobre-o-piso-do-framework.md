@@ -21,7 +21,7 @@ O [doc 09](../09-frontend-e-seo.md) fixou o JavaScript de rota em até 110 KB co
 | `/eventos/[slug]` | 151,1 KB | 151,4 KB | 214 → 214 KB | 2,32 a 2,48 s | 18 ms | 0 |
 | `/validar` | 161,2 KB | 152,4 KB | 247 → 228 KB | 2,48 a 2,49 s | 23 ms | 0 |
 
-Desempenho 0,98, acessibilidade 1, boas práticas 0,96 e SEO 1 nas três. O LCP não se moveu com nenhuma das três alavancas, nem com dois experimentos anteriores (tirar a fonte mono da página e carregar a capa do primeiro card sem `lazy`). No modelo simulado, o LCP carrega o download de tudo o que começou antes dele, e o grosso disso é o piso do framework. Em `/validar` o elemento do LCP é um parágrafo renderizado no servidor, que o aparelho pinta junto com o FCP, em 0,9 s.
+Desempenho 0,98, acessibilidade 1, boas práticas 0,96 e SEO 1 nas três. O LCP não se moveu com nenhuma das três alavancas, nem com a retirada da fonte mono da página. (Carregar a capa do primeiro card sem `lazy` também parecia não mover, numa amostra única; o M4 refez o teste e mostrou o contrário, na seção de consequências.) No modelo simulado, o LCP carrega o download de tudo o que começou antes dele, e o grosso disso é o piso do framework. Em `/validar` o elemento do LCP é um parágrafo renderizado no servidor, que o aparelho pinta junto com o FCP, em 0,9 s.
 
 ## Decisão
 **LCP, CLS e TBT são a asserção principal do gate de performance, e o total de KB de JavaScript é um tripwire de regressão, calculado como piso do framework, mais o nosso código medido, mais uma folga de feature.**
@@ -54,6 +54,7 @@ Quando o tripwire dispara, o PR mostra a medição, diz o porquê e acrescenta a
 ## Consequências
 - Positivas: o gate vigia o que o aluno sente, e o tripwire pega qualquer biblioteca nova sem pré-alocar folga para ninguém. O plano de dados do aluno ficou 26 KB mais leve por visita à `/`, e 19 KB mais leve em `/validar`.
 - Negativas: o LCP das três páginas está a menos de 0,1 s do limite no modelo simulado, então ele deve ser o primeiro a disparar, antes do tripwire. Quando isso acontecer, o trabalho é tirar bytes do caminho do LCP, e não afrouxar o limite. O piso sobe junto com o React e o Next.
+- **Primeiro disparo, no M4.** O LCP de `/` passou a 2,56 s, sem mudança no JavaScript público. No celular, o elemento do LCP é a capa do primeiro card, que carregava `lazy`. Num A/B na mesma sessão, com 5 execuções de cada variante, o `lazy` deu mediana de 2,47 s (2,47 a 2,65 s) e 2,56 s (2,47 a 2,63 s). Com `priority` só no primeiro card, a mediana foi a 2,40 s, com todas as execuções abaixo de 2,5 s (2,40 a 2,49 s). O primeiro card passou a ter `priority`, e os demais seguem `lazy`. O mesmo A/B mostrou que o ruído entre sessões mexe a mediana em até 90 ms, então o Lighthouse passou de 3 para 5 execuções.
 - Rever quando o piso do framework cair (numa major do React ou do Next) e apertar a linha do piso no mesmo PR.
 
 ## Alternativas consideradas

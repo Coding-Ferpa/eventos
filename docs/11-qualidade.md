@@ -7,7 +7,7 @@
 | Lógica pura | Vitest | `features/certificate`, `features/import`, `lib/` (HMAC, cookies, códigos, formatação) | `pnpm test`, sem banco, sem rede |
 | Componentes | Vitest + Testing Library (jsdom) | formulário de busca, campo de código, assistente de importação, painéis do editor | `pnpm test` |
 | Banco | pgTAP | matriz de RLS, funções, triggers, `revoke` das `security definer` | `pnpm db:test` (Supabase local) |
-| Integração | Vitest (`vitest.integration.config.ts`) contra o Supabase local | importação de ponta a ponta, conciliação, `apply_import`, `public-lookup`, rate limit, eliminação LGPD | `pnpm test:integration` |
+| Integração | Vitest (`vitest.integration.config.ts`) contra o Supabase local | Server Actions com sessão real em cada papel (login de senha no GoTrue local, herdado do CF Jobs: é o que prova o gate do `defineAction`), importação de ponta a ponta, conciliação, `apply_import`, `public-lookup`, rate limit, eliminação LGPD | `pnpm test:integration` |
 | E2E | Playwright (Chromium e WebKit; viewport de celular nos fluxos públicos) | fluxos de usuário numerados abaixo | `pnpm test:e2e` |
 | Acessibilidade | `@axe-core/playwright` | páginas públicas e telas-chave do admin | dentro do E2E |
 | Performance | Lighthouse CI | orçamentos do [doc 09](09-frontend-e-seo.md) | job `lighthouse` |
@@ -69,7 +69,7 @@ Numeradas: os milestones do [doc 14](14-prompt-de-execucao-opus-5.md) citam este
 | E03 | Tema | escuro por padrão; alternar persiste no cookie `cf-tema` após recarregar; sem flash na primeira pintura |
 | E04 | SEO | página do evento tem canonical, Open Graph com capa, JSON-LD `Event` válido; evento sem capa serve a capa gerada (200, imagem) |
 | E05 | Login e guarda | `reader` não entra em `/admin`; `editor` entra; `editor` não vê gestão de usuários |
-| E06 | CRUD de evento | criar, editar, mudar status; aparece no catálogo; os 4 tipos padrão existem |
+| E06 | CRUD de evento | criar, editar, mudar status; aparece no catálogo na mesma navegação; os 4 tipos padrão existem; a capa enviada sobe ao Storage e a página pública a serve pelo `next/image`; apagar é do admin, só em rascunho. As E2E que criam dados os apagam no fim, direto no banco local |
 | E07 | Modelo por formulário | subir arte, declarar um campo de conteúdo, posicionar nome, código e QR por números, ver a prévia mudar, testar o nome mais longo, publicar; modelo sem nome não publica |
 | E08 | Importação feliz | CSV do Excel pt-BR: inspeção mostra acentos certos; mapeamento sugerido; prévia com contadores; aplicar; participantes na lista |
 | E09 | Reimportação | mesmo arquivo: 0 a criar, 0 a atualizar; arquivo com nome corrigido: 1 a atualizar, com antes e depois |
@@ -108,7 +108,7 @@ Configurado em `vitest.config.ts` com `thresholds` por glob; abaixo disso o CI f
 
 ## Lighthouse e acessibilidade
 
-`lighthouserc.json` com as URLs `/`, `/eventos/{slug-do-seed}` e `/validar`, perfil mobile, 3 execuções, mediana, asserções do [doc 09](09-frontend-e-seo.md): LCP, CLS e TBT como asserção principal, e os KB de JavaScript como tripwire de regressão ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Rode o Lighthouse no Linux, como o CI: no Windows, o build do Next 16.3 com webpack não pré-carrega fonte nenhuma, porque o plugin do manifesto de fontes compara o caminho do módulo com barra normal, e o FCP local sai uns 300 ms pior.
+`lighthouserc.json` com as URLs `/`, `/eventos/{slug-do-seed}` e `/validar`, perfil mobile, 5 execuções, mediana (com 3, o ruído do modelo simulado mexia a mediana do LCP em até 90 ms entre sessões), asserções do [doc 09](09-frontend-e-seo.md): LCP, CLS e TBT como asserção principal, e os KB de JavaScript como tripwire de regressão ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Rode o Lighthouse no Linux, como o CI: no Windows, o build do Next 16.3 com webpack não pré-carrega fonte nenhuma, porque o plugin do manifesto de fontes compara o caminho do módulo com barra normal, e o FCP local sai uns 300 ms pior.
 
 A E03 verifica o tema na primeira pintura de fato: um `requestAnimationFrame` agendado antes de qualquer script da página tem de encontrar o `data-theme` já aplicado. Os atributos do cookie de dispositivo são conferidos no `Set-Cookie` da resposta, e não no pote de cookies do navegador, porque o WebKit do Playwright fora do macOS reporta todo cookie como `SameSite=None`. axe no Playwright falha em violação `serious` ou `critical`. Revisão manual com leitor de tela (NVDA ou VoiceOver) do fluxo busca → retirada → download, uma vez, no M8, registrada no PR.
 
