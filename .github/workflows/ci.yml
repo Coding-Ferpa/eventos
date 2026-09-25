@@ -117,7 +117,19 @@ jobs:
         run: |
           eval "$(pnpm exec supabase status -o env | grep -E '^DB_URL=' | sed 's/^/export /')"
           DATABASE_URL="$DB_URL" pnpm check:schema
-      # Entra aqui: test:integration no M7, com a importação.
+      # Server Actions com sessão de verdade em cada papel: o gate real da
+      # escrita é o defineAction, e é esta suíte que o prova (doc 12).
+      - name: Testes de integração
+        run: |
+          eval "$(pnpm exec supabase status -o env | grep -E '^[A-Z_]+=' | sed 's/^/export /')"
+          export NEXT_PUBLIC_SITE_URL=http://localhost:3000
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          export DATABASE_URL="$DB_URL"
+          export DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos
+          export IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo
+          pnpm test:integration
       - name: Derruba o Supabase
         if: ${{ always() }}
         run: pnpm db:stop
@@ -147,6 +159,7 @@ jobs:
             echo "DATABASE_URL=$DB_URL"
             echo "DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos"
             echo "IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
       - run: pnpm build
       # LCP, CLS e TBT são a asserção principal; os KB de JavaScript são o
@@ -196,6 +209,7 @@ jobs:
             # propósito, e recusados pelo schema dentro da Vercel.
             echo "DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos"
             echo "IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
       # O build roda pelo `webServer` do playwright.config.ts.
       - run: pnpm test:e2e

@@ -13,6 +13,8 @@ export type ActionErrorCode =
   | 'validation_error'
   | 'rate_limited'
   | 'conflict'
+  // Eventos (doc 07). Os códigos de cada domínio entram com a action que os usa.
+  | 'slug_locked'
 
 export type ActionError = {
   code: ActionErrorCode

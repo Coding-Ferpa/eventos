@@ -95,6 +95,7 @@ describe('parseServerEnv', () => {
       'postgresql://postgres.abc:senha@aws-0-sa-east-1.pooler.supabase.com:6543/postgres',
     DEVICE_COOKIE_SECRET: 'Zm9ybWF0by1kZS1vcGVuc3NsLXJhbmQtYmFzZTY0LTMy',
     IP_HASH_SECRET: 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns',
+    SUPABASE_SERVICE_ROLE_KEY: 'chave-de-servico',
   }
 
   it('aceita o pooler e os segredos, sem exigir o GitHub', () => {

@@ -143,6 +143,10 @@ export const serverEnvSchema = z
     // (doc 08). Sem banco, fora da produção, ninguém os lê (ADR-0014).
     DEVICE_COOKIE_SECRET: segredo(),
     IP_HASH_SECRET: segredo(),
+
+    // M4: URL assinada de upload no Storage, e a leitura do que foi enviado.
+    // Ignora a RLS: só é usada depois de sessão e papel conferidos.
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(

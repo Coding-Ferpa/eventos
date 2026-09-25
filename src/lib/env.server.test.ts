@@ -16,6 +16,7 @@ function stubServidorValido() {
   vi.stubEnv('DATABASE_URL', POOLER)
   vi.stubEnv('DEVICE_COOKIE_SECRET', 'Zm9ybWF0by1kZS1vcGVuc3NsLXJhbmQtYmFzZTY0LTMy')
   vi.stubEnv('IP_HASH_SECRET', 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns')
+  vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'chave-de-servico')
 }
 
 async function envNovo() {

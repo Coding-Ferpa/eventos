@@ -22,12 +22,12 @@ describe('novoEventoSchema', () => {
     expect(evento.descriptionMd).toBe('')
   })
 
-  it('campo deixado em branco no formulário vira ausente, e não texto vazio', () => {
+  it('campo deixado em branco no formulário vira nulo, e não texto vazio', () => {
     const evento = novoEventoSchema.parse({ ...NOVO, city: '  ', state: '', endsAt: '' })
 
-    expect(evento.city).toBeUndefined()
-    expect(evento.state).toBeUndefined()
-    expect(evento.endsAt).toBeUndefined()
+    expect(evento.city).toBeNull()
+    expect(evento.state).toBeNull()
+    expect(evento.endsAt).toBeNull()
   })
 
   it('recusa término antes do início, apontando o campo do término', () => {
@@ -79,6 +79,16 @@ describe('atualizacaoDeEventoSchema', () => {
       id: '5e000000-0000-4000-8000-000000000001',
       searchByName: true,
     })
+  })
+
+  it('campo apagado vira nulo, que apaga; campo ausente não muda nada', () => {
+    const id = '5e000000-0000-4000-8000-000000000001'
+
+    expect(atualizacaoDeEventoSchema.parse({ id, externalUrl: '' })).toEqual({
+      id,
+      externalUrl: null,
+    })
+    expect(atualizacaoDeEventoSchema.parse({ id })).toEqual({ id })
   })
 
   it('a capa só pode apontar para a pasta do próprio evento', () => {

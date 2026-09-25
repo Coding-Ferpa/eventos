@@ -7,6 +7,7 @@ import { z } from '@/lib/zod'
 import { db, type Transaction } from '@/db/client'
 import { auditLogs } from '@/db/schema'
 import { getCurrentUser, type CurrentUser } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import type { UserRole } from '@/lib/roles'
 
 import { autorizar } from './authorize'
@@ -55,6 +56,11 @@ type Efeito<TData> = {
    * operação em massa, contadores e não nomes (doc 07).
    */
   diff?: unknown
+  /**
+   * Tags que dependem do dado, como `event:{slug}`: só a operação sabe o slug
+   * do evento que mudou. Somam-se às de `revalidar`.
+   */
+  tags?: string[]
 }
 
 type Config<TSchema extends z.ZodType, TData> = {
@@ -117,7 +123,14 @@ export function defineAction<TSchema extends z.ZodType, TData>(
         return actionError(erro.code, erro.message, erro.fieldErrors)
       }
 
-      console.error(`[action:${config.nome}]`, erro)
+      // Pelo logger, e não pelo console: a mensagem de um erro do banco pode
+      // trazer o valor que violou a regra, e a lista branca do doc 10 deixa
+      // passar só o nome da action e o código SQLSTATE.
+      logger.error({
+        event: 'action.failed',
+        route: config.nome,
+        code: codigoDoErro(erro),
+      })
       return actionError(
         'validation_error',
         'Não conseguimos concluir a operação. Tente de novo em instantes.',
@@ -131,8 +144,20 @@ export function defineAction<TSchema extends z.ZodType, TData>(
     // dá read-your-own-writes dentro de uma Server Action, o comportamento de
     // que este admin depende (publicar e ver no catálogo no mesmo passo).
     // ADR-0014 do CF Jobs, herdado pelo ADR-0001.
-    for (const tag of config.revalidar ?? []) updateTag(tag)
+    for (const tag of [...(config.revalidar ?? []), ...(efeito.tags ?? [])]) {
+      updateTag(tag)
+    }
 
     return actionOk(efeito.data)
   }
+}
+
+/** O código SQLSTATE de um erro do Postgres, se for um. Nunca a mensagem. */
+function codigoDoErro(erro: unknown): string | null {
+  const causa = erro instanceof Error && erro.cause ? erro.cause : erro
+  if (typeof causa === 'object' && causa !== null && 'code' in causa) {
+    const codigo = (causa as { code: unknown }).code
+    if (typeof codigo === 'string') return codigo
+  }
+  return null
 }

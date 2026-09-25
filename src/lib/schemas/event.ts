@@ -51,11 +51,16 @@ export const UFS = [
 
 const DATA_E_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 
-/** Campo em branco no formulário quer dizer "não informei". */
+/**
+ * Campo em branco no formulário vira `null`. Na criação é o mesmo que não
+ * informar; na atualização quer dizer "apague", e ausente quer dizer "deixe
+ * como está". Sem essa diferença não haveria como tirar de um evento o link
+ * de inscrição.
+ */
 function opcional<T extends z.ZodType>(schema: T) {
   return z.preprocess(
-    (valor) => (typeof valor === 'string' && valor.trim() === '' ? undefined : valor),
-    schema.optional(),
+    (valor) => (typeof valor === 'string' && valor.trim() === '' ? null : valor),
+    schema.nullable().optional(),
   )
 }
 
@@ -115,7 +120,7 @@ const camposDaBusca = z.object({
 export type ConfiguracaoDeBusca = z.infer<typeof camposDaBusca>
 
 function terminoDepoisDoInicio(
-  evento: { startsAt?: Date; endsAt?: Date },
+  evento: { startsAt?: Date; endsAt?: Date | null },
   ctx: z.RefinementCtx,
 ) {
   if (evento.startsAt && evento.endsAt && evento.endsAt < evento.startsAt) {
