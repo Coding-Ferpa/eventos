@@ -30,7 +30,6 @@ function mensagemDeErro(entrada: string): string | null {
 
 export function CodeInput({ classeDaFonte }: { classeDaFonte?: string }) {
   const router = useRouter()
-  const [valor, setValor] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const idDoCampo = useId()
   const idDaAjuda = useId()
@@ -39,6 +38,7 @@ export function CodeInput({ classeDaFonte }: { classeDaFonte?: string }) {
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault()
 
+    const valor = String(new FormData(evento.currentTarget).get('codigo') ?? '')
     const problema = mensagemDeErro(valor)
     if (problema) {
       setErro(problema)
@@ -66,14 +66,18 @@ export function CodeInput({ classeDaFonte }: { classeDaFonte?: string }) {
           )}
           id={idDoCampo}
           inputMode="text"
+          name="codigo"
+          // Não controlado de propósito: o valor mora no DOM. Num celular
+          // lento, quem digita antes da hidratação não perde o que digitou,
+          // o que um `value` controlado pelo React apagaria ao assumir.
           onChange={(evento) => {
-            setValor(formatCode(canonicalizeCode(evento.target.value)))
+            const campo = evento.currentTarget
+            campo.value = formatCode(canonicalizeCode(campo.value))
             setErro(null)
           }}
           placeholder="XXXX-XXX-XXX"
           spellCheck={false}
           type="text"
-          value={valor}
         />
         <p className="text-caption text-muted-foreground" id={idDaAjuda}>
           São 10 caracteres, como em 7K2M-9QF-4TX. Não precisa digitar os hífens.
