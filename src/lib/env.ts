@@ -68,6 +68,10 @@ function recusarEnderecoLocal(
 export const clientEnvSchema = z
   .object({
     NEXT_PUBLIC_SITE_URL: z.url(),
+    NEXT_PUBLIC_SUPABASE_URL: z.url(),
+    // Pública por construção: a RLS é quem protege os dados, e a Data API fica
+    // desligada em produção (ADR-0012).
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(
@@ -78,13 +82,24 @@ export const clientEnvSchema = z
         'projeto enquanto ele não existe. É o que vai no canonical, no Open ' +
         'Graph e no QR de todo certificado.',
     )
+    recusarEnderecoLocal(
+      'NEXT_PUBLIC_SUPABASE_URL',
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      ctx,
+      'Use a Project URL do painel do Supabase.',
+    )
   })
 
 export const serverEnvSchema = z
   .object({
-    // Pooler Supavisor em modo transaction, usado pelo Drizzle (doc 01). O
-    // primeiro a ler é o `check:schema`; a aplicação passa a ler no M3.
+    // Pooler Supavisor em modo transaction, usado pelo Drizzle (doc 01).
     DATABASE_URL: z.string().min(1),
+
+    // Opcionais: sem elas o login com GitHub simplesmente não é oferecido. Os
+    // nomes são os que a CLI do Supabase lê no `config.toml`, então o mesmo
+    // par configura o provider local e a detecção do recurso na aplicação.
+    SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID: z.string().min(1).optional(),
+    SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(
@@ -139,12 +154,35 @@ export function parseServerEnv(source: unknown): ServerEnv {
 // estático: por isso a leitura explícita, chave por chave.
 const rawClientEnv = {
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 }
 
 let cachedClientEnv: ClientEnv | undefined
+let cachedServerEnv: ServerEnv | undefined
 
 /** Variáveis públicas: seguras em qualquer runtime. */
 export function clientEnv(): ClientEnv {
   cachedClientEnv ??= parseClientEnv(rawClientEnv)
   return cachedClientEnv
+}
+
+/** Variáveis de servidor, incluindo segredos. Nunca chamar em código de cliente. */
+export function serverEnv(): ServerEnv {
+  if (typeof window !== 'undefined') {
+    throw new Error(
+      'serverEnv() só pode ser lido no servidor: use clientEnv() em código de navegador.',
+    )
+  }
+  cachedServerEnv ??= parseServerEnv(process.env)
+  return cachedServerEnv
+}
+
+/**
+ * O login com GitHub só aparece quando há credenciais configuradas: em
+ * desenvolvimento a entrada é por e-mail e senha, e o OAuth App é criado na
+ * ida para produção (M9).
+ */
+export function isGithubOAuthEnabled(): boolean {
+  return Boolean(serverEnv().SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)
 }
