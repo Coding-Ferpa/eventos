@@ -36,6 +36,13 @@ export type ContentSecurityPolicyOptions = {
   nonce?: string
   /** Em desenvolvimento o Next precisa de `unsafe-eval` (HMR e React Refresh). */
   isDev: boolean
+  /**
+   * Servido em localhost, como no `pnpm start` das E2E e do Lighthouse. Lá não
+   * existe HTTPS para onde subir, e o WebKit, ao contrário do Chromium, sobe
+   * mesmo assim: pede o CSS e o JS por https://localhost, e a página sai sem
+   * estilo e sem hidratar.
+   */
+  localhost?: boolean
 }
 
 const SELF = "'self'"
@@ -43,6 +50,7 @@ const SELF = "'self'"
 export function buildContentSecurityPolicy({
   nonce,
   isDev,
+  localhost = false,
 }: ContentSecurityPolicyOptions): string {
   const scriptSrc = nonce
     ? [SELF, `'nonce-${nonce}'`, "'strict-dynamic'"]
@@ -68,7 +76,7 @@ export function buildContentSecurityPolicy({
   ]
 
   const policy = directives.map(([name, values]) => `${name} ${values.join(' ')}`)
-  if (!isDev) policy.push('upgrade-insecure-requests')
+  if (!isDev && !localhost) policy.push('upgrade-insecure-requests')
 
   return policy.join('; ')
 }

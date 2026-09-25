@@ -37,6 +37,7 @@ export async function proxy(request: NextRequest) {
   const csp = buildContentSecurityPolicy({
     nonce,
     isDev: process.env.NODE_ENV === 'development',
+    localhost: ['localhost', '127.0.0.1', '[::1]'].includes(request.nextUrl.hostname),
   })
 
   const requestHeaders = new Headers(request.headers)

@@ -55,6 +55,18 @@ describe('buildContentSecurityPolicy', () => {
       'upgrade-insecure-requests',
     )
   })
+
+  it('não manda subir para HTTPS quem é servido em localhost', () => {
+    // Em http://localhost não existe HTTPS para onde subir. O WebKit obedece
+    // mesmo assim e pede o CSS e o JS por https://localhost, e a página sai
+    // sem estilo e sem hidratar; o Chromium isenta o localhost.
+    expect(buildContentSecurityPolicy({ isDev: false, localhost: true })).not.toContain(
+      'upgrade-insecure-requests',
+    )
+    expect(buildContentSecurityPolicy({ isDev: false, localhost: false })).toContain(
+      'upgrade-insecure-requests',
+    )
+  })
 })
 
 describe('staticSecurityHeaders', () => {
