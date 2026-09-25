@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 
 import { canonicalizeCode, diagnoseCode, formatCode } from '@/features/certificate/code'
-import { cn } from '@/lib/cn'
 
 /**
  * Campo do código de validação (doc 03, 6e). Maiúsculas e hífens aparecem
@@ -60,10 +59,14 @@ export function CodeInput({ classeDaFonte }: { classeDaFonte?: string }) {
           aria-invalid={erro ? true : undefined}
           autoCapitalize="characters"
           autoComplete="off"
-          className={cn(
+          // Junção simples, sem `cn`: o `tailwind-merge` custaria 9 KB no
+          // navegador, e estas classes não conflitam entre si.
+          className={[
             'bg-card border-border focus:border-primary text-h3 min-h-14 rounded-md border px-4 font-mono tracking-wider',
             classeDaFonte,
-          )}
+          ]
+            .filter(Boolean)
+            .join(' ')}
           id={idDoCampo}
           inputMode="text"
           name="codigo"
