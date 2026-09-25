@@ -74,7 +74,7 @@ select is(
 insert into public.rate_limits (key, window_start, request_count) values
   ('dev:abandonada', now() - interval '3 days', 1),
   ('dev:recente', now() - interval '1 hour', 1);
-select is(public.prune_rate_limits(), 2,
+select is(public.prune_rate_limits(), 1,
   'a poda remove baldes com mais de dois dias, inclusive de chave que nunca mais voltou');
 select is(
   (select count(*) from public.rate_limits where key = 'dev:recente'),
