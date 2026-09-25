@@ -1,0 +1,39 @@
+/**
+ * Retorno padrão das Server Actions (doc 07). Actions nunca lançam exceção
+ * para o cliente: erro é dado, com código do catálogo e mensagem já em pt-BR.
+ *
+ * O catálogo cresce com os milestones: cada domínio acrescenta os próprios
+ * códigos quando a primeira action dele existir.
+ */
+
+export type ActionErrorCode =
+  | 'unauthorized'
+  | 'forbidden'
+  | 'not_found'
+  | 'validation_error'
+  | 'rate_limited'
+  | 'conflict'
+
+export type ActionError = {
+  code: ActionErrorCode
+  message: string
+  /** Erros por campo do formulário, no formato que o Zod devolve. */
+  fieldErrors?: Record<string, string[]>
+}
+
+export type ActionResult<T = undefined> =
+  { ok: true; data: T } | { ok: false; error: ActionError }
+
+export function actionOk(): ActionResult
+export function actionOk<T>(data: T): ActionResult<T>
+export function actionOk<T>(data?: T): ActionResult<T | undefined> {
+  return { ok: true, data }
+}
+
+export function actionError(
+  code: ActionErrorCode,
+  message: string,
+  fieldErrors?: Record<string, string[]>,
+): ActionResult<never> {
+  return { ok: false, error: { code, message, fieldErrors } }
+}
