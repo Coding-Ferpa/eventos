@@ -210,6 +210,8 @@ Canal: o e-mail do encarregado em `/privacidade`. Procedimento (runbook):
    - certificados viram lápide: `status = 'erased'`, `participant_id = null`, `data = '{}'`. Ficam o código, o tipo e as datas, sem nenhum dado pessoal;
    - o participante é apagado, junto com tokens de acesso, pedidos de correção, entregas de e-mail e linhas de staging;
    - os `diff` dos `audit_logs` que citam aquela pessoa são substituídos por `{"scrubbed": true}`. A entrada de auditoria da própria eliminação registra o ator e a data, sem o nome.
+
+   **Pendência do runbook do M9.** A função `erase_participant` não recebe o ator: pela aplicação, quem audita é o `defineAction`. Só que a eliminação por LGPD é justamente a operação com mais chance de ser rodada à mão no console, durante um pedido real, e por ali não fica rastro de quem executou. O runbook do M9 decide entre duas saídas: proibir o caminho manual, ou fazer a função gravar `current_user` na auditoria por conta própria.
 4. **Responder ao titular em até 15 dias.**
 
 A lápide existe por honestidade com terceiros: um papel que circula por aí não pode virar "código inexistente" (o que sugere fraude) nem continuar exibindo o nome de quem pediu para sair.

@@ -30,6 +30,17 @@ O CF Eventos é o segundo projeto da casa. A stack é a do CF Jobs, versão por 
 
 **Uma divergência deliberada de arquivo herdado:** o `engines` deste projeto é `>=24.15 <25`, e não o `>=24.15` do CF Jobs. O intervalo aberto aceita o Node 26 e não expressa a decisão da tabela acima, que é a série 24 LTS; com o teto, quem desenvolve em outra série descobre no `pnpm install` e não no PR. O `.npmrc` mantém `engine-strict=true`, sem o qual o teto viraria aviso, e um `.nvmrc` com a série 24 fixa a versão de quem clona.
 
+### Majors seguradas de propósito
+
+Conferido em 2026-09-25, contra os peers publicados naquele dia. Cada linha tem um motivo concreto e um gatilho de revisão. Não é "nunca", é "ainda não": revisitar quando o gatilho acontecer, e não antes. A mesma tabela vale para o CF Jobs, e uma casa não sobe sem a outra, para os mesmos contribuidores não conviverem com dois padrões.
+
+| Segurado em | Major disponível | O que trava | Revisitar quando |
+|---|---|---|---|
+| ESLint 9 (`eslint`, `@eslint/js`) | 10 | `eslint-plugin-react` declara peer `^9.7` e `eslint-plugin-jsx-a11y` declara `^9` | os dois plugins declararem suporte ao 10 |
+| TypeScript 6.0 | 7 | `typescript-eslint` 8.70.1 declara `typescript <6.1.0`; na 7 o lint inteiro para | o `typescript-eslint` declarar suporte |
+| `@types/node` 24 | 26 | não é bloqueio: os tipos acompanham a série do runtime (24), e tipar API que o runtime não tem troca erro de compilação por erro de produção | o runtime mudar de série |
+| Vitest 4 (`vitest`, `@vitest/coverage-v8`) | 5 | a major saiu em 03/09/2026 e está na 5.0.2, publicada em 25/09; o ecossistema em volta ainda se acomoda. Decisão do mantenedor, para as duas casas | sair a 5.1, ou no fechamento do M7, o que vier antes |
+
 ADRs do CF Jobs que valem aqui sem reescrita estão listados no [ADR-0001](adr/0001-heranca-do-cf-jobs.md).
 
 **O que o CF Jobs tem e este projeto não leva:** Vercel AI SDK, `linkedom`, `@mozilla/readability`, `turndown` (pipeline de IA), `zod-openapi` e Scalar (não há API pública versionada, [doc 07](07-apis-e-actions.md)).
