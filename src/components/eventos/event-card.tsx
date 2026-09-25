@@ -1,7 +1,7 @@
 import { CalendarDays, MapPin } from 'lucide-react'
 import Image from 'next/image'
-import Link from 'next/link'
 
+import { HoverPrefetchLink } from '@/components/layout/hover-prefetch-link'
 import type { EventoDoCatalogo } from '@/db/queries/events'
 import { srcDaCapa } from '@/lib/capa'
 import { formatarLocal, formatarPeriodo } from '@/lib/format'
@@ -10,7 +10,9 @@ import { StatusBadge } from './status-badge'
 
 /**
  * Card de evento do catálogo (doc 03, 6a). Um único link envolve o card todo:
- * o título nomeia o link, por isso a capa tem `alt` vazio.
+ * o título nomeia o link, por isso a capa tem `alt` vazio. O prefetch espera
+ * a intenção da pessoa (`HoverPrefetchLink`), em vez de baixar cada evento
+ * que aparece na tela.
  */
 export function EventCard({ evento }: { evento: EventoDoCatalogo }) {
   const periodo = formatarPeriodo(
@@ -20,7 +22,7 @@ export function EventCard({ evento }: { evento: EventoDoCatalogo }) {
 
   return (
     <li>
-      <Link
+      <HoverPrefetchLink
         className="bg-card border-border hover:border-primary hover:shadow-glow active:border-primary flex h-full flex-col overflow-hidden rounded-md border transition duration-150 ease-out hover:-translate-y-0.5"
         href={`/eventos/${evento.slug}`}
       >
@@ -48,7 +50,7 @@ export function EventCard({ evento }: { evento: EventoDoCatalogo }) {
             {formatarLocal(evento)}
           </p>
         </div>
-      </Link>
+      </HoverPrefetchLink>
     </li>
   )
 }
