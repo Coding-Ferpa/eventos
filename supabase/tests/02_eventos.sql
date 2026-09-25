@@ -141,7 +141,9 @@ select lives_ok(
   $$ insert into public.participation_types (event_id, slug, label, default_hours)
      values ('e0000000-0000-4000-8000-000000000002', 'palestrante', 'Palestrante', 2) $$,
   'editor cria tipo de participação');
-select is((select count(*) from public.participation_types), 2::bigint, 'editor vê os tipos');
+select is((select count(*) from public.participation_types
+            where event_id = 'e0000000-0000-4000-8000-000000000002'),
+  2::bigint, 'editor vê os tipos');
 
 delete from public.events where id = 'e0000000-0000-4000-8000-000000000001';
 select is((select count(*) from public.events where id = 'e0000000-0000-4000-8000-000000000001'),

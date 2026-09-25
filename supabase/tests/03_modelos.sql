@@ -130,7 +130,9 @@ set local role authenticated;
 set local request.jwt.claims =
   '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"editor"}';
 
-select is((select count(*) from public.certificate_templates), 2::bigint, 'editor vê os modelos');
+select is((select count(*) from public.certificate_templates
+            where event_id in ('e0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000002')),
+  2::bigint, 'editor vê os modelos');
 select lives_ok(
   $$ insert into public.certificate_templates (event_id, name)
      values ('e0000000-0000-4000-8000-000000000002', 'Palestrante B') $$,

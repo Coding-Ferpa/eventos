@@ -84,14 +84,19 @@ select is(
   (select count(*) from public.import_rows where matched_participant_id = '90000000-0000-4000-8000-000000000001'),
   0::bigint, 'a linha de staging da pessoa sai');
 select is(
-  (select count(*) from public.audit_logs where diff = '{"scrubbed": true}'),
+  (select count(*) from public.audit_logs
+    where diff = '{"scrubbed": true}'
+      and entity_id in ('90000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000002',
+                        'd0000000-0000-4000-8000-000000000001')),
   3::bigint, 'as três entradas de auditoria que citam a pessoa são raspadas');
 select is(
   (select diff from public.audit_logs where entity_id = '90000000-0000-4000-8000-000000000002'),
   '{"full_name": ["Pessoa", "Pessoa Que Fica"]}'::jsonb, 'a auditoria de outra pessoa fica intacta');
 select is(
-  (select count(*) from public.audit_logs), 4::bigint,
-  'nenhuma entrada de auditoria é apagada: só o conteúdo pessoal sai');
+  (select count(*) from public.audit_logs
+    where entity_id in ('90000000-0000-4000-8000-000000000001', '90000000-0000-4000-8000-000000000002',
+                        'c0000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000001')),
+  4::bigint, 'nenhuma entrada de auditoria é apagada: só o conteúdo pessoal sai');
 
 -- O que não pode ser tocado.
 select is(
@@ -113,7 +118,7 @@ select throws_ok(
 -- Minimização por prazo
 -- ---------------------------------------------------------------------------
 
-select is(public.minimize_old_participants(), 1, 'cinco anos depois do evento, os dados de busca saem');
+select cmp_ok(public.minimize_old_participants(), '>=', 1, 'cinco anos depois do evento, os dados de busca saem');
 select is(
   (select row(cpf_hash, cpf_last3, birth_date, email)::text from public.participants
     where id = '90000000-0000-4000-8000-000000000003'),

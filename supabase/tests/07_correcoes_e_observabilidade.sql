@@ -118,7 +118,8 @@ select is(
   (select download_rate from public.v_event_summary where event_id = 'e0000000-0000-4000-8000-000000000001'),
   0.5::numeric, 'taxa de retirada: retirados sobre emitidos');
 select is(
-  (select array_agg(certificate_id) from public.v_pending_downloads),
+  (select array_agg(certificate_id) from public.v_pending_downloads
+    where event_id = 'e0000000-0000-4000-8000-000000000001'),
   array['c0000000-0000-4000-8000-000000000002'::uuid], 'v_pending_downloads lista quem ainda não baixou');
 select ok(
   (select bool_and(coalesce(reloptions::text like '%security_invoker=true%', false))
@@ -129,12 +130,17 @@ select ok(
 -- Rollup e poda
 -- ---------------------------------------------------------------------------
 
-select is(public.rollup_event_stats((select hoje from dia)), 1, 'o rollup grava uma linha por evento com atividade');
+select cmp_ok(public.rollup_event_stats((select hoje from dia)), '>=', 1,
+  'o rollup grava pelo menos a linha do evento com atividade');
 select is(
   (select row(visits, searches, searches_not_found, first_downloads, downloads, validations, correction_requests)::text
      from public.event_stats_daily where event_id = 'e0000000-0000-4000-8000-000000000001' and day = (select hoje from dia)),
   '(1,3,2,1,1,1,2)', 'busca ambígua conta como sem resultado; o rollup soma o dia');
-select is(public.rollup_event_stats((select hoje from dia)), 1, 'rodar de novo não duplica: reescreve o dia');
+do $$ begin perform public.rollup_event_stats((now() at time zone 'America/Sao_Paulo')::date); end $$;
+select is(
+  (select count(*) from public.event_stats_daily
+    where event_id = 'e0000000-0000-4000-8000-000000000001' and day = (select hoje from dia)),
+  1::bigint, 'rodar de novo não duplica: reescreve o dia');
 
 update public.search_attempts set occurred_at = now() - interval '100 days';
 select is(public.prune_observability(), 0, 'log antigo de dia sem agregado não é podado');

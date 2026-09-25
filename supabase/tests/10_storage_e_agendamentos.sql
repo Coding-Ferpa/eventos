@@ -66,7 +66,7 @@ set local request.jwt.claims =
 select lives_ok(
   $$ insert into storage.objects (bucket_id, name) values ('covers', 'editor.png') $$,
   'editor sobe capa');
-select is((select count(*) from storage.objects where bucket_id = 'fonts'), 1::bigint,
+select is((select count(*) from storage.objects where bucket_id = 'fonts' and name = 'fonte-existente.ttf'), 1::bigint,
   'editor lê fonte: o editor de modelo mede e desenha com ela no navegador');
 select is((select count(*) from storage.objects where bucket_id = 'templates'), 0::bigint,
   'editor não lê a arte pelo Storage: quem lê é o servidor, na publicação');
