@@ -28,7 +28,8 @@
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "check:schema": "tsx --env-file-if-exists=.env scripts/check-schema.ts"
+    "check:schema": "tsx --env-file-if-exists=.env scripts/check-schema.ts",
+    "check:migrations": "tsx scripts/check-migrations.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

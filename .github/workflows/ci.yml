@@ -17,7 +17,6 @@ env:
 # roda contra diretório vazio passa por vacuidade e dá falsa segurança.
 #
 # Faltam, e onde entram:
-#   db          M1  migrations, pgTAP da matriz de RLS, check:schema, integração
 #   e2e         M3  Playwright, quando existirem as primeiras specs
 #   lighthouse  M3  orçamento de performance, quando existir página com dado
 #
@@ -40,7 +39,11 @@ jobs:
       - run: pnpm typecheck
       - name: .env.example em sincronia com o schema de env
         run: pnpm check:env
-      # Entram aqui: check:migrations no M1 e check:fonts no M5.
+      # Compatibilidade com o deploy anterior. No PR, para a conversa acontecer
+      # na revisão e não no dia do deploy.
+      - name: Expand/contract nas migrations
+        run: pnpm check:migrations
+      # Entra aqui: check:fonts no M5.
       #
       # Bloqueia no que vai para produção (doc 08, A06). Avisos em dependência
       # de desenvolvimento aparecem no passo seguinte sem derrubar o PR.
@@ -86,3 +89,31 @@ jobs:
       # nomeados: test:gate:pdf no M5 e test:gate:csv no M7. PR que os
       # remova, marque com .skip ou afrouxe é recusado.
       - run: pnpm test:coverage
+
+  db:
+    name: Banco de dados
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Sobe o Supabase local
+        run: pnpm db:start
+      - name: Aplica as migrations do zero e os dois seeds
+        run: pnpm db:reset
+      - name: Matriz de RLS, funções e guardas (pgTAP)
+        run: pnpm db:test
+      # O endereço sai do próprio Supabase, e não de uma porta escrita aqui:
+      # este projeto usa portas deslocadas para conviver com o CF Jobs.
+      - name: Schema Drizzle em sincronia com o banco
+        run: |
+          eval "$(pnpm exec supabase status -o env | grep -E '^DB_URL=' | sed 's/^/export /')"
+          DATABASE_URL="$DB_URL" pnpm check:schema
+      # Entra aqui: test:integration no M7, com a importação.
+      - name: Derruba o Supabase
+        if: ${{ always() }}
+        run: pnpm db:stop
