@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
 import { sair } from '@/actions/auth'
 import { AdminNav } from '@/components/admin/admin-nav'
@@ -25,7 +26,12 @@ export default async function AdminLayout({
     // Mais denso que a área pública, com raio menor (doc 03): o `--radius-md`
     // local encolhe tudo que usa `rounded-md` aqui dentro, sem tocar em cada
     // componente.
-    <div className="min-h-dvh [--radius-md:0.5rem]">
+    //
+    // O `data-theme` fixo existe porque o admin não roda o script de tema (a
+    // CSP com nonce não o deixa, ADR-0012 do CF Jobs): sem ele, as cores já
+    // saem escuras pelo `:root`, mas as variantes `dark:` dos componentes do
+    // shadcn nunca se aplicariam.
+    <div className="min-h-dvh [--radius-md:0.5rem]" data-theme="dark">
       <header className="border-border bg-card border-b">
         <div className="mx-auto flex h-[var(--header-height)] w-full max-w-[var(--container-max)] items-center justify-between gap-4 px-6">
           <Link className="font-semibold" href="/admin">
@@ -59,7 +65,10 @@ export default async function AdminLayout({
           </div>
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col gap-6">{children}</main>
+        <main className="flex min-w-0 flex-1 flex-col gap-6">
+          {/* Filtros e paginação das tabelas moram na URL (doc 09). */}
+          <NuqsAdapter>{children}</NuqsAdapter>
+        </main>
       </div>
     </div>
   )

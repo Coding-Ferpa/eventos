@@ -8,10 +8,10 @@ import { hasRole, type UserRole } from '@/lib/roles'
 
 type Item = { href: string; rotulo: string; papelMinimo: UserRole }
 
-// Cada milestone acrescenta a sua entrada: eventos no M4, modelos no M6,
-// importação no M7.
+// Cada milestone acrescenta a sua entrada: modelos no M6, importação no M7.
 const ITENS: Item[] = [
   { href: '/admin', rotulo: 'Visão geral', papelMinimo: 'editor' },
+  { href: '/admin/eventos', rotulo: 'Eventos', papelMinimo: 'editor' },
   { href: '/admin/usuarios', rotulo: 'Usuários', papelMinimo: 'admin' },
 ]
 
