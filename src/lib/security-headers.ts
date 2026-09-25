@@ -43,6 +43,12 @@ export type ContentSecurityPolicyOptions = {
    * estilo e sem hidratar.
    */
   localhost?: boolean
+  /**
+   * Origem do Supabase, liberada no `connect-src` de quem sobe arquivo direto
+   * do navegador ao Storage, por URL assinada: o admin (doc 04). A área
+   * pública não fala com o Supabase pelo navegador e não a recebe.
+   */
+  supabase?: string
 }
 
 const SELF = "'self'"
@@ -51,6 +57,7 @@ export function buildContentSecurityPolicy({
   nonce,
   isDev,
   localhost = false,
+  supabase,
 }: ContentSecurityPolicyOptions): string {
   const scriptSrc = nonce
     ? [SELF, `'nonce-${nonce}'`, "'strict-dynamic'"]
@@ -58,6 +65,7 @@ export function buildContentSecurityPolicy({
   if (isDev) scriptSrc.push("'unsafe-eval'")
 
   const connectSrc = [SELF]
+  if (supabase) connectSrc.push(supabase)
   if (isDev) connectSrc.push('ws:')
 
   const directives: [string, string[]][] = [

@@ -56,6 +56,21 @@ describe('buildContentSecurityPolicy', () => {
     )
   })
 
+  it('libera a conexão com o Supabase só para quem a pede, que é o admin', () => {
+    // O navegador do admin sobe a capa direto ao Storage, por URL assinada.
+    const admin = buildContentSecurityPolicy({
+      nonce: 'abc123',
+      isDev: false,
+      supabase: 'https://abc.supabase.co',
+    })
+    expect(diretiva(admin, 'connect-src')).toBe(
+      "connect-src 'self' https://abc.supabase.co",
+    )
+
+    const publica = buildContentSecurityPolicy({ isDev: false })
+    expect(diretiva(publica, 'connect-src')).toBe("connect-src 'self'")
+  })
+
   it('não manda subir para HTTPS quem é servido em localhost', () => {
     // Em http://localhost não existe HTTPS para onde subir. O WebKit obedece
     // mesmo assim e pede o CSS e o JS por https://localhost, e a página sai

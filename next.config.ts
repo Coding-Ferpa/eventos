@@ -2,7 +2,36 @@ import type { NextConfig } from 'next'
 
 import { staticSecurityHeaders } from './src/lib/security-headers'
 
+/**
+ * As capas enviadas ficam no bucket público `covers` do Supabase e passam pelo
+ * otimizador do `next/image` (doc 09). O endereço vem da env: sem ela, como na
+ * Preview sem banco, não há capa enviada para servir.
+ *
+ * O Supabase local mora em 127.0.0.1, e o Next 16 recusa otimizar imagem de IP
+ * local, uma proteção contra SSRF. A exceção vale só para esse caso, que só
+ * existe em desenvolvimento e no CI.
+ */
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  : null
+const supabaseLocal = supabase
+  ? ['localhost', '127.0.0.1'].includes(supabase.hostname)
+  : false
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: supabase
+      ? [
+          {
+            protocol: supabase.protocol.replace(':', '') as 'http' | 'https',
+            hostname: supabase.hostname,
+            port: supabase.port,
+            pathname: '/storage/v1/object/public/covers/**',
+          },
+        ]
+      : [],
+    dangerouslyAllowLocalIP: supabaseLocal,
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   // O Next transmite a metadata em vez de segurar o shell, e quando a página

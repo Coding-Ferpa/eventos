@@ -38,6 +38,10 @@ export async function proxy(request: NextRequest) {
     nonce,
     isDev: process.env.NODE_ENV === 'development',
     localhost: ['localhost', '127.0.0.1', '[::1]'].includes(request.nextUrl.hostname),
+    // O admin sobe a capa (e, no M6, a arte) direto ao Storage.
+    supabase: rotaDinamica
+      ? new URL(supabaseEnv().NEXT_PUBLIC_SUPABASE_URL).origin
+      : undefined,
   })
 
   const requestHeaders = new Headers(request.headers)
