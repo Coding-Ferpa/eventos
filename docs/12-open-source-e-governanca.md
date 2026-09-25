@@ -38,7 +38,7 @@ Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigat
 | `test` | `pnpm test:gate:pdf`, `pnpm test:gate:csv`, `pnpm test:coverage` (Vitest, limites do [doc 11](11-qualidade.md)) |
 | `db` | `pnpm db:start`, `pnpm db:reset` (migrations do zero mais seed), `pnpm db:test` (pgTAP da matriz de RLS do [doc 04](04-banco-de-dados.md)), `pnpm check:schema`, `pnpm test:integration` (contra o Postgres do Supabase CLI) |
 | `e2e` | Supabase local, `pnpm test:e2e` (Playwright, Chromium e WebKit; fluxos públicos em viewport de celular) |
-| `lighthouse` | Supabase local, `pnpm build`, `pnpm exec lhci autorun` em `/`, `/eventos/{slug-do-seed}` e `/validar` (as rotas dinâmicas ficam fora: dependem de cookie e de banco, [doc 09](09-frontend-e-seo.md)). Relatórios como artefato do job, sem armazenamento público. Entra no CI quando o [ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md) for decidido: com o orçamento atual do doc 09, ele reprova só pelo peso do framework |
+| `lighthouse` | Supabase local, `pnpm build`, `pnpm exec lhci autorun` em `/`, `/eventos/{slug-do-seed}` e `/validar` (as rotas dinâmicas ficam fora: dependem de cookie e de banco, [doc 09](09-frontend-e-seo.md)). LCP, CLS e TBT como asserção principal e os KB de JavaScript como tripwire ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Relatórios como artefato do job, sem armazenamento público |
 
 **Dois gates inegociáveis**, em passos nomeados para o PR mostrar o que quebrou. Os scripts filtram por nome de arquivo (`vitest run pdf-accents`, `vitest run csv-encoding`), onde quer que o doc 02 ponha os testes.
 

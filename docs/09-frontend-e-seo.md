@@ -111,17 +111,18 @@ Meta: WCAG 2.2 AA, verificada por axe no Playwright ([doc 11](11-qualidade.md)).
 
 ## Orçamento de performance
 
-O público acessa por celular em rede móvel, a partir de um link no WhatsApp. O orçamento é medido no perfil **mobile** do Lighthouse (4G lento, CPU 4x mais lenta) e é bloqueante no CI.
+O público acessa por celular em rede móvel, a partir de um link no WhatsApp. O orçamento é medido no perfil **mobile** do Lighthouse (4G lento, CPU 4x mais lenta) e é bloqueante no CI. A hierarquia é a do [ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md): **LCP, CLS e TBT são a asserção principal**, porque é o que o aluno sente; os KB de JavaScript são um **tripwire de regressão**, porque são só um indicador indireto.
 
-| Métrica | `/` e `/eventos/[slug]` | `/validar` |
+| Asserção principal | `/` e `/eventos/[slug]` | `/validar` |
 |---|---|---|
-| Performance (Lighthouse) | ≥ 90 | ≥ 95 |
-| Acessibilidade | ≥ 95 | ≥ 95 |
-| Boas práticas e SEO | ≥ 95 | ≥ 95 |
-| LCP | < 2,5 s | < 2,0 s |
+| LCP | < 2,5 s | < 2,5 s |
 | CLS | < 0,05 | < 0,05 |
 | TBT | < 200 ms | < 150 ms |
-| JavaScript da rota (gzip) | ≤ 110 KB | ≤ 95 KB |
+| Desempenho (Lighthouse) | ≥ 90 | ≥ 95 |
+| Acessibilidade | ≥ 95 | ≥ 95 |
+| Boas práticas e SEO | ≥ 95 | ≥ 95 |
+
+**Tripwire de JavaScript por rota (comprimido)**: piso do framework (130,6 KB: `react-dom`, runtime do App Router, runtime do webpack e `main-app`), mais o nosso código medido, mais uma folga de feature de 5 KB. Hoje: 157,4 KB em `/`, 156,4 KB na página do evento e 157,4 KB em `/validar`. Cada linha, e cada acréscimo futuro com a medição que o justifica, está no ADR-0015. Nada é pré-alocado: o M8 acrescenta a linha do formulário de busca quando ele existir.
 
 Como o orçamento é cumprido:
 
@@ -129,6 +130,8 @@ Como o orçamento é cumprido:
 - **Nenhum pdf.js, fontkit ou pdf-lib no bundle público.** São carregados por `import()` apenas no editor do admin. Um teste de bundle falha o CI se qualquer um deles aparecer em um chunk de rota pública.
 - **Prévia do certificado:** SVG inline de poucos KB mais um WebP de até 200 KB (`loading="eager"`, `fetchpriority="high"`, dimensões explícitas: CLS zero). O PDF de até alguns MB só trafega quando a pessoa clica em baixar.
 - **Capa do evento:** `next/image` com `sizes`, `priority` só na página do evento; nos cards, lazy.
-- **Fontes da UI:** Poppins e JetBrains Mono via `next/font/google` com `display: 'optional'` (orçamento de CLS). JetBrains Mono só é pré-carregada em `/validar` e na tela de retirada.
+- **Prefetch só com intenção nas listas de links:** o card do catálogo usa `HoverPrefetchLink`, que só faz prefetch com o ponteiro em cima ou com foco do teclado. O prefetch padrão baixaria a rota de cada card que entra na tela, gastando o plano de dados do aluno com eventos que ele não vai abrir. Os links de navegação seguem com o prefetch normal. Um teste E2E em build de produção garante que nenhum evento é pré-carregado antes da intenção.
+- **Sem `cn()` em componente cliente da área pública:** o `tailwind-merge` custa 9 KB no navegador. Junção de classes que não conflitam é feita com `join(' ')`.
+- **Fontes da UI:** Poppins e JetBrains Mono via `next/font/google` com `display: 'optional'` (orçamento de CLS). JetBrains Mono só é pré-carregada em `/validar` e na tela de retirada, que declaram a própria instância com o único peso que usam (400, um arquivo estático de 21 KB, em vez do variável de 31 KB).
 - **Sem bibliotecas de animação, de data (usa `Intl`), de máscara (função de 20 linhas) nem de ícones além de `lucide-react` com import nomeado.**
 - **Rotas dinâmicas** (retirada e validação) ficam fora do orçamento do Lighthouse CI porque dependem de cookie e de banco; o alvo delas é tempo de servidor: p95 < 400 ms na validação e < 600 ms na tela de retirada (com o layout e o SVG).

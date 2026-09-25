@@ -1,41 +1,64 @@
-# ADR-0015 · Orçamento de JavaScript e de LCP medidos sobre o piso do framework
+# ADR-0015 · LCP, CLS e TBT como gate; os KB de JavaScript como tripwire sobre o piso do framework
 
-- **Status:** proposta, aguardando o mantenedor
+- **Status:** aceita
 - **Data:** 2026-09-25
-- **Autores:** sessão de execução do M3
+- **Autores:** sessão de execução do M3, com os critérios do mantenedor
 
 ## Contexto
-O [doc 09](../09-frontend-e-seo.md) fixou o JavaScript de rota em até 110 KB comprimidos para `/` e para a página do evento, e em até 95 KB para `/validar`, com LCP abaixo de 2,0 s em `/validar`. Os números foram escritos antes de existir página para medir. No M3, o Lighthouse mobile (4G lento, CPU 4x mais lenta, 3 execuções, mediana, build de produção) mediu:
+O [doc 09](../09-frontend-e-seo.md) fixou o JavaScript de rota em até 110 KB comprimidos para `/` e para a página do evento, e em até 95 KB para `/validar`, com LCP abaixo de 2,0 s em `/validar`. Os números foram escritos antes de existir página para medir. Todas as medidas daqui são do Lighthouse mobile (4G lento, CPU 4x mais lenta, throttling simulado), com build de produção e fontes pré-carregadas como no build em Linux do CI, e 1 KB = 1.024 bytes.
 
-| Página | JS total | Desempenho | LCP | FCP | TBT | CLS |
+**Só o framework já passa dos 110 KB.** O `react-dom`, o runtime do App Router, o runtime do webpack e o `main-app` somam 130,6 KB (133.713 bytes), carregados em toda página do App Router antes de qualquer linha nossa. A stack é fixa ([ADR-0001](0001-heranca-do-cf-jobs.md)).
+
+**Primeiro, as alavancas que são nossas**, nesta ordem, pedida pelo mantenedor:
+
+1. **Prefetch dos cards só com intenção.** O prefetch padrão baixava a rota de cada card que entrava na tela. O card passou a usar o padrão da documentação do Next para listas de links: prefetch só com o ponteiro em cima ou com foco do teclado. Os links de navegação seguem com o prefetch normal. Em `/`, os prefetches de rota caíram de 8 para 6 (sobram só os da navegação), os bytes deles caíram de 17,0 para 11,1 KB, e o JavaScript caiu 0,8 KB. Na página do evento e em `/validar`, que não têm lista de links, nada mudou. As rotas de evento são leves, cerca de 1,2 KB por card: o ganho cresce com o catálogo, mas não mexe no LCP.
+2. **Achado ao dissecar os chunks: o `tailwind-merge` no navegador.** O campo do código de `/validar` usava `cn()` só para juntar duas classes, e isso trazia 9,2 KB de `tailwind-merge` para `/validar` e, pelo prefetch, também para `/`. Agora a junção é simples.
+3. **A JetBrains Mono de `/validar` só no peso 400**, que é o único que o campo usa. O arquivo variável de 31 KB virou um estático de 21 KB.
+
+| Página | JS antes | JS depois | Total transferido antes → depois | LCP (5 execuções) | TBT | CLS |
 |---|---|---|---|---|---|---|
-| `/` | 162 KB | 0,98 | 2,40 s | 0,91 s | 11 ms | 0 |
-| `/eventos/ferpa-tech-day-2026` | 151 KB | 0,98 | 2,32 s | 0,91 s | 12 ms | 0 |
-| `/validar` | 161 KB | 0,98 | 2,47 s | 0,90 s | 7 ms | 0 |
+| `/` | 162,4 KB | 152,4 KB | 296 → 270 KB | 2,40 a 2,49 s | 10 ms | 0 |
+| `/eventos/[slug]` | 151,1 KB | 151,4 KB | 214 → 214 KB | 2,32 a 2,48 s | 18 ms | 0 |
+| `/validar` | 161,2 KB | 152,4 KB | 247 → 228 KB | 2,48 a 2,49 s | 23 ms | 0 |
 
-Acessibilidade 1, boas práticas 0,96 e SEO 1 nas três. Todo o resto do orçamento cabe com folga.
+Desempenho 0,98, acessibilidade 1, boas práticas 0,96 e SEO 1 nas três. O LCP não se moveu com nenhuma das três alavancas, nem com dois experimentos anteriores (tirar a fonte mono da página e carregar a capa do primeiro card sem `lazy`). No modelo simulado, o LCP carrega o download de tudo o que começou antes dele, e o grosso disso é o piso do framework. Em `/validar` o elemento do LCP é um parágrafo renderizado no servidor, que o aparelho pinta junto com o FCP, em 0,9 s.
 
-**Só o framework já passa dos 110 KB.** O `react-dom` (64 KB), o runtime do App Router (66 KB), o runtime do webpack (2,4 KB) e o `main-app` (1,1 KB) somam 134 KB comprimidos, antes de qualquer linha nossa. O nosso código acrescenta cerca de 20 KB, e o prefetch dos links visíveis traz os chunks das rotas vizinhas. A stack é fixa ([ADR-0001](0001-heranca-do-cf-jobs.md)), então o número do doc 09 é inalcançável como está escrito. O CF Jobs, com a mesma stack, usa 250 KB.
+## Decisão
+**LCP, CLS e TBT são a asserção principal do gate de performance, e o total de KB de JavaScript é um tripwire de regressão, calculado como piso do framework, mais o nosso código medido, mais uma folga de feature.**
 
-O LCP tem a mesma raiz. Em `/validar` o elemento do LCP é um parágrafo renderizado no servidor, pintado junto com o FCP numa rede de verdade. No modelo simulado do Lighthouse, a pintura fica dependente do download e da execução do JavaScript do framework, e o LCP cai no mesmo patamar das outras páginas. Dois experimentos, desfeitos depois, não o moveram: tirar a fonte mono da página e carregar a capa do primeiro card sem `lazy`.
-
-## Decisão (proposta)
-**O orçamento de JavaScript passa a ser o total da rota, com o piso do framework declarado, e o LCP de `/validar` fica igual ao das demais.**
+Asserção principal, o que o aluno sente:
 
 | Métrica | `/` | `/eventos/[slug]` | `/validar` |
 |---|---|---|---|
-| JavaScript da rota (comprimido) | ≤ 180 KB | ≤ 200 KB | ≤ 175 KB |
 | LCP | < 2,5 s | < 2,5 s | < 2,5 s |
+| CLS | < 0,05 | < 0,05 | < 0,05 |
+| TBT | < 200 ms | < 200 ms | < 150 ms |
 
-Desempenho, acessibilidade, boas práticas, SEO, CLS e TBT ficam como no doc 09. A página do evento tem mais folga porque o formulário de busca do M8 entra nela. Os números são o medido mais uma folga de cerca de 15 KB, e não um alvo: servem para pegar crescimento, e o PR que os ultrapassar diz o porquê.
+O LCP de `/validar` passa de 2,0 para 2,5 s, o limite "bom" das Core Web Vitals, porque o piso o prende em 2,48 s. As notas de categoria continuam as do doc 09.
+
+Tripwire, cada linha com nome:
+
+| Linha | `/` | `/eventos/[slug]` | `/validar` |
+|---|---|---|---|
+| Piso do framework | 130,6 KB | 130,6 KB | 130,6 KB |
+| Nosso código, medido no M3 | 21,8 KB | 20,9 KB | 21,8 KB |
+| Folga de feature | 5 KB | 5 KB | 5 KB |
+| **Tripwire** | **157,4 KB** (161.190 B) | **156,4 KB** (160.190 B) | **157,4 KB** (161.190 B) |
+
+A **folga de feature** é de 5 KB porque um commit de feature normal acrescenta 1 a 3 KB de componente cliente, e a menor biblioteca que já pegamos, o `tailwind-merge`, tem 9 KB. O `react-hook-form` tem uns 9 KB, e o Zod, mais de 13. Nenhuma biblioteca nova passa sem disparar.
+
+Quando o tripwire dispara, o PR mostra a medição, diz o porquê e acrescenta aqui uma linha nova com nome. **Nada é pré-alocado:** o formulário de busca do M8 entra na página do evento, que por isso fica apertada agora, e o M8 acrescenta a linha dele com a medição na mão.
+
+**Calibração no CI.** Os números foram medidos numa máquina de desenvolvimento. O throttling simulado escala o tempo de CPU observado, e o runner do GitHub é mais lento. Se a primeira execução no CI divergir, o ADR registra os números do runner, pela mesma regra: a medição é a resposta.
 
 ## Consequências
-- Positivas: o gate do Lighthouse volta a ser um sinal, e não um vermelho permanente. Um salto de dezenas de KB, que é o que uma biblioteca pesada no bundle público causaria, reprova. A proteção específica contra pdf.js, fontkit e pdf-lib continua sendo o teste de bundle público do M5.
-- Negativas: o orçamento deixa de prometer uma página leve em termos absolutos. Ele vigia o crescimento sobre um piso que não controlamos, e esse piso sobe junto com o React e o Next.
-- Rever quando o piso do framework cair, por exemplo numa major do React ou do Next, e apertar os números no mesmo PR.
+- Positivas: o gate vigia o que o aluno sente, e o tripwire pega qualquer biblioteca nova sem pré-alocar folga para ninguém. O plano de dados do aluno ficou 26 KB mais leve por visita à `/`, e 19 KB mais leve em `/validar`.
+- Negativas: o LCP das três páginas está a menos de 0,1 s do limite no modelo simulado, então ele deve ser o primeiro a disparar, antes do tripwire. Quando isso acontecer, o trabalho é tirar bytes do caminho do LCP, e não afrouxar o limite. O piso sobe junto com o React e o Next.
+- Rever quando o piso do framework cair (numa major do React ou do Next) e apertar a linha do piso no mesmo PR.
 
 ## Alternativas consideradas
 - **Manter 110 KB e tirar as páginas públicas do App Router:** fere o ADR-0001 e põe dois roteadores no mesmo projeto.
-- **Medir só o JavaScript nosso, excluindo os chunks do framework:** os nomes dos chunks são hashes, e separar o que é framework dependeria do conteúdo. Seria frágil, e ainda esconderia o crescimento do framework numa atualização.
-- **Desligar o prefetch dos links na área pública:** economiza uns 5 KB e deixa mais lenta a navegação do WhatsApp para o evento e dele para a retirada, que é o caminho que importa.
-- **Throttling aplicado pelo DevTools em vez do simulado:** números mais próximos do real, mas com ruído demais para um gate de CI.
+- **O medido mais uma folga proporcional, em torno de 13%** (a proposta anterior deste ADR, com 180, 200 e 175 KB): recusada pelo mantenedor. Pré-alocava 50 KB para o M8, e orçamento com folga antecipada não pega nada.
+- **Medir só o JavaScript nosso, excluindo o framework por nome de chunk:** os nomes são hashes, e isso esconderia o crescimento do framework numa atualização. A linha nomeada do piso resolve o mesmo problema sem fragilidade.
+- **Cache Components ou partial prefetching,** que reduziriam o prefetch: recusados pelo mantenedor por ora, porque é mudança grande perto da data do evento.
+- **Desligar o prefetch dos links de navegação:** eles são o caminho que importa (WhatsApp, evento, retirada), e continuam com o prefetch normal.
