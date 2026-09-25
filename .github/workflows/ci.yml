@@ -17,7 +17,8 @@ env:
 # roda contra diretório vazio passa por vacuidade e dá falsa segurança.
 #
 # Falta, e onde entra:
-#   lighthouse  M3  orçamento de performance, quando existir página com dado
+#   lighthouse  M3  lighthouserc.json pronto; entra quando o ADR-0015 decidir o
+#                   orçamento de JS, que hoje o framework sozinho já estoura
 #
 # Nenhum job usa secret: tudo fala com o ambiente local, então PR de fork roda
 # a bateria inteira.

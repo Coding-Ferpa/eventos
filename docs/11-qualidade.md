@@ -108,7 +108,9 @@ Configurado em `vitest.config.ts` com `thresholds` por glob; abaixo disso o CI f
 
 ## Lighthouse e acessibilidade
 
-`lighthouserc.json` com as URLs `/`, `/eventos/{slug-do-seed}` e `/validar`, perfil mobile, 3 execuções, mediana, asserções do [doc 09](09-frontend-e-seo.md). axe no Playwright falha em violação `serious` ou `critical`. Revisão manual com leitor de tela (NVDA ou VoiceOver) do fluxo busca → retirada → download, uma vez, no M8, registrada no PR.
+`lighthouserc.json` com as URLs `/`, `/eventos/{slug-do-seed}` e `/validar`, perfil mobile, 3 execuções, mediana, asserções do [doc 09](09-frontend-e-seo.md) (o orçamento de JavaScript e o LCP de `/validar` têm proposta de revisão no [ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Rode o Lighthouse no Linux, como o CI: no Windows, o build do Next 16.3 com webpack não pré-carrega fonte nenhuma, porque o plugin do manifesto de fontes compara o caminho do módulo com barra normal, e o FCP local sai uns 300 ms pior.
+
+A E03 verifica o tema na primeira pintura de fato: um `requestAnimationFrame` agendado antes de qualquer script da página tem de encontrar o `data-theme` já aplicado. Os atributos do cookie de dispositivo são conferidos no `Set-Cookie` da resposta, e não no pote de cookies do navegador, porque o WebKit do Playwright fora do macOS reporta todo cookie como `SameSite=None`. axe no Playwright falha em violação `serious` ou `critical`. Revisão manual com leitor de tela (NVDA ou VoiceOver) do fluxo busca → retirada → download, uma vez, no M8, registrada no PR.
 
 ## Verificações manuais que não se automatizam
 

@@ -86,7 +86,7 @@ O pico honesto estimado é de 200 buscas em 5 minutos com 15% de falha: 6 falhas
 
 ### O cookie de dispositivo nasce na primeira visita
 
-`cf-dispositivo = v1.{id de 128 bits}.{emitido_em}.{HMAC com DEVICE_COOKIE_SECRET}`, `HttpOnly`, `Secure`, `SameSite=Lax`, 30 dias. **É emitido pelo `proxy.ts` na primeira resposta de `/`, `/eventos/*`, `/validar*` e `/meus-certificados`**, e não na primeira busca. Se nascesse junto com a primeira tentativa, a primeira requisição de todo mundo cairia no balde de IP, exatamente no pico que ele existe para cobrir. O proxy só acrescenta `Set-Cookie` à resposta: a página continua estática e servida do cache de ISR (mesmo mecanismo com que o CF Jobs já injeta a CSP em rota pública).
+`cf-dispositivo = v1.{id de 128 bits}.{emitido_em}.{HMAC com DEVICE_COOKIE_SECRET}`, `HttpOnly`, `Secure`, `SameSite=Lax`, 30 dias. **É emitido pelo `proxy.ts` na primeira resposta de `/`, `/eventos/*`, `/validar*` e `/meus-certificados`**, e não na primeira busca, e reemitido quando o que o navegador manda não vale mais (vencido, forjado, segredo trocado). Se nascesse junto com a primeira tentativa, a primeira requisição de todo mundo cairia no balde de IP, exatamente no pico que ele existe para cobrir. O proxy só acrescenta `Set-Cookie` à resposta: a página continua estática e servida do cache de ISR (mesmo mecanismo com que o CF Jobs já injeta a CSP em rota pública).
 
 Fora da produção e sem banco (a Preview da Vercel), o proxy não emite o cookie: sem banco não há busca nem rate limit para ele servir ([ADR-0014](adr/0014-site-vazio-quando-nao-ha-banco.md)).
 

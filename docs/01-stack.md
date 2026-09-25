@@ -116,6 +116,6 @@ Validadas por Zod em `src/lib/env.ts`. `pnpm check:env` (herdado) falha o CI se 
 | `LINKEDIN_ORGANIZATION_ID` | servidor | P1, opcional | sem ela o botão usa `organizationName=Coding Ferpa` |
 | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | misto | não | como no CF Jobs |
 
-O `.env.example` traz valores **de desenvolvimento** para os cinco segredos criptográficos, marcados como tal, para que `supabase db reset` e o seed local funcionem sem cerimônia. Em produção, cada um é gerado com `openssl rand -base64 32`.
+O `.env.example` traz valores **de desenvolvimento** para os cinco segredos criptográficos, marcados como tal, para que `supabase db reset` e o seed local funcionem sem cerimônia. Em produção, cada um é gerado com `openssl rand -base64 32`. Os valores de desenvolvimento começam com `desenvolvimento-local-`, e o schema de `lib/env.ts` os recusa dentro da Vercel: estão no repositório, então são públicos.
 
 Pré-requisitos operacionais que não são código (runbook do M9): SPF e DKIM de `codingferpa.org` no Resend antes do primeiro envio; página de empresa da Coding Ferpa no LinkedIn antes do M12; Data API desligada; Node 24.x e região `gru1` fixados no projeto da Vercel.

@@ -23,13 +23,15 @@ Regra de ouro herdada: **nada de `cookies()` ou `headers()` em layout ou página
 
 ### Bloco de ação da página do evento
 
+Os textos de cada estado são a microcopy final do [doc 03](03-design-system.md), seção 7; esta tabela diz só o que aparece.
+
 | `event_status` | O que aparece |
 |---|---|
-| `registration_open` | botão para `external_url` ("Inscreva-se") |
+| `registration_open` | texto e botão para `external_url` ("Quero participar", em outra aba) |
 | `registration_closed`, `in_progress` | aviso do status; sem formulário |
 | `completed` | "Os certificados estão sendo preparados." Sem formulário. |
 | `certificates_available` | formulário de busca (componente cliente, hidrata sozinho: o resto da página é RSC) |
-| `archived` | "Este evento foi arquivado. Se você recebeu um link por e-mail, ele continua funcionando." e link para `/validar` |
+| `archived` | aviso de arquivado, com link para `/validar` |
 
 O formulário de busca é a única ilha interativa da página. A página do evento envia um beacon de visita (`navigator.sendBeacon`, [doc 10](10-observabilidade.md)) e, se detectar navegador embutido do Instagram ou do Facebook, mostra a dica de abrir no navegador **antes** da busca ([doc 02](02-arquitetura.md)).
 
