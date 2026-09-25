@@ -34,3 +34,10 @@ export function hasRole(role: UserRole, minimum: UserRole): boolean {
 
 /** Menor papel que entra no admin. `reader` existe só porque o cadastro é aberto. */
 export const MIN_ADMIN_ROLE: UserRole = 'editor'
+
+/** Como cada papel aparece na interface. */
+export const ROTULO_DO_PAPEL: Record<UserRole, string> = {
+  reader: 'Sem acesso',
+  editor: 'Organização',
+  admin: 'Administração',
+}
