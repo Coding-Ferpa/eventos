@@ -43,8 +43,10 @@ pnpm db:reset   # migrations do zero e os dois seeds
 pnpm dev
 ```
 
-Os valores do `.env` saem de `pnpm db:status` (URL da API, chave anônima e
-URL do banco); cada variável está comentada no `.env.example`.
+Os valores do `.env` saem de `pnpm db:status` (URL da API, chave anônima,
+chave de serviço e URL do banco); cada variável está comentada no
+`.env.example`, e os segredos do cookie de dispositivo já vêm com valor de
+desenvolvimento.
 
 O Supabase local deste projeto usa portas deslocadas em +100 (API em 54421,
 banco em 54422, Studio em 54423, e-mails de teste em 54424), para conviver
