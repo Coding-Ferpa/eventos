@@ -42,6 +42,14 @@ jobs:
       # na revisão e não no dia do deploy.
       - name: Expand/contract nas migrations
         run: pnpm check:migrations
+      # A Preview da Vercel sobe sem banco e sem Supabase (doc 02). Este job
+      # também não tem nenhum dos dois, então o build daqui é o da Preview: se
+      # alguma página passar a exigir o banco no build, quebra aqui, e não no
+      # primeiro deploy de Preview depois do merge.
+      - name: Build como Preview, sem banco
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://preview.example.org
       # Entra aqui: check:fonts no M5.
       #
       # Bloqueia no que vai para produção (doc 08, A06). Avisos em dependência

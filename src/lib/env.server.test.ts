@@ -53,3 +53,25 @@ describe('isGithubOAuthEnabled', () => {
     expect(isGithubOAuthEnabled()).toBe(true)
   })
 })
+
+describe('Preview sem banco (doc 02)', () => {
+  it('a URL do site é lida sem o Supabase e sem o banco', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://preview.example.org')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+    vi.stubEnv('DATABASE_URL', '')
+    const { siteEnv, supabaseEnv } = await envNovo()
+
+    expect(siteEnv().NEXT_PUBLIC_SITE_URL).toBe('https://preview.example.org')
+    // Quem precisa do Supabase continua recusando a ausência dele.
+    expect(() => supabaseEnv()).toThrowError(/NEXT_PUBLIC_SUPABASE_URL/)
+  })
+
+  it('o Supabase é lido quando está configurado', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'chave-anonima')
+    const { supabaseEnv } = await envNovo()
+
+    expect(supabaseEnv().NEXT_PUBLIC_SUPABASE_URL).toBe('https://abc.supabase.co')
+  })
+})

@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { clientEnvSchema, serverEnvSchema } from '../src/lib/env'
+import { serverEnvSchema, siteEnvSchema, supabaseEnvSchema } from '../src/lib/env'
 
 const EXAMPLE_PATH = resolve(process.cwd(), '.env.example')
 
@@ -21,7 +21,8 @@ function keysFromExample(contents: string): string[] {
 
 function main(): void {
   const schemaKeys = [
-    ...Object.keys(clientEnvSchema.shape),
+    ...Object.keys(siteEnvSchema.shape),
+    ...Object.keys(supabaseEnvSchema.shape),
     ...Object.keys(serverEnvSchema.shape),
   ].sort()
 

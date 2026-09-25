@@ -65,13 +65,13 @@ function recusarEnderecoLocal(
   })
 }
 
-export const clientEnvSchema = z
+// Dois contratos públicos em vez de um. A Preview da Vercel sobe sem env de
+// banco (doc 02) e serve para revisar a UI: o que toda página precisa, a URL
+// do site, não pode depender do que só o login e o admin usam, o Supabase.
+// Juntos, um layout que só queria a URL derrubava o build da Preview.
+export const siteEnvSchema = z
   .object({
     NEXT_PUBLIC_SITE_URL: z.url(),
-    NEXT_PUBLIC_SUPABASE_URL: z.url(),
-    // Pública por construção: a RLS é quem protege os dados, e a Data API fica
-    // desligada em produção (ADR-0012).
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(
@@ -82,6 +82,16 @@ export const clientEnvSchema = z
         'projeto enquanto ele não existe. É o que vai no canonical, no Open ' +
         'Graph e no QR de todo certificado.',
     )
+  })
+
+export const supabaseEnvSchema = z
+  .object({
+    NEXT_PUBLIC_SUPABASE_URL: z.url(),
+    // Pública por construção: a RLS é quem protege os dados, e a Data API fica
+    // desligada em produção (ADR-0012).
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  })
+  .superRefine((env, ctx) => {
     recusarEnderecoLocal(
       'NEXT_PUBLIC_SUPABASE_URL',
       env.NEXT_PUBLIC_SUPABASE_URL,
@@ -110,7 +120,8 @@ export const serverEnvSchema = z
     )
   })
 
-export type ClientEnv = z.infer<typeof clientEnvSchema>
+export type SiteEnv = z.infer<typeof siteEnvSchema>
+export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>
 export type ServerEnv = z.infer<typeof serverEnvSchema>
 
 /**
@@ -142,36 +153,47 @@ function parse<T extends z.ZodType>(schema: T, source: unknown, scope: string) {
   )
 }
 
-export function parseClientEnv(source: unknown): ClientEnv {
-  return parse(clientEnvSchema, source, 'cliente')
+export function parseSiteEnv(source: unknown): SiteEnv {
+  return parse(siteEnvSchema, source, 'site')
+}
+
+export function parseSupabaseEnv(source: unknown): SupabaseEnv {
+  return parse(supabaseEnvSchema, source, 'Supabase')
 }
 
 export function parseServerEnv(source: unknown): ServerEnv {
   return parse(serverEnvSchema, source, 'servidor')
 }
 
-// O Next só substitui `process.env.NEXT_PUBLIC_*` em build quando o acesso é
-// estático: por isso a leitura explícita, chave por chave.
-const rawClientEnv = {
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-}
-
-let cachedClientEnv: ClientEnv | undefined
+let cachedSiteEnv: SiteEnv | undefined
+let cachedSupabaseEnv: SupabaseEnv | undefined
 let cachedServerEnv: ServerEnv | undefined
 
-/** Variáveis públicas: seguras em qualquer runtime. */
-export function clientEnv(): ClientEnv {
-  cachedClientEnv ??= parseClientEnv(rawClientEnv)
-  return cachedClientEnv
+// O Next só substitui `process.env.NEXT_PUBLIC_*` em build quando o acesso é
+// estático: por isso a leitura explícita, chave por chave.
+
+/** URL pública do site: toda página precisa dela. Segura em qualquer runtime. */
+export function siteEnv(): SiteEnv {
+  cachedSiteEnv ??= parseSiteEnv({
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+  })
+  return cachedSiteEnv
+}
+
+/** Endereço e chave pública do Supabase: só quem fala com o Auth pede. */
+export function supabaseEnv(): SupabaseEnv {
+  cachedSupabaseEnv ??= parseSupabaseEnv({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  })
+  return cachedSupabaseEnv
 }
 
 /** Variáveis de servidor, incluindo segredos. Nunca chamar em código de cliente. */
 export function serverEnv(): ServerEnv {
   if (typeof window !== 'undefined') {
     throw new Error(
-      'serverEnv() só pode ser lido no servidor: use clientEnv() em código de navegador.',
+      'serverEnv() só pode ser lido no servidor: no navegador, só as variáveis públicas.',
     )
   }
   cachedServerEnv ??= parseServerEnv(process.env)

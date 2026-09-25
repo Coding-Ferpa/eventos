@@ -91,7 +91,7 @@ export function defineAction<TSchema extends z.ZodType, TData>(
     let efeito: Efeito<TData>
 
     try {
-      efeito = await db.transaction(async (tx) => {
+      efeito = await db().transaction(async (tx) => {
         const resultado = await config.executar({
           entrada: validada.data as z.output<TSchema>,
           usuario,

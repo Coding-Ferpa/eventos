@@ -33,7 +33,7 @@ Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigat
 
 | Job | Roda, e bloqueia o merge se falhar |
 |---|---|
-| `quality` | `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm check:env` (`.env.example` contra o schema Zod de env), `pnpm check:migrations`, `pnpm check:fonts`, `pnpm audit --prod --audit-level high`. A auditoria com dev roda só informativa (ADR-0011 do CF Jobs) |
+| `quality` | `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm check:env` (`.env.example` contra o schema Zod de env), `pnpm check:migrations`, `pnpm build` só com `NEXT_PUBLIC_SITE_URL` (o build da Preview, sem banco: doc 02), `pnpm check:fonts`, `pnpm audit --prod --audit-level high`. A auditoria com dev roda só informativa (ADR-0011 do CF Jobs) |
 | `commitlint` | só em PR: commits contra a seção 9 |
 | `test` | `pnpm test:gate:pdf`, `pnpm test:gate:csv`, `pnpm test:coverage` (Vitest, limites do [doc 11](11-qualidade.md)) |
 | `db` | `pnpm db:start`, `pnpm db:reset` (migrations do zero mais seed), `pnpm db:test` (pgTAP da matriz de RLS do [doc 04](04-banco-de-dados.md)), `pnpm check:schema`, `pnpm test:integration` (contra o Postgres do Supabase CLI) |

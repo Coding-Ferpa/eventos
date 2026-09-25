@@ -18,7 +18,7 @@ export type ContaDoAdmin = {
  * servidor lê `auth.users`, que nenhuma role pública enxerga.
  */
 export async function listarContas(): Promise<ContaDoAdmin[]> {
-  const linhas = await db.execute<{
+  const linhas = await db().execute<{
     id: string
     display_name: string
     email: string | null

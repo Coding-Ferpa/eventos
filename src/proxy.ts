@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { clientEnv } from '@/lib/env'
+import { supabaseEnv } from '@/lib/env'
 import { buildContentSecurityPolicy } from '@/lib/security-headers'
 
 /**
@@ -39,7 +39,7 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  const env = clientEnv()
+  const env = supabaseEnv()
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

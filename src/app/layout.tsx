@@ -2,7 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { JetBrains_Mono, Poppins } from 'next/font/google'
 
-import { clientEnv } from '@/lib/env'
+import { siteEnv } from '@/lib/env'
 
 import './globals.css'
 
@@ -25,7 +25,7 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   // Base para canonical e Open Graph resolverem URL relativa.
-  metadataBase: new URL(clientEnv().NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(siteEnv().NEXT_PUBLIC_SITE_URL),
   title: {
     default: 'CF Eventos: certificados da comunidade Coding Ferpa',
     template: '%s · CF Eventos',
