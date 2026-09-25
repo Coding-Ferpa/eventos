@@ -25,10 +25,11 @@ export default defineConfig({
       // decisão do CF Jobs.
       exclude: ['src/lib/supabase/**', 'src/lib/auth.ts'],
       thresholds: {
-        // Os limites de `src/features/certificate` e de `src/features/import`
-        // (90 de linhas, 85 de ramos) entram junto com os módulos, no M5 e no
-        // M7: glob sem arquivo não mede nada e só daria falsa segurança.
         'src/lib/**': { lines: 80, branches: 75 },
+        // O motor nasceu no M3, com o `code.ts` que o /validar precisava.
+        'src/features/certificate/**': { lines: 90, branches: 85 },
+        // O de `src/features/import` (os mesmos 90 e 85) entra com o módulo,
+        // no M7: glob sem arquivo não mede nada e só daria falsa segurança.
       },
     },
   },
