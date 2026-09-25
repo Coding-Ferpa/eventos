@@ -136,10 +136,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Só o Chromium por enquanto: os projetos de celular rodam `e2e/publico/`,
-      # que nasce no M3, e aí o WebKit entra aqui.
-      - name: Instala o Chromium do Playwright
-        run: pnpm exec playwright install --with-deps chromium
+      # Chromium para o desktop e o celular Android; WebKit para o iPhone, que
+      # roda os fluxos de `e2e/publico/` (doc 11).
+      - name: Instala o Chromium e o WebKit do Playwright
+        run: pnpm exec playwright install --with-deps chromium webkit
       # Login, papéis e o guarda do admin precisam de banco e de auth de
       # verdade. O `start` de um banco novo já aplica migrations e seeds.
       - name: Sobe o Supabase local
@@ -153,6 +153,10 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
             echo "DATABASE_URL=$DB_URL"
+            # Os valores de desenvolvimento do .env.example: públicos de
+            # propósito, e recusados pelo schema dentro da Vercel.
+            echo "DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos"
+            echo "IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo"
           } >> "$GITHUB_ENV"
       # O build roda pelo `webServer` do playwright.config.ts.
       - run: pnpm test:e2e
