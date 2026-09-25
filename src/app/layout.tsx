@@ -17,11 +17,15 @@ const poppins = Poppins({
   display: 'optional',
 })
 
+// Sem preload aqui: só `/validar` e a tela de retirada mostram código logo de
+// cara, e elas declaram a própria instância com preload (doc 09). As demais
+// páginas baixam a fonte só se chegarem a usá-la.
 const jetBrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '500'],
   variable: '--font-jetbrains-mono',
   display: 'optional',
+  preload: false,
 })
 
 export const metadata: Metadata = {
