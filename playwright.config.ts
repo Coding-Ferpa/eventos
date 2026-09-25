@@ -17,10 +17,20 @@ export default defineConfig({
   },
   projects: [
     // O admin é desktop; a área pública é celular em rede móvel (doc 09), e o
-    // doc 11 pede os fluxos públicos nos dois motores.
+    // doc 11 pede os fluxos públicos nos dois motores. Por isso os projetos de
+    // celular só rodam o que está em `e2e/publico/`: rodar o admin em três
+    // motores triplicaria o tempo sem cobrir nada que o desktop não cubra.
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
-    { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 7'] },
+      testMatch: /publico\/.*\.spec\.ts/,
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 14'] },
+      testMatch: /publico\/.*\.spec\.ts/,
+    },
   ],
   webServer: {
     command: 'pnpm build && pnpm start',

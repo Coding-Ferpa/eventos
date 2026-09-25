@@ -34,13 +34,21 @@ insert into auth.users (
    'authenticated', 'authenticated', 'editor@cfeventos.local',
    extensions.crypt('cfeventos-local', extensions.gen_salt('bf')),
    now(), now(), now(), '{"provider":"email","providers":["email"]}',
-   '{"full_name":"Editora Local"}', '', '', '', '', '', '', '', '')
+   '{"full_name":"Editora Local"}', '', '', '', '', '', '', '', ''),
+  -- Conta sem papel: é o que todo cadastro novo recebe, e o E05 confere que
+  -- ela não entra no admin.
+  ('00000000-0000-0000-0000-000000000000', 'ad000000-0000-4000-8000-000000000003',
+   'authenticated', 'authenticated', 'reader@cfeventos.local',
+   extensions.crypt('cfeventos-local', extensions.gen_salt('bf')),
+   now(), now(), now(), '{"provider":"email","providers":["email"]}',
+   '{"full_name":"Pessoa Sem Acesso"}', '', '', '', '', '', '', '', '')
 on conflict (id) do nothing;
 
 insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select u.id::text, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email), 'email', now(), now(), now()
   from auth.users u
- where u.id in ('ad000000-0000-4000-8000-000000000001', 'ad000000-0000-4000-8000-000000000002')
+ where u.id in ('ad000000-0000-4000-8000-000000000001', 'ad000000-0000-4000-8000-000000000002',
+                'ad000000-0000-4000-8000-000000000003')
 on conflict do nothing;
 
 -- O trigger criou os perfis como `reader`; promover é ação manual.

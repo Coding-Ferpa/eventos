@@ -16,8 +16,7 @@ env:
 # verificam, e cada ausência está anotada abaixo com o milestone dela: job que
 # roda contra diretório vazio passa por vacuidade e dá falsa segurança.
 #
-# Faltam, e onde entram:
-#   e2e         M3  Playwright, quando existirem as primeiras specs
+# Falta, e onde entra:
 #   lighthouse  M3  orçamento de performance, quando existir página com dado
 #
 # Nenhum job usa secret: tudo fala com o ambiente local, então PR de fork roda
@@ -117,3 +116,44 @@ jobs:
       - name: Derruba o Supabase
         if: ${{ always() }}
         run: pnpm db:stop
+
+  e2e:
+    name: Testes E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Só o Chromium por enquanto: os projetos de celular rodam `e2e/publico/`,
+      # que nasce no M3, e aí o WebKit entra aqui.
+      - name: Instala o Chromium do Playwright
+        run: pnpm exec playwright install --with-deps chromium
+      # Login, papéis e o guarda do admin precisam de banco e de auth de
+      # verdade. O `start` de um banco novo já aplica migrations e seeds.
+      - name: Sobe o Supabase local
+        run: pnpm db:start
+      - name: Aponta o app para o Supabase local
+        run: |
+          # O comando também imprime linhas de status; só as VARIAVEL="valor" servem.
+          eval "$(pnpm exec supabase status -o env | grep -E '^[A-Z_]+=' | sed 's/^/export /')"
+          {
+            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "DATABASE_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+      # O build roda pelo `webServer` do playwright.config.ts.
+      - run: pnpm test:e2e
+      - name: Derruba o Supabase
+        if: ${{ always() }}
+        run: pnpm db:stop
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
