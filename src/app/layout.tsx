@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { JetBrains_Mono, Poppins } from 'next/font/google'
 
 import { siteEnv } from '@/lib/env'
+import { OPEN_GRAPH_BASE } from '@/lib/metadata'
 
 import './globals.css'
 
@@ -32,11 +33,7 @@ export const metadata: Metadata = {
   },
   description:
     'Ache o evento, confirme seus dados e baixe o certificado em PDF. Sem cadastro.',
-  openGraph: {
-    type: 'website',
-    locale: 'pt_BR',
-    siteName: 'CF Eventos',
-  },
+  openGraph: OPEN_GRAPH_BASE,
 }
 
 export default function RootLayout({

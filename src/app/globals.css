@@ -153,3 +153,69 @@
     }
   }
 }
+
+/* Estilos de prosa da descrição do evento, herdados do CF Jobs. Escopo fechado na classe
+   para nunca vazar para o resto da interface. */
+@layer components {
+  .prosa h2 {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    font-weight: 600;
+    margin-top: 1.5rem;
+  }
+
+  .prosa h3,
+  .prosa h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+
+  .prosa p,
+  .prosa li {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    color: var(--muted-foreground);
+  }
+
+  .prosa ul,
+  .prosa ol {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 1.25rem;
+  }
+
+  .prosa ul {
+    list-style: disc;
+  }
+
+  .prosa ol {
+    list-style: decimal;
+  }
+
+  .prosa strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .prosa code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background-color: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 0.125rem 0.375rem;
+  }
+
+  .prosa pre {
+    background-color: var(--surface);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .prosa blockquote {
+    border-left: 2px solid var(--border);
+    padding-left: 1rem;
+  }
+}
