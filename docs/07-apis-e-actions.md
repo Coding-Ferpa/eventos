@@ -29,7 +29,7 @@ export const revokeCertificate = defineAction({
 })
 ```
 
-Ordem fixa: **sessão → Zod → papel → operação em transação → `audit_logs` na mesma transação → `updateTag` depois do commit.** A auditoria não é opcional: o tipo de retorno de `executar` exige `entityId` e `diff`, e o insert em `audit_logs` é feito pelo esqueleto. Retorno padronizado `{ ok: true, data } | { ok: false, error: { code, message, fieldErrors? } }`; actions nunca lançam para o cliente. Erro de domínio esperado é `throw new FalhaDaAction(code, mensagem)`.
+Ordem fixa: **sessão → papel → Zod → operação em transação → `audit_logs` na mesma transação → `updateTag` depois do commit.** O papel vem antes do Zod para a entrada de quem não tem papel nem ser processada (a ordem do esqueleto desde o M2; este parágrafo dizia o contrário até o M4). A auditoria não é opcional: o tipo de retorno de `executar` exige `entityId` e `diff`, e o insert em `audit_logs` é feito pelo esqueleto. Retorno padronizado `{ ok: true, data } | { ok: false, error: { code, message, fieldErrors? } }`; actions nunca lançam para o cliente. Erro de domínio esperado é `throw new FalhaDaAction(code, mensagem)`.
 
 Duas regras próprias deste projeto para o `diff`: nunca contém CPF (não existe) e, em operações em massa, contém **contadores e ids**, nunca listas de nomes.
 
