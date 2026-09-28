@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import type { DataField } from './schema'
-import { findUnknownTokens, resolveTokens, TOKENS, type TokenContext } from './tokens'
+import {
+  findUnknownTokens,
+  resolveTokens,
+  TOKENS,
+  usedTokens,
+  type TokenContext,
+} from './tokens'
 
 const CONTEXTO: TokenContext = {
   siteUrl: 'https://eventos.codingferpa.org/',
@@ -135,6 +141,15 @@ describe('findUnknownTokens', () => {
     expect(
       findUnknownTokens('{{participant.full_name}}, {{data.titulo_palestra}}', CAMPOS),
     ).toEqual([])
+  })
+})
+
+describe('usedTokens', () => {
+  it('lista os placeholders do conteúdo, com a mesma leitura do motor', () => {
+    expect(
+      usedTokens('Olá, {{ participant.full_name }}! Código {{certificate.code}}.'),
+    ).toEqual(['participant.full_name', 'certificate.code'])
+    expect(usedTokens('sem nada')).toEqual([])
   })
 })
 

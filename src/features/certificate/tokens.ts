@@ -120,12 +120,15 @@ export function resolveTokens(
 }
 
 /** Os tokens do conteúdo que o modelo não conhece, na ordem em que aparecem. */
+/** Os placeholders de um conteúdo, na ordem, lidos como o motor lê. */
+export function usedTokens(conteudo: string): string[] {
+  return [...conteudo.matchAll(PADRAO)].map((casamento) => casamento[1] ?? '')
+}
+
 export function findUnknownTokens(conteudo: string, dataFields: DataField[]): string[] {
   const chaves = new Set(dataFields.map((campo) => campo.key))
-  return [...conteudo.matchAll(PADRAO)]
-    .map((casamento) => casamento[1] ?? '')
-    .filter(
-      (token) =>
-        !(token in FIXOS) && !(token.startsWith('data.') && chaves.has(token.slice(5))),
-    )
+  return usedTokens(conteudo).filter(
+    (token) =>
+      !(token in FIXOS) && !(token.startsWith('data.') && chaves.has(token.slice(5))),
+  )
 }

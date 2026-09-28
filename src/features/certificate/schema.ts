@@ -7,9 +7,9 @@ import { isReservedKey } from './reserved-keys'
  * por isso os nomes em `snake_case`. O motor só lê o `published_snapshot`,
  * validado por `templateSnapshotSchema`.
  *
- * Coordenadas normalizadas de 0 a 1, origem no topo-esquerda. As regras de
- * publicação (caixa inteira dentro da página, nome e QR obrigatórios) são do
- * `publishTemplate` do M6; aqui fica só a forma.
+ * Coordenadas normalizadas de 0 a 1, origem no topo-esquerda. Aqui fica só a
+ * forma de cada campo; a coerência do rascunho e as 7 regras de publicação
+ * estão em `publish.ts`.
  */
 
 export const MAX_DATA_FIELDS = 20
