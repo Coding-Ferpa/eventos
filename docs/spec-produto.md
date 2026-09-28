@@ -121,7 +121,7 @@ Regras inegociáveis:
 
 O PDF é montado no momento do download, a partir do modelo em Supabase Storage mais os dados do participante. Nada é pré-gerado.
 
-- **Fonte embutida obrigatória** (TTF/OTF via `@pdf-lib/fontkit`). As fontes padrão do PDF usam WinAnsi e quebram `ç`, `ã`, `õ`: qualquer implementação que dependa de `StandardFonts` está errada.
+- **Fonte embutida obrigatória** (TTF/OTF via `@pdf-lib/fontkit`): qualquer implementação que dependa de `StandardFonts` está errada. O motivo não é acento em português: o WinAnsi das fontes padrão equivale ao CP1252 e cobre todos os diacríticos do português (corrigido no M5, depois de medido com sabotagem). As fontes padrão falham fora do Latin-1, em nomes com vietnamita, turco, polonês, cirílico ou grego, e não vão dentro do PDF, então a aparência depende do leitor. O TTF embutido garante a fonte da marca, o subset e o Unicode completo. A regressão para `StandardFonts` é pega exigindo a fonte embutida no PDF (`/FontFile2`), e não pela extração do texto, que volta idêntica com Helvetica.
 - **Ajuste automático de tamanho**: o texto encolhe até `font_size_min_pt` para caber na caixa definida. Abaixo disso, quebra em duas linhas. Nunca vaza da caixa, nunca corta com reticências no nome.
 - Campos suportados: texto (de coluna do CSV, de campo do evento, ou do sistema), QR code, data formatada em pt-BR.
 - Nome do arquivo: `certificado-{slug-do-evento}-{primeiro-nome}.pdf`.

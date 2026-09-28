@@ -28,7 +28,7 @@ Você é o engenheiro executor do **CF Eventos**, a plataforma open source de ce
 
 | # | Armadilha | Onde está resolvida |
 |---|---|---|
-| 1 | Acento quebrado no PDF (`StandardFonts` usa WinAnsi) | doc 05, fontes; gate `test:gate:pdf` |
+| 1 | Nome fora do Latin-1 quebrado no PDF, e fonte que não vai dentro do arquivo (`StandardFonts`). Não é acento em português: o WinAnsi equivale ao CP1252 e cobre todos os diacríticos do português, como o M5 mediu | doc 05, fontes; gate `test:gate:pdf`, que exige `/FontFile2` além da extração |
 | 2 | CSV do Excel pt-BR (Windows-1252, `;`, BOM) virando `Ã§` em silêncio | doc 06, decodificação; gate `test:gate:csv` |
 | 3 | Coordenadas em pixel; eixo y invertido entre navegador e PDF | doc 05: caixas de 0 a 1, `toPdfY()` é a única inversão |
 | 4 | Nome que não cabe | doc 05, `fit-text.ts`: nunca vaza, nunca trunca |
