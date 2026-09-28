@@ -179,7 +179,7 @@ eventos/
 ├── public/
 │   └── fonts/cert/                    # TTF estáticos das 5 famílias curadas + LICENSES/
 ├── scripts/                           # check-env, check-schema, check-migrations, check-fonts,
-│                                      # anonymize-csv, load-test-download
+│                                      # check-fonts-trace, anonymize-csv, load-test-download
 ├── src/
 │   ├── app/
 │   │   ├── (public)/

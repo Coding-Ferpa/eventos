@@ -44,7 +44,8 @@ Outros testes que funcionam como guarda de projeto:
 - **`public-projection`** (unidade): nenhuma função de `public-lookup.ts` devolve `id`, `participant_id`, `cpf_hash`, `email` ou `birth_date`.
 - **`public-bundle`** (script pós-build): nenhum chunk de rota pública contém `pdfjs-dist`, `@cantoo/pdf-lib` ou `@cantoo/fontkit`.
 - **`env-example`**, **`check:schema`**, **`check:migrations`**: herdados do CF Jobs.
-- **`check:fonts`**: toda fonte do catálogo existe em `public/fonts/cert/`, é TTF estático e tem licença em `LICENSES/`.
+- **`check:fonts`**: toda fonte do catálogo existe em `public/fonts/cert/` e todo TTF da pasta está no catálogo, é TTF estático, tem o peso que o catálogo declara (`usWeightClass`; arquivo trocado de peso sai errado sem erro), cobre os caracteres do português e tem licença em `LICENSES/` e linha no `THIRD_PARTY_NOTICES.md`.
+- **`check:fonts-trace`** (pós-build): as TTFs estão no rastro (`.nft.json`) de cada rota de `src/lib/rotas-pdf.ts`, e nenhum `.env` ou `.git/` foi traçado junto ([doc 05](05-motor-de-certificados.md)). Um teste unitário garante que toda rota que chama `generateCertificatePdf` está na lista.
 
 ## pgTAP: o que a matriz de RLS afirma
 
