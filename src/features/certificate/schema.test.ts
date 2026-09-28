@@ -32,7 +32,9 @@ const QR = { id: 'qr', kind: 'qr', page: 1, box: { x: 0.85, y: 0.8, w: 0.1, h: 0
 const SNAPSHOT = {
   schema_version: 1,
   version: 1,
+  base_pdf_path: '0b4ed4e6-2a4c-4f7e-9d71-1f5e2d3c4b5a/base.pdf',
   base_pdf_sha256: 'a'.repeat(64),
+  base_pdf_size_bytes: 412_000,
   pages: [{ width_pt: 841.89, height_pt: 595.28, preview_path: null }],
   data_fields: [DATA_FIELD],
   layout_fields: [NOME, QR],
@@ -125,6 +127,21 @@ describe('layoutFieldSchema', () => {
 describe('templateSnapshotSchema', () => {
   it('aceita o snapshot de um modelo publicado', () => {
     expect(templateSnapshotSchema.safeParse(SNAPSHOT).success).toBe(true)
+  })
+
+  // O snapshot é imutável e a linha do modelo muda quando a arte do rascunho
+  // é trocada: o caminho do base.pdf publicado tem de estar nele (doc 04).
+  it('traz o caminho e o tamanho do base.pdf, com o teto de 3 MB', () => {
+    const { base_pdf_path: _, ...semCaminho } = SNAPSHOT
+    expect(templateSnapshotSchema.safeParse(semCaminho).success).toBe(false)
+    expect(
+      templateSnapshotSchema.safeParse({ ...SNAPSHOT, base_pdf_size_bytes: 3_145_729 })
+        .success,
+    ).toBe(false)
+    expect(
+      templateSnapshotSchema.safeParse({ ...SNAPSHOT, base_pdf_size_bytes: 3_145_728 })
+        .success,
+    ).toBe(true)
   })
 
   it('campo na página 2 exige modelo de duas páginas', () => {

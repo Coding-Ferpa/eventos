@@ -75,7 +75,9 @@ function plano(campos: TemplateSnapshot['layout_fields'], nome = 'José Gonçalv
     {
       schema_version: 1,
       version: 1,
+      base_pdf_path: 'modelo/base.pdf',
       base_pdf_sha256: 'a'.repeat(64),
+      base_pdf_size_bytes: 1,
       pages: [PAGINA],
       data_fields: [],
       layout_fields: campos,

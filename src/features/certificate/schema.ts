@@ -121,11 +121,19 @@ export const pageSchema = z.object({
   preview_path: z.string().nullable(),
 })
 
+/**
+ * Teto do `base.pdf` (doc 05), o mesmo do check no banco: a resposta de uma
+ * Vercel Function vai até 4,5 MB, e o resto do PDF é fonte e texto.
+ */
+export const BASE_PDF_MAX_BYTES = 3 * 1024 * 1024
+
 export const templateSnapshotSchema = z
   .object({
     schema_version: z.literal(1),
     version: z.int().min(1),
+    base_pdf_path: z.string().min(1),
     base_pdf_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    base_pdf_size_bytes: z.int().min(1).max(BASE_PDF_MAX_BYTES),
     pages: z.array(pageSchema).min(1).max(2),
     data_fields: z.array(dataFieldSchema).max(MAX_DATA_FIELDS),
     layout_fields: z.array(layoutFieldSchema).max(MAX_LAYOUT_FIELDS),

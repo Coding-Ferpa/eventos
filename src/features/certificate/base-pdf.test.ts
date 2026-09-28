@@ -39,7 +39,9 @@ function modeloSobre(
   return {
     schema_version: 1,
     version: 1,
+    base_pdf_path: 'modelo/base.pdf',
     base_pdf_sha256: 'a'.repeat(64),
+    base_pdf_size_bytes: 1,
     pages: paginas.map((pagina) => ({ ...pagina, preview_path: null })),
     data_fields: [],
     layout_fields: [

@@ -53,7 +53,9 @@ async function frenteEVerso() {
   const snapshot: TemplateSnapshot = {
     schema_version: 1,
     version: 1,
+    base_pdf_path: 'modelo/base.pdf',
     base_pdf_sha256: base.sha256,
+    base_pdf_size_bytes: base.bytes.byteLength,
     pages: base.pages.map((pagina) => ({ ...pagina, preview_path: null })),
     data_fields: [],
     layout_fields: [

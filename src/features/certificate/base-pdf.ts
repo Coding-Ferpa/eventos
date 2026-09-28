@@ -3,6 +3,7 @@ import { EncryptedPDFError, PDFDocument, PDFName, type PDFPage } from '@cantoo/p
 import { tipoDeImagemPelosBytes } from '@/lib/image-signature'
 
 import { round2 } from './layout/coords'
+import { BASE_PDF_MAX_BYTES } from './schema'
 
 /**
  * A arte vira o `base.pdf` canônico uma vez, na publicação (doc 05). O
@@ -15,8 +16,6 @@ import { round2 } from './layout/coords'
  */
 
 export const CANONICAL_SIDE_PT = 841.89
-/** A resposta de uma Vercel Function vai até 4,5 MB; o resto é fonte e texto. */
-export const BASE_PDF_MAX_BYTES = 3 * 1024 * 1024
 export const ART_MIN_SIDE_PX = 1200
 export const ART_PRINT_SIDE_PX = 2000
 const MAX_PAGINAS = 2
