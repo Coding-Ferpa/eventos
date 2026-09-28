@@ -297,7 +297,7 @@ sequenceDiagram
     B->>R: cookie de retirada + If-None-Match
     R->>R: abre o cookie, rate limit do download
     R->>DB: certificado + participante + evento + snapshot (1 consulta)
-    R->>R: ETag = sha256(base_pdf_sha256, template.version, certificate.version, ENGINE_VERSION)
+    R->>R: ETag = sha256(ENGINE_VERSION, base_pdf_sha256, template.version, certificate.version, contexto impresso)
     alt ETag igual
         R-->>B: 304
     else
@@ -311,6 +311,7 @@ sequenceDiagram
     end
 ```
 
+- **ETag (`etag.ts`):** além das versões, entra tudo o que o `layout()` lê do contexto, em ordem fixa (`JSON` de uma lista, sem separador que cole dois campos): nome, últimos dígitos do CPF, título, local, cidade e datas do evento, rótulo do tipo, horas, código, emissão, sequência, `data` com as chaves ordenadas e o endereço do site. Correção do M5: a fórmula original tinha só as versões, e título, datas, cidade e local do evento, e o rótulo do tipo, mudam sem mudar versão nenhuma. Corrigir o título do evento daria 304 e o aluno ficaria com o PDF antigo. A rota já tem esses dados antes de calcular o ETag, e o custo é de microssegundos. `ENGINE_VERSION` sobe quando o motor, a formatação ou uma fonte curada mudam o PDF de um certificado que não mudou.
 - **Cache de módulo:** `Map` com no máximo 8 `base.pdf` (LRU, chave `base_pdf_sha256`) e todas as fontes usadas. Guarda-se bytes do `base.pdf` (o `PDFDocument` é mutável, então cada requisição faz seu `load`) e a fonte **parseada**. Com Fluid Compute a instância atende várias requisições e o cache aquece na primeira.
 - **Cabeçalhos:** `Content-Type: application/pdf` · `Content-Disposition: attachment; filename="certificado-{slug}-{primeiro-nome}.pdf"` (primeiro nome em ASCII minúsculo; mais `filename*` UTF-8) · `ETag` forte · `Cache-Control: private, no-cache` · `X-Robots-Tag: noindex`.
 - **Revogado ou apagado:** o motor nem é chamado; a rota responde 410.
@@ -348,7 +349,7 @@ Artes de teste geradas em memória por `tests/support/artes.ts`, e não guardada
 | PDF-20 | chaves reservadas e valor com cara de CPF | recusados |
 | PDF-21 | glifo ausente na fonte do campo | `GLYPH_FALLBACK`, nenhum `.notdef` no PDF |
 | PDF-22 | fonte variável e fonte sem `ç` no upload | recusadas |
-| PDF-23 | ETag muda com `certificate.version`, `template.version` e `ENGINE_VERSION`; não muda sem mudança | |
+| PDF-23 | ETag muda com `certificate.version`, `template.version`, `ENGINE_VERSION`, o `base.pdf` e cada dado impresso do evento e do tipo; não muda sem mudança nem com a ordem das chaves de `data` | |
 | PDF-24 | tamanho do PDF final com `base.pdf` de 3 MB | < 4,5 MB |
 
 O decodificador de QR do PDF-13 (`jsqr`, devDependency) lê a matriz desenhada em um bitmap montado pelo próprio teste a partir do path: não exige rasterizador.
