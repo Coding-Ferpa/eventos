@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 
+import { FONTES_CURADAS_NO_PACOTE, ROTAS_QUE_GERAM_PDF } from './src/lib/rotas-pdf'
 import { staticSecurityHeaders } from './src/lib/security-headers'
 
 /**
@@ -32,6 +33,11 @@ const nextConfig: NextConfig = {
       : [],
     dangerouslyAllowLocalIP: supabaseLocal,
   },
+  // `public/` é servido pela CDN e não entra no pacote da função sozinho: as
+  // rotas que geram PDF declaram as fontes, e o check:fonts-trace confere.
+  outputFileTracingIncludes: Object.fromEntries(
+    ROTAS_QUE_GERAM_PDF.map((rota) => [rota, FONTES_CURADAS_NO_PACOTE]),
+  ),
   reactStrictMode: true,
   poweredByHeader: false,
   // O Next transmite a metadata em vez de segurar o shell, e quando a página

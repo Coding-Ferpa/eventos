@@ -47,8 +47,9 @@ jobs:
         run: pnpm build
         env:
           NEXT_PUBLIC_SITE_URL: https://preview.example.org
-      # Entra aqui: check:fonts no M5.
-      #
+      # Depende do build acima: lê o rastro (.nft.json) de cada rota de PDF.
+      - name: Fontes do certificado no pacote das rotas de PDF
+        run: pnpm check:fonts-trace
       # Bloqueia no que vai para produção (doc 08, A06). Avisos em dependência
       # de desenvolvimento aparecem no passo seguinte sem derrubar o PR.
       - name: Auditoria de dependências de produção
