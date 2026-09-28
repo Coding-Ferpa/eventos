@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+
 import { expect, test, type Page } from '@playwright/test'
 
 import { artes } from '../tests/support/artes'
-import { apagarEventosComPrefixo } from './support/banco'
+import { apagarEventosComPrefixo, apagarFonteEnviada } from './support/banco'
 import { CONTAS, entrar } from './support/sessao'
 
 /**
@@ -16,8 +19,19 @@ const NOME_CANONICO = 'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues'
 
 test.describe.configure({ mode: 'serial' })
 
+// Uma fonte de verdade, enviada como se fosse da organização.
+const FONTE = readFileSync('public/fonts/cert/Poppins-Bold.ttf')
+const SHA_DA_FONTE = createHash('sha256').update(FONTE).digest('hex')
+
+// Antes também: a fonte precisa entrar como nova, para o teste ver o
+// resultado da ida e volta do subset, e não o "já tinha sido enviada".
+test.beforeAll(async () => {
+  await apagarFonteEnviada(SHA_DA_FONTE)
+})
+
 test.afterAll(async () => {
   await apagarEventosComPrefixo(PREFIXO)
+  await apagarFonteEnviada(SHA_DA_FONTE)
 })
 
 async function criarEvento(page: Page) {
@@ -39,13 +53,11 @@ async function criarModelo(page: Page, urlDoEvento: string, nome: string) {
 }
 
 async function subirArte(page: Page) {
-  await page
-    .locator('input[type="file"][accept^="application/pdf"]')
-    .setInputFiles({
-      name: 'arte.pdf',
-      mimeType: 'application/pdf',
-      buffer: Buffer.from(await artes.a4Paisagem()),
-    })
+  await page.locator('input[type="file"][accept^="application/pdf"]').setInputFiles({
+    name: 'arte.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from(await artes.a4Paisagem()),
+  })
   await expect(page.getByText('Arte conferida e salva.')).toBeVisible({ timeout: 30_000 })
 }
 
@@ -136,5 +148,40 @@ test.describe('modelo por formulário (E07)', () => {
       page.getByText('Falta um campo de texto com {{participant.full_name}}.'),
     ).toBeVisible()
     await expect(page.getByText('Rascunho', { exact: true })).toBeVisible()
+  })
+
+  test('fonte enviada entra no seletor e a prévia a usa, lida do bucket privado', async ({
+    page,
+  }) => {
+    await entrar(page, CONTAS.editor)
+    const urlDoEvento = await criarEvento(page)
+    await criarModelo(page, urlDoEvento, 'Fonte E2E')
+    await subirArte(page)
+
+    // O servidor avalia a fonte com o pdf.js (ida e volta do subset). A
+    // Poppins passa: "falhou no subset" aqui seria o pdf.js quebrado no build
+    // de produção, que marcava toda fonte assim sem erro nenhum (M6).
+    await page
+      .locator('input[type="file"][accept=".ttf,.otf"]')
+      .setInputFiles({ name: 'Marca-Bold.ttf', mimeType: 'font/ttf', buffer: FONTE })
+    await expect(page.getByText('Fonte conferida e disponível.')).toBeVisible({
+      timeout: 30_000,
+    })
+
+    await page.getByRole('button', { name: 'Posicionar o nome' }).click()
+    const nome = page.getByRole('group', { name: 'Texto: nome' })
+    await nome.getByRole('combobox', { name: 'Fonte' }).click()
+    await page.getByRole('option', { name: 'Poppins 700 (enviada)' }).click()
+
+    await expect(linhaDoNome(page)).toHaveAttribute('transform', /translate/)
+    // Os glifos da prévia vêm da fonte enviada: o id nasce da referência dela.
+    await expect(
+      page
+        .getByTestId('previa-do-modelo')
+        .locator('defs > path[id^="cf-custom-"]')
+        .first(),
+    ).toBeAttached()
+    // No main: o anunciador de rota do Next também é role=alert.
+    await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0)
   })
 })

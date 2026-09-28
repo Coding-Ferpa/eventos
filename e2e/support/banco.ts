@@ -70,3 +70,24 @@ async function apagarArquivosDosModelos(ids: string[]) {
     }
   }
 }
+
+/** Apaga uma fonte enviada pelo sha256 dos bytes: a linha e o arquivo do bucket. */
+export async function apagarFonteEnviada(sha256: string) {
+  const sql = conectar()
+  try {
+    const linhas = await sql<{ storage_path: string }[]>`
+      delete from public.custom_fonts where sha256 = ${sha256} returning storage_path`
+    if (linhas.length === 0) return
+    await createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: { persistSession: false },
+      },
+    )
+      .storage.from('fonts')
+      .remove(linhas.map((linha) => linha.storage_path))
+  } finally {
+    await sql.end()
+  }
+}

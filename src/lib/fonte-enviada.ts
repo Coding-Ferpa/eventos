@@ -48,7 +48,14 @@ function formatoAceito(bytes: Uint8Array) {
 
 async function textoDoPdf(pdf: Uint8Array): Promise<string> {
   // Só quando alguém sobe fonte: o pdf.js não pesa nas outras rotas.
-  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const [{ getDocument }] = await Promise.all([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    // Importado, o worker se registra em globalThis.pdfjsWorker, e o pdf.js
+    // roda na mesma thread sem o import() dinâmico do worker, que o webpack
+    // não empacota. Medido no M6: sem isto, o pdf.js falha no build de
+    // produção e passa nos testes.
+    import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
+  ])
   const tarefa = getDocument({ data: pdf, useSystemFonts: false })
   try {
     const pagina = await (await tarefa.promise).getPage(1)
@@ -60,6 +67,7 @@ async function textoDoPdf(pdf: Uint8Array): Promise<string> {
 }
 
 async function subsetVoltaIntegro(bytes: Uint8Array): Promise<boolean> {
+  let pdf: Uint8Array
   try {
     const documento = await PDFDocument.create()
     documento.registerFontkit(cachedFontkit)
@@ -70,10 +78,14 @@ async function subsetVoltaIntegro(bytes: Uint8Array): Promise<boolean> {
     documento
       .addPage([2000, 100])
       .drawText(REQUIRED_CHARACTERS, { x: 10, y: 40, size: 10, font: fonte })
-    return (await textoDoPdf(await documento.save())) === REQUIRED_CHARACTERS
+    pdf = await documento.save()
   } catch {
+    // O pdf-lib não conseguiu fazer o subset desta fonte: veredito sobre ela.
     return false
   }
+  // Pane do pdf.js não é veredito sobre a fonte: sobe como erro, em vez de
+  // marcar toda fonte enviada como "falhou no subset" sem ninguém ver.
+  return (await textoDoPdf(pdf)) === REQUIRED_CHARACTERS
 }
 
 export async function avaliarFonteEnviada(bytes: Uint8Array): Promise<FonteAvaliada> {
