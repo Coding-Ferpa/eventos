@@ -35,7 +35,7 @@ UI e CRUD não exigem TDD: teste junto com o código basta.
 
 Dois testes têm passo próprio e nomeado no workflow, para que ninguém os desligue dentro de um `vitest run` genérico:
 
-1. **`pnpm test:gate:pdf`** (`pdf-accents.test.ts`): para **cada fonte curada e cada peso**, gera um PDF com `José Gonçalves de Assunção`, extrai o texto com pdf.js e compara byte a byte. Acento quebrado no certificado é constrangimento público; este teste é o seguro.
+1. **`pnpm test:gate:pdf`** (`pdf-accents.test.ts`): para **cada fonte curada e cada peso**, gera um PDF com `José Gonçalves de Assunção`, extrai o texto com pdf.js e compara byte a byte, e exige a fonte embutida no PDF. Acento quebrado no certificado é constrangimento público; este teste é o seguro.
 2. **`pnpm test:gate:csv`** (`csv-encoding.test.ts`): decodifica e faz o parse de `excel-ptbr-cp1252-semicolon.csv`, `excel-csv-utf8-bom-semicolon.csv`, `google-sheets-utf8-comma.csv` e `excel-unicode-utf16le-tab.txt`, e afirma os mesmos nomes acentuados nos quatro.
 
 Outros testes que funcionam como guarda de projeto:

@@ -42,7 +42,7 @@ Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigat
 
 **Dois gates inegociáveis**, em passos nomeados para o PR mostrar o que quebrou. Os scripts filtram por nome de arquivo (`vitest run pdf-accents`, `vitest run csv-encoding`), onde quer que o doc 02 ponha os testes.
 
-- **`pdf-accents.test.ts`**: para cada TTF de `public/fonts/cert/` (lista a pasta, então fonte nova entra sozinha), gera um PDF pelo motor real do [doc 05](05-motor-de-certificados.md) com `José Gonçalves de Assunção`, extrai o texto e compara por igualdade estrita. Pega regressão para `StandardFonts` e TTF sem os glifos: falhas sem erro, só com certificado impresso errado.
+- **`pdf-accents.test.ts`**: para cada TTF de `public/fonts/cert/` (lista a pasta, então fonte nova entra sozinha), gera um PDF pelo motor real do [doc 05](05-motor-de-certificados.md) com `José Gonçalves de Assunção`, extrai o texto e compara por igualdade estrita, e exige a fonte embutida (`/FontFile2`, nenhuma das 14 fontes-padrão). Pega TTF sem os glifos e regressão para `StandardFonts`: falhas sem erro, só com certificado impresso errado. A extração sozinha não pegaria a segunda, porque os acentos do português existem no WinAnsi (medido no M5).
 - **`csv-encoding.test.ts`**: roda o parser do [doc 06](06-importacao-csv.md) contra `excel-ptbr-cp1252-semicolon.csv`, `excel-csv-utf8-bom-semicolon.csv`, `google-sheets-utf8-comma.csv` e `excel-unicode-utf16le-tab.txt`, de mesmo conteúdo lógico. As quatro produzem as mesmas linhas, com acentos intactos, sem opção informada pelo chamador.
 
 PR que remove, marca com `.skip` ou afrouxa um gate é recusado.

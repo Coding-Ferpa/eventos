@@ -39,7 +39,22 @@ export default tseslint.config(
               message:
                 "Importe `z` de '@/lib/zod': é a instância com o locale pt-BR (ADR-0016).",
             },
+            {
+              name: '@cantoo/pdf-lib',
+              importNames: ['StandardFonts'],
+              message:
+                'Fonte do certificado é sempre TTF embutida (doc 05): a fonte-padrão não vai dentro do PDF.',
+            },
           ],
+        },
+      ],
+      // A outra porta para as fontes-padrão, que nem passa por import.
+      'no-restricted-properties': [
+        'error',
+        {
+          property: 'embedStandardFont',
+          message:
+            'Fonte do certificado é sempre TTF embutida (doc 05): a fonte-padrão não vai dentro do PDF.',
         },
       ],
     },
