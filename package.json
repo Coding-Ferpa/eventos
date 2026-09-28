@@ -32,6 +32,7 @@
     "db:test": "supabase test db",
     "check:schema": "tsx --env-file-if-exists=.env scripts/check-schema.ts",
     "check:migrations": "tsx scripts/check-migrations.ts",
+    "check:fonts": "tsx scripts/check-fonts.ts",
     "check:fonts-trace": "tsx scripts/check-fonts-trace.ts"
   },
   "dependencies": {

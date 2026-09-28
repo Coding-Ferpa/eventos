@@ -39,6 +39,8 @@ jobs:
       # na revisão e não no dia do deploy.
       - name: Expand/contract nas migrations
         run: pnpm check:migrations
+      - name: Fontes curadas estáticas, com peso, cobertura e licença
+        run: pnpm check:fonts
       # A Preview da Vercel sobe sem banco e sem Supabase (doc 02). Este job
       # também não tem nenhum dos dois, então o build daqui é o da Preview: se
       # alguma página passar a exigir o banco no build, quebra aqui, e não no
