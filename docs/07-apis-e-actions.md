@@ -61,7 +61,7 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 |---|---|---|
 | `createTemplate` (editor) | `{ event_id, name }` | cria em `draft`, `schema_version = 1`, listas vazias |
 | `createArtUploadUrls` (editor) | `{ template_id, art: { content_type, size }, previews: [{ page }] }` | URLs assinadas: arte original em `templates`, prévias WebP em `previews` |
-| `attachArt` (editor) | `{ template_id, art_path, preview_paths[] }` | baixa a arte, confere assinatura de bytes, roda `buildBasePdf` ([doc 05](05-motor-de-certificados.md)), grava `base.pdf`, `pages`, sha256 e tamanho. Erros: `art_encrypted`, `art_rotated`, `art_too_many_pages`, `art_too_small`, `art_too_heavy`. `maxDuration = 60`. |
+| `attachArt` (editor) | `{ template_id, art_path, preview_paths[] }` | baixa a arte, confere assinatura de bytes, roda `buildBasePdf` ([doc 05](05-motor-de-certificados.md)), grava `base.pdf`, `pages`, sha256 e tamanho. Erros: `art_encrypted`, `art_rotated`, `art_too_many_pages`, `art_too_small`, `art_too_heavy`, `art_unsupported_type`, `art_unreadable`. `maxDuration = 60`. |
 | `saveTemplateDraft` (editor) | `{ id, data_fields, layout_fields }` | valida com o Zod de `schema.ts`: chaves reservadas, placeholders conhecidos, caixas dentro da página. Grava só a cópia de trabalho. **Não afeta downloads.** |
 | `publishTemplate` (editor) | `{ id }` | roda as 7 regras de publicação do doc 05; grava `published_snapshot`, `version + 1`, `status = published` |
 | `getLongestNameSample` (editor) | `{ template_id, field_id }` | devolve o nome mais largo do evento para o botão de teste (leitura, mas é action para carregar sessão e papel) |
@@ -172,7 +172,7 @@ Isto existe desde a fase 1: o pedido nunca sai da plataforma, então o históric
 
 Comuns: `unauthorized`, `forbidden`, `not_found`, `validation_error`, `rate_limited`, `conflict`.
 Eventos: `event_unavailable`, `release_preconditions_failed` (lista o que falta), `slug_locked`.
-Modelos: `art_encrypted`, `art_rotated`, `art_too_many_pages`, `art_too_small`, `art_too_heavy`, `art_unsupported_type`, `font_variable`, `font_missing_glyphs`, `template_publish_blocked` (lista as regras violadas), `reserved_key`, `unknown_placeholder`.
+Modelos: `art_encrypted`, `art_rotated`, `art_too_many_pages`, `art_too_small`, `art_too_heavy`, `art_unsupported_type`, `art_unreadable`, `font_variable`, `font_missing_glyphs`, `template_publish_blocked` (lista as regras violadas), `reserved_key`, `unknown_placeholder`.
 Importação: `file_too_large`, `too_many_rows`, `single_column`, `mapping_incomplete`, `preview_stale`, `decisions_pending`, `batch_not_staged`.
 Certificados: `must_revoke`, `confirm_count_mismatch`, `correction_already_pending`, `certificate_gone`.
 Geração: `pdf_generation_failed`.

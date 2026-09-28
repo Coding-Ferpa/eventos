@@ -1,11 +1,9 @@
 // @vitest-environment node
 
-import { randomBytes } from 'node:crypto'
-import { deflateSync } from 'node:zlib'
-
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, it } from 'vitest'
 
+import { artePng } from '../../../../tests/support/artes'
 import {
   basePdfEmBranco,
   bytesCurados,
@@ -215,44 +213,9 @@ describe('drawPdf', () => {
 
 /** Um base.pdf de uns 3 MB: imagem de ruído, que não comprime. */
 async function basePdfPesado(): Promise<Uint8Array> {
-  const largura = 1024
-  const altura = 1000
-  // Ruído de verdade: bytes aleatórios não comprimem, e o base.pdf fica com
-  // o tamanho do teto. Cada linha começa com o filtro 0 do PNG.
-  const linhas = randomBytes((largura * 3 + 1) * altura)
-  for (let linha = 0; linha < altura; linha++) linhas[linha * (largura * 3 + 1)] = 0
-  const bloco = (tipo: string, dados: Buffer) => {
-    const tamanho = Buffer.alloc(4)
-    tamanho.writeUInt32BE(dados.length)
-    const corpo = Buffer.concat([Buffer.from(tipo), dados])
-    const crc = Buffer.alloc(4)
-    crc.writeUInt32BE(crc32(corpo))
-    return Buffer.concat([tamanho, corpo, crc])
-  }
-  const cabecalho = Buffer.alloc(13)
-  cabecalho.writeUInt32BE(largura, 0)
-  cabecalho.writeUInt32BE(altura, 4)
-  cabecalho[8] = 8
-  cabecalho[9] = 2
-  const png = Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    bloco('IHDR', cabecalho),
-    bloco('IDAT', deflateSync(linhas, { level: 0 })),
-    bloco('IEND', Buffer.alloc(0)),
-  ])
-
   const doc = await PDFDocument.create()
   const pagina = doc.addPage([841.89, 595.28])
-  const imagem = await doc.embedPng(png)
+  const imagem = await doc.embedPng(artePng(1024, 1000, { ruido: true }))
   pagina.drawImage(imagem, { x: 0, y: 0, width: 841.89, height: 595.28 })
   return doc.save()
-}
-
-function crc32(dados: Buffer): number {
-  let crc = 0xffffffff
-  for (const byte of dados) {
-    crc ^= byte
-    for (let k = 0; k < 8; k++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1))
-  }
-  return (crc ^ 0xffffffff) >>> 0
 }
