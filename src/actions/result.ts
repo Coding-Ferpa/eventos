@@ -17,6 +17,13 @@ export type ActionErrorCode =
   | 'slug_locked'
   // Modelos (doc 07).
   | 'template_publish_blocked'
+  | 'art_encrypted'
+  | 'art_rotated'
+  | 'art_too_many_pages'
+  | 'art_too_small'
+  | 'art_too_heavy'
+  | 'art_unsupported_type'
+  | 'art_unreadable'
 
 export type ActionError = {
   code: ActionErrorCode
