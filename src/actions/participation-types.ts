@@ -74,7 +74,8 @@ export const upsertParticipationType = defineAction({
       label: entrada.label,
       aliases: entrada.aliases,
       defaultHours: entrada.defaultHours.toFixed(1),
-      // Só muda quando vier: o formulário de tipos não mexe no modelo (M6).
+      // Só muda quando vier: o formulário de dados do tipo não mexe no modelo,
+      // e o seletor de modelo manda os dados como estão.
       ...(entrada.certificateTemplateId !== undefined
         ? { certificateTemplateId: entrada.certificateTemplateId }
         : {}),

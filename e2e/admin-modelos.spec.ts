@@ -1,0 +1,140 @@
+import { expect, test, type Page } from '@playwright/test'
+
+import { artes } from '../tests/support/artes'
+import { apagarEventosComPrefixo } from './support/banco'
+import { CONTAS, entrar } from './support/sessao'
+
+/**
+ * E07 do doc 11: subir a arte, declarar um campo de conteúdo, posicionar
+ * nome, código e QR por números, ver a prévia mudar, testar o nome mais
+ * longo, publicar; e modelo sem nome não publica. Só no desktop: o editor
+ * mostra um aviso abaixo de 1024 px (doc 09).
+ */
+
+const PREFIXO = 'E2E modelos'
+const NOME_CANONICO = 'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues'
+
+test.describe.configure({ mode: 'serial' })
+
+test.afterAll(async () => {
+  await apagarEventosComPrefixo(PREFIXO)
+})
+
+async function criarEvento(page: Page) {
+  const nome = `${PREFIXO} ${Date.now()}`
+  await page.goto('/admin/eventos/novo')
+  await page.getByLabel('Título').fill(nome)
+  await page.getByLabel('Início').fill('2027-05-20T19:00')
+  await page.getByRole('button', { name: 'Criar evento' }).click()
+  await expect(page).toHaveURL(/\/admin\/eventos\/[0-9a-f-]{36}$/)
+  return page.url()
+}
+
+async function criarModelo(page: Page, urlDoEvento: string, nome: string) {
+  await page.goto(urlDoEvento)
+  await page.getByLabel('Nome do modelo novo').fill(nome)
+  await page.getByRole('button', { name: 'Criar modelo' }).click()
+  await expect(page).toHaveURL(/\/modelos\/[0-9a-f-]{36}$/)
+  await expect(page.getByRole('heading', { level: 1, name: nome })).toBeVisible()
+}
+
+async function subirArte(page: Page) {
+  await page
+    .locator('input[type="file"][accept^="application/pdf"]')
+    .setInputFiles({
+      name: 'arte.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from(await artes.a4Paisagem()),
+    })
+  await expect(page.getByText('Arte conferida e salva.')).toBeVisible({ timeout: 30_000 })
+}
+
+function linhaDoNome(page: Page) {
+  return page.getByTestId('previa-do-modelo').locator('g[data-field="nome"] > g').first()
+}
+
+test.describe('modelo por formulário (E07)', () => {
+  test('da arte à publicação, com a prévia acompanhando cada número', async ({
+    page,
+  }, testInfo) => {
+    await entrar(page, CONTAS.editor)
+    const urlDoEvento = await criarEvento(page)
+    await criarModelo(page, urlDoEvento, 'Participante E2E')
+
+    await expect(page.getByText('Envie a arte para ver a prévia.')).toBeVisible()
+    await subirArte(page)
+
+    // Campo de conteúdo: a chave nasce do rótulo.
+    await page.getByRole('button', { name: 'Declarar campo de conteúdo' }).click()
+    await page.getByLabel('Rótulo').fill('Título da palestra')
+    await expect(page.getByLabel('Chave')).toHaveValue('titulo_palestra')
+
+    await page.getByRole('button', { name: 'Posicionar o nome' }).click()
+    await page.getByRole('button', { name: 'Posicionar o código' }).click()
+    await page.getByRole('button', { name: 'Posicionar o QR' }).click()
+
+    // A prévia é o motor no navegador: a linha do nome está no plano.
+    await expect(linhaDoNome(page)).toHaveAttribute('transform', /translate/)
+    const antes = await linhaDoNome(page).getAttribute('transform')
+
+    // Mover a caixa do nome por número move a linha na prévia.
+    await page.getByRole('group', { name: 'Texto: nome' }).getByLabel('Topo').fill('25')
+    await expect.poll(() => linhaDoNome(page).getAttribute('transform')).not.toBe(antes)
+
+    // Sem participantes, o nome mais longo é o canônico do doc 05.
+    await page
+      .getByRole('button', { name: 'Testar com o nome mais longo deste evento' })
+      .click()
+    await expect(page.getByLabel('Nome de exemplo')).toHaveValue(NOME_CANONICO)
+    await expect(page.getByTestId('previa-do-modelo').locator('svg')).toHaveAttribute(
+      'aria-label',
+      `Prévia do certificado de ${NOME_CANONICO}`,
+    )
+    await page.screenshot({ path: testInfo.outputPath('editor.png'), fullPage: true })
+
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click()
+    await expect(
+      page.getByText('Rascunho salvo. Os downloads não mudam até publicar.'),
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Publicar' }).click()
+    await expect(
+      page.getByText('Modelo publicado: os próximos PDFs já saem com ele.'),
+    ).toBeVisible()
+    await expect(page.getByText('Publicado, versão 1')).toBeVisible()
+
+    // O tipo de participação passa a usar o modelo.
+    await page.goto(urlDoEvento)
+    await page
+      .getByRole('combobox', { name: 'Modelo de certificado de Participante' })
+      .click()
+    await page.getByRole('option', { name: 'Participante E2E' }).click()
+    const seletor = page.getByRole('combobox', {
+      name: 'Modelo de certificado de Participante',
+    })
+    // O seletor mostra o modelo depois que a action grava e a página recarrega os dados.
+    await expect(seletor).toHaveText('Participante E2E')
+    await page.reload()
+    await expect(seletor).toHaveText('Participante E2E')
+  })
+
+  test('modelo sem o nome do participante não publica', async ({ page }) => {
+    await entrar(page, CONTAS.editor)
+    const urlDoEvento = await criarEvento(page)
+    await criarModelo(page, urlDoEvento, 'Sem nome E2E')
+    await subirArte(page)
+
+    await page.getByRole('button', { name: 'Posicionar o código' }).click()
+    await page.getByRole('button', { name: 'Posicionar o QR' }).click()
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click()
+    await expect(
+      page.getByText('Rascunho salvo. Os downloads não mudam até publicar.'),
+    ).toBeVisible()
+
+    await page.getByRole('button', { name: 'Publicar' }).click()
+    await expect(page.getByText('O modelo ainda não pode ser publicado.')).toBeVisible()
+    await expect(
+      page.getByText('Falta um campo de texto com {{participant.full_name}}.'),
+    ).toBeVisible()
+    await expect(page.getByText('Rascunho', { exact: true })).toBeVisible()
+  })
+})

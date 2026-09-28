@@ -46,8 +46,10 @@ export const uploadCustomFont = defineAction({
     storagePath: z
       .string()
       .regex(/^[0-9a-f-]{36}\.(ttf|otf)$/, 'Arquivo de fonte inválido.'),
-    family: z.string().trim().min(1).max(80),
-    weight: z.int().min(100).max(900).multipleOf(100),
+    // Sem família e peso, valem os do próprio arquivo: pedir ao admin que
+    // digite o peso só abre espaço para divergir dele.
+    family: z.string().trim().min(1).max(80).optional(),
+    weight: z.int().min(100).max(900).multipleOf(100).optional(),
   }),
   async executar({ entrada, usuario, tx }) {
     const { data: arquivo, error } = await supabaseAdmin()
@@ -87,8 +89,8 @@ export const uploadCustomFont = defineAction({
     const [fonte] = await tx
       .insert(customFonts)
       .values({
-        family: entrada.family,
-        weight: entrada.weight,
+        family: entrada.family ?? avaliacao.family,
+        weight: entrada.weight ?? avaliacao.weight,
         storagePath: entrada.storagePath,
         sha256: avaliacao.sha256,
         subsetOk: avaliacao.subsetOk,
@@ -102,8 +104,8 @@ export const uploadCustomFont = defineAction({
       data: { id: fonte.id, subsetOk: avaliacao.subsetOk, repetida: false },
       entityId: fonte.id,
       diff: {
-        family: entrada.family,
-        weight: entrada.weight,
+        family: entrada.family ?? avaliacao.family,
+        weight: entrada.weight ?? avaliacao.weight,
         subsetOk: avaliacao.subsetOk,
       },
     }

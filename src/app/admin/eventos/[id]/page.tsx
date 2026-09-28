@@ -9,8 +9,10 @@ import { CapaDoEvento } from '@/components/admin/eventos/capa-do-evento'
 import { FormularioDeEvento } from '@/components/admin/eventos/formulario-de-evento'
 import { StatusDoEvento } from '@/components/admin/eventos/status-do-evento'
 import { TiposDeParticipacao } from '@/components/admin/eventos/tipos-de-participacao'
+import { ModelosDoEvento } from '@/components/admin/modelos/modelos-do-evento'
 import { StatusBadge } from '@/components/eventos/status-badge'
 import { buscarEventoDoAdmin } from '@/db/queries/admin-events'
+import { listarModelosDoEvento } from '@/db/queries/admin-templates'
 import { getCurrentUser } from '@/lib/auth'
 import { srcDaCapa } from '@/lib/capa'
 import { utcParaDataHoraDeSaoPaulo } from '@/lib/format'
@@ -63,7 +65,10 @@ export default async function EventoDoAdminPage({ params }: Props) {
   if (!dados) notFound()
 
   const { evento, tipos, certificados } = dados
-  const usuario = await getCurrentUser()
+  const [usuario, modelos] = await Promise.all([
+    getCurrentUser(),
+    listarModelosDoEvento(evento.id),
+  ])
   const podeApagar =
     usuario !== null &&
     hasRole(usuario.role, 'admin') &&
@@ -151,11 +156,19 @@ export default async function EventoDoAdminPage({ params }: Props) {
       </Secao>
 
       <Secao
-        descricao="Cada tipo tem a sua carga horária padrão e, no M6, o seu modelo de certificado."
+        descricao="A arte, os campos e a posição de cada texto sobre ela. Cada tipo de participação usa um."
+        titulo="Modelos de certificado"
+      >
+        <ModelosDoEvento eventId={evento.id} modelos={modelos} />
+      </Secao>
+
+      <Secao
+        descricao="Cada tipo tem a sua carga horária padrão e o seu modelo de certificado."
         titulo="Tipos de participação"
       >
         <TiposDeParticipacao
           eventId={evento.id}
+          modelos={modelos.map((modelo) => ({ id: modelo.id, name: modelo.name }))}
           tipos={tipos.map((tipo) => ({
             ...tipo,
             certificados: Number(tipo.certificados),

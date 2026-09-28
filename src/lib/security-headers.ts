@@ -68,15 +68,23 @@ export function buildContentSecurityPolicy({
   if (supabase) connectSrc.push(supabase)
   if (isDev) connectSrc.push('ws:')
 
+  // O fundo da prévia do editor mora no Storage. Em produção o `https:` já o
+  // cobre; o Supabase local, em http://127.0.0.1, não.
+  const imgSrc = [SELF, 'blob:', 'data:', 'https:']
+  if (supabase) imgSrc.push(supabase)
+
   const directives: [string, string[]][] = [
     ['default-src', [SELF]],
     ['script-src', scriptSrc],
     // `next/font` e o Tailwind emitem <style> inline, e o Next não aplica
     // nonce em estilo.
     ['style-src', [SELF, "'unsafe-inline'"]],
-    ['img-src', [SELF, 'blob:', 'data:', 'https:']],
+    ['img-src', imgSrc],
     ['font-src', [SELF, 'data:']],
     ['connect-src', connectSrc],
+    // O pdf.js do editor rasteriza a arte num worker. Sem esta diretiva vale o
+    // script-src, e com strict-dynamic o 'self' de lá é ignorado.
+    ['worker-src', [SELF]],
     ['form-action', [SELF]],
     ['frame-ancestors', ["'none'"]],
     ['base-uri', [SELF]],

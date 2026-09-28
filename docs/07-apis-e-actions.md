@@ -68,7 +68,7 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 | `cloneTemplate` (editor) | `{ id, target_event_id }` | copia modelo e arquivos |
 | `deleteTemplate` (admin) | `{ id }` | só `draft` sem tipos apontando |
 | `createFontUploadUrl` (editor) | `{ extension, size }` | URL assinada no bucket privado `fonts`, até 2 MB |
-| `uploadCustomFont` (editor) | `{ storage_path, family, weight }` | valida assinatura, recusa variável, testa cobertura e subset, grava `custom_fonts`. Arquivo recusado ou repetido (mesmo sha256) sai do bucket; o repetido devolve a fonte que já existe. |
+| `uploadCustomFont` (editor) | `{ storage_path, family?, weight? }` (sem família e peso, valem os do arquivo) | valida assinatura, recusa variável, testa cobertura e subset, grava `custom_fonts`. Arquivo recusado ou repetido (mesmo sha256) sai do bucket; o repetido devolve a fonte que já existe. |
 | `createFontReadUrls` (editor) | `{ ids }` | URLs de leitura de uma hora das fontes enviadas, para a prévia do editor rodar o motor no navegador |
 
 `publishTemplate` derruba `event:{slug}`. O PDF não precisa de tag: o ETag inclui `template.version`.

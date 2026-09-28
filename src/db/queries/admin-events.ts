@@ -88,6 +88,7 @@ export async function buscarEventoDoAdmin(id: string) {
         label: participationTypes.label,
         aliases: participationTypes.aliases,
         defaultHours: participationTypes.defaultHours,
+        certificateTemplateId: participationTypes.certificateTemplateId,
         certificados: count(certificates.id),
       })
       .from(participationTypes)

@@ -34,6 +34,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { tipoDeParticipacaoSchema } from '@/lib/schemas/participation-type'
 
 /**
@@ -48,7 +55,69 @@ export type TipoNaTela = {
   label: string
   aliases: string[]
   defaultHours: string
+  certificateTemplateId: string | null
   certificados: number
+}
+
+export type ModeloNoSeletor = { id: string; name: string }
+
+/** O `<Select>` do Radix não aceita valor vazio; este sentinela é "sem modelo". */
+const SEM_MODELO = '__sem-modelo__'
+
+/**
+ * O modelo de certificado do tipo (doc 04). Vários tipos podem usar o mesmo;
+ * tipo com certificados e sem modelo publicado bloqueia a liberação.
+ */
+function ModeloDoTipo({
+  eventId,
+  tipo,
+  modelos,
+}: {
+  eventId: string
+  tipo: TipoNaTela
+  modelos: ModeloNoSeletor[]
+}) {
+  const router = useRouter()
+  const [resultado, setResultado] = useState<ActionResult<unknown> | null>(null)
+
+  async function trocar(valor: string) {
+    const resposta = await upsertParticipationType({
+      id: tipo.id,
+      eventId,
+      slug: tipo.slug,
+      label: tipo.label,
+      aliases: tipo.aliases,
+      defaultHours: Number(tipo.defaultHours),
+      certificateTemplateId: valor === SEM_MODELO ? null : valor,
+    })
+    setResultado(resposta)
+    if (resposta.ok) router.refresh()
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Select
+        onValueChange={(valor) => void trocar(valor)}
+        value={tipo.certificateTemplateId ?? SEM_MODELO}
+      >
+        <SelectTrigger
+          aria-label={`Modelo de certificado de ${tipo.label}`}
+          className="w-56"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={SEM_MODELO}>Sem modelo</SelectItem>
+          {modelos.map((modelo) => (
+            <SelectItem key={modelo.id} value={modelo.id}>
+              {modelo.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <ActionFeedback resultado={resultado} />
+    </div>
+  )
 }
 
 type Valores = { label: string; slug: string; aliases: string; defaultHours: string }
@@ -235,9 +304,11 @@ function ApagarTipo({ tipo }: { tipo: TipoNaTela }) {
 export function TiposDeParticipacao({
   eventId,
   tipos,
+  modelos,
 }: {
   eventId: string
   tipos: TipoNaTela[]
+  modelos: ModeloNoSeletor[]
 }) {
   const [editando, setEditando] = useState<string | null>(null)
 
@@ -276,6 +347,7 @@ export function TiposDeParticipacao({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <ModeloDoTipo eventId={eventId} modelos={modelos} tipo={tipo} />
                   <Button
                     onClick={() => setEditando(tipo.id)}
                     size="sm"

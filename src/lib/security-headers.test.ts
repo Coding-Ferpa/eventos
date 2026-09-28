@@ -71,6 +71,26 @@ describe('buildContentSecurityPolicy', () => {
     expect(diretiva(publica, 'connect-src')).toBe("connect-src 'self'")
   })
 
+  it('o fundo da prévia do editor vem do Storage, mesmo em http local', () => {
+    // O `https:` do img-src não cobre o Supabase local, em http://127.0.0.1.
+    const admin = buildContentSecurityPolicy({
+      nonce: 'abc123',
+      isDev: false,
+      supabase: 'http://127.0.0.1:54421',
+    })
+    expect(diretiva(admin, 'img-src')).toBe(
+      "img-src 'self' blob: data: https: http://127.0.0.1:54421",
+    )
+    const publica = buildContentSecurityPolicy({ isDev: false })
+    expect(diretiva(publica, 'img-src')).toBe("img-src 'self' blob: data: https:")
+  })
+
+  it('o worker do pdf.js do editor sai da própria origem, mesmo com strict-dynamic', () => {
+    // Sem worker-src, vale o script-src, e o strict-dynamic ignora o 'self'.
+    const admin = buildContentSecurityPolicy({ nonce: 'abc123', isDev: false })
+    expect(diretiva(admin, 'worker-src')).toBe("worker-src 'self'")
+  })
+
   it('não manda subir para HTTPS quem é servido em localhost', () => {
     // Em http://localhost não existe HTTPS para onde subir. O WebKit obedece
     // mesmo assim e pede o CSS e o JS por https://localhost, e a página sai

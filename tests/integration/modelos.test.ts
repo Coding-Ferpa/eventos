@@ -25,10 +25,12 @@ const {
   createTemplate,
   deleteTemplate,
   getLongestNameSample,
-  NOME_CANONICO,
   publishTemplate,
   saveTemplateDraft,
 } = await import('@/actions/templates')
+
+const { CANONICAL_LONG_NAME: NOME_CANONICO } =
+  await import('@/features/certificate/layout/fit-text')
 
 const sessoes = new Map<Papel, CookiesFalsos>()
 async function entrarComo(papel: Papel) {

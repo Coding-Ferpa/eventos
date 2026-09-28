@@ -8,6 +8,12 @@
  * busca: `measure(texto)` devolve a largura no tamanho 1.
  */
 
+/**
+ * O nome do "testar com o nome mais longo" quando o evento ainda não tem
+ * participantes (doc 05).
+ */
+export const CANONICAL_LONG_NAME = 'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues'
+
 export type FitMode = 'shrink_then_wrap' | 'wrap_then_shrink'
 
 export type FitInput = {

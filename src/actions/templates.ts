@@ -13,6 +13,7 @@ import {
 } from '@/db/schema'
 import { findCuratedFont } from '@/features/certificate/fonts/catalog'
 import { applyTransform } from '@/features/certificate/format'
+import { CANONICAL_LONG_NAME } from '@/features/certificate/layout/fit-text'
 import {
   publicationProblems,
   templateDraftSchema,
@@ -261,9 +262,6 @@ export const deleteTemplate = defineAction({
   },
 })
 
-/** O nome do doc 05 para evento ainda sem participantes. */
-export const NOME_CANONICO = 'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues'
-
 type AmostraDeNome = { nome: string; origem: 'evento' | 'canonico' }
 
 /**
@@ -299,7 +297,7 @@ export const getLongestNameSample = defineAction({
       .limit(5)
     if (linhas.length === 0) {
       return {
-        data: { nome: NOME_CANONICO, origem: 'canonico' },
+        data: { nome: CANONICAL_LONG_NAME, origem: 'canonico' },
         entityId: entrada.templateId,
       }
     }
