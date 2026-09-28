@@ -253,6 +253,8 @@ O plano é JSON serializável e arredondado a 0,01 pt: é ele que os testes de s
 
 `<svg viewBox="0 0 W H" role="img" aria-label="Prévia do certificado de {nome}">` com `<image href="{preview_path}">` de fundo e, para cada linha de texto, **os contornos dos glifos como `<path>`** (`glyph.path.toSVG()`, escalados por `size / unitsPerEm` e espelhados no y). Consequências boas: a prévia não depende de fonte instalada nem de webfont (nenhuma fonte é servida ao público, o que elimina a questão de licença de webfont para fonte enviada pelo admin), não há diferença de kerning ou ligadura entre navegador e PDF, e o celular não baixa pdf.js. O QR é o mesmo `path` do plano.
 
+Cada glifo entra uma vez em `<defs>` e as linhas o reusam com `<use x="avanço">`, dentro de um grupo `translate(x linhaDeBase) scale(k -k)` por linha, com `k = size / unitsPerEm`. O id do glifo nasce da referência da fonte e do índice do glifo (`cf-curated-poppins-600-704`): o mesmo id é sempre o mesmo contorno, e duas prévias na mesma página (frente e verso, ou o editor) não trocam letras entre si. Medido no M5, o certificado típico (nome longo, parágrafo de quatro linhas e QR) tem 33,5 KB crus e **8,4 KB comprimidos**; sem a deduplicação, só o parágrafo passaria de 50 KB. O teste guarda o teto de 10 KB comprimido. O rótulo e a URL do fundo são escapados: o nome do participante vai inline na página.
+
 Onde roda: **no servidor** para a tela de retirada (RSC, SVG inline, poucos KB) e **no navegador do admin** para o editor (fontkit carregado por `import()` só nessa tela), o que dá prévia instantânea a cada tecla, sem ida ao servidor.
 
 ### Equivalência entre prévia e PDF (critério de 1% do R4)

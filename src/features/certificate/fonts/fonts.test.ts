@@ -102,6 +102,12 @@ describe('métricas', () => {
       6,
     )
   })
+
+  it('a mesma letra dá o mesmo id de glifo, que é o que a prévia deduplica', () => {
+    const [a, b, outroA] = poppins.glyphs('aba')
+    expect(a!.id).toBe(outroA!.id)
+    expect(a!.id).not.toBe(b!.id)
+  })
 })
 
 describe('cobertura de glifos pt-BR', () => {

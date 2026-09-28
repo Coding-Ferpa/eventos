@@ -34,7 +34,7 @@ export const cachedFontkit = {
   },
 }
 
-export type Glyph = { path: string; advance: number }
+export type Glyph = { id: number; path: string; advance: number }
 
 export type FontMetrics = {
   readonly font: fontkit.Font
@@ -46,7 +46,10 @@ export type FontMetrics = {
   widthAt(texto: string, tamanho: number): number
   /** Caracteres do texto que a fonte não tem, sem repetição, na ordem. */
   missingCharacters(texto: string): string[]
-  /** Contornos SVG em unidades da fonte (y para cima) e o avanço de cada glifo. */
+  /**
+   * Contornos SVG em unidades da fonte (y para cima) e o avanço de cada
+   * glifo. O `id` é o índice do glifo na fonte: a mesma letra repete o id.
+   */
   glyphs(texto: string): Glyph[]
 }
 
@@ -70,6 +73,7 @@ export function loadFont(bytes: Uint8Array): FontMetrics {
     },
     glyphs(texto) {
       return glifos(texto).map((glifo) => ({
+        id: glifo.id,
         path: glifo.path.toSVG(),
         advance: glifo.advanceWidth,
       }))
