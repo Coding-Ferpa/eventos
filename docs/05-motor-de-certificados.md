@@ -237,8 +237,9 @@ type PagePlan = { widthPt: number; heightPt: number; items: PlanItem[] }
 type PlanItem =
   | { kind: 'text'; fieldId: string; font: string; sizePt: number; color: string;
       lines: { text: string; xPt: number; baselineYPt: number; widthPt: number }[] }
-  | { kind: 'qr'; fieldId: string; xPt: number; yPt: number; sizePt: number; path: string;
-      dark: string; light: string | null }
+  | { kind: 'qr'; fieldId: string; xPt: number; yPt: number; sizePt: number;
+      modules: number; path: string; dark: string; light: string | null }
+      // path em unidades de módulo, y para baixo; escala = sizePt / modules (acréscimo do M5)
 type LayoutWarning = { fieldId: string; code: 'BELOW_MIN_SIZE' | 'GLYPH_FALLBACK' | 'QR_TOO_SMALL'; detail: string }
 ```
 

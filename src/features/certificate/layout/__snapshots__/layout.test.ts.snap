@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`layout: snapshots com a Poppins > nome longo em caixa de nome típica: cabe, e nenhuma linha passa da caixa 1`] = `
+{
+  "pages": [
+    {
+      "heightPt": 595.28,
+      "items": [
+        {
+          "color": "#1E1E1E",
+          "fieldId": "nome",
+          "font": "curated:poppins-600",
+          "kind": "text",
+          "lines": [
+            {
+              "baselineYPt": 281.79,
+              "text": "Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues",
+              "widthPt": 670.53,
+              "xPt": 85.68,
+            },
+          ],
+          "sizePt": 22.75,
+        },
+      ],
+      "widthPt": 841.89,
+    },
+  ],
+  "warnings": [],
+}
+`;
+
+exports[`layout: snapshots com a Poppins > parágrafo wrap_then_shrink com título de palestra longo 1`] = `
+{
+  "pages": [
+    {
+      "heightPt": 595.28,
+      "items": [
+        {
+          "color": "#1E1E1E",
+          "fieldId": "paragrafo",
+          "font": "curated:poppins-400",
+          "kind": "text",
+          "lines": [
+            {
+              "baselineYPt": 342.2,
+              "text": "participou como Participante com a palestra Introdução ao versionamento",
+              "widthPt": 604.16,
+              "xPt": 84.19,
+            },
+            {
+              "baselineYPt": 360.6,
+              "text": "distribuído com Git e GitHub: ramificações, revisão de código e integração contínua",
+              "widthPt": 670.66,
+              "xPt": 84.19,
+            },
+            {
+              "baselineYPt": 379,
+              "text": "na prática, com carga horária de 8 horas.",
+              "widthPt": 334.37,
+              "xPt": 84.19,
+            },
+          ],
+          "sizePt": 16,
+        },
+      ],
+      "widthPt": 841.89,
+    },
+  ],
+  "warnings": [],
+}
+`;
