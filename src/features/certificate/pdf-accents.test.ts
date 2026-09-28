@@ -89,7 +89,7 @@ describe('gate: acentos no PDF', () => {
         if (pedida !== ref) throw new Error(`O gate pediu outra fonte: ${pedida}`)
         return { metrics: loadFont(bytesDaFonte(arquivo)), weight: 400 }
       },
-      fontBytes: () => bytesDaFonte(arquivo),
+      fontBytes: () => ({ bytes: bytesDaFonte(arquivo), subset: true }),
     })
 
     expect(warnings).toEqual([])

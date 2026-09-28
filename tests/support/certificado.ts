@@ -44,7 +44,10 @@ export const fontesCuradas: FontResolver = (ref) => {
   return { metrics: loadFont(bytesDaFonte(curada.file)), weight: curada.weight }
 }
 
-export const bytesCurados = (ref: string) => bytesDaFonte(arquivoDaReferencia(ref))
+export const bytesCurados = (ref: string) => ({
+  bytes: bytesDaFonte(arquivoDaReferencia(ref)),
+  subset: true,
+})
 
 /** Um base.pdf em branco, com as páginas pedidas (A4 paisagem por padrão). */
 export async function basePdfEmBranco(

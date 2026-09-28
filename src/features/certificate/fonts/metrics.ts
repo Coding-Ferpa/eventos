@@ -67,9 +67,16 @@ export function loadFont(bytes: Uint8Array): FontMetrics {
       return (avanco / font.unitsPerEm) * tamanho
     },
     missingCharacters(texto) {
-      return [...new Set(texto)].filter(
-        (caractere) => !font.hasGlyphForCodePoint(caractere.codePointAt(0) ?? 0),
-      )
+      const tem = (caractere: string) => {
+        // Fonte sem mapa de caracteres utilizável faz o fontkit lançar; para a
+        // cobertura, é o mesmo que não ter o caractere.
+        try {
+          return font.hasGlyphForCodePoint(caractere.codePointAt(0) ?? 0)
+        } catch {
+          return false
+        }
+      }
+      return [...new Set(texto)].filter((caractere) => !tem(caractere))
     },
     glyphs(texto) {
       return glifos(texto).map((glifo) => ({

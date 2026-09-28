@@ -15,7 +15,12 @@ import type { QrItem, RenderPlan, TextItem } from '../layout/layout'
  * plano guarda, não há altura de fonte a somar.
  */
 
-export type FontBytesResolver = (ref: string) => Uint8Array
+/**
+ * Os bytes de cada fonte e se ela pode ir em subset. Fonte enviada que falhou
+ * na ida e volta do subset (doc 05) vai inteira.
+ */
+export type EmbeddableFont = { bytes: Uint8Array; subset: boolean }
+export type FontBytesResolver = (ref: string) => EmbeddableFont
 export type PdfMetadata = { eventTitle: string; code: string }
 
 function cor(hex: string) {
@@ -43,10 +48,8 @@ export async function drawPdf(
   async function fonte(ref: string) {
     let embutida = fontes.get(ref)
     if (!embutida) {
-      embutida = await documento.embedFont(bytesDaFonte(ref), {
-        subset: true,
-        features: FONT_FEATURES,
-      })
+      const { bytes, subset } = bytesDaFonte(ref)
+      embutida = await documento.embedFont(bytes, { subset, features: FONT_FEATURES })
       fontes.set(ref, embutida)
     }
     return embutida

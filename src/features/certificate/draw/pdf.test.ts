@@ -153,7 +153,8 @@ describe('drawPdf', () => {
     }
     const fontes: FontResolver = (ref) =>
       ref === CUSTOM ? { metrics: semCedilha, weight: 400 } : fontesCuradas(ref)
-    const bytes = (ref: string) => (ref === CUSTOM ? regular : bytesCurados(ref))
+    const bytes = (ref: string) =>
+      ref === CUSTOM ? { bytes: regular, subset: true } : bytesCurados(ref)
 
     const { plano, pdf } = await gerar(
       [campo({ font: CUSTOM })],
@@ -165,6 +166,18 @@ describe('drawPdf', () => {
     expect((plano.pages[0]!.items[0] as TextItem).font).toBe('curated:poppins-400')
     expect(plano.warnings.map((aviso) => aviso.code)).toEqual(['GLYPH_FALLBACK'])
     expect((await extrairTexto(pdf))[0]!.map((t) => t.text).join('')).toBe('Conceição')
+  })
+
+  it('fonte que falhou na ida e volta do subset vai inteira, e o texto continua certo', async () => {
+    const inteira = (ref: string) => ({ ...bytesCurados(ref), subset: false })
+    const emSubset = await gerar([campo()], NOME)
+    const semSubset = await gerar([campo()], NOME, fontesCuradas, inteira)
+
+    // Medido no M6: 4 KB em subset e 80 KB inteira (os 155 KB da Poppins
+    // comprimidos no PDF).
+    expect(emSubset.pdf.byteLength).toBeLessThan(10 * 1024)
+    expect(semSubset.pdf.byteLength).toBeGreaterThan(60 * 1024)
+    expect((await extrairTexto(semSubset.pdf))[0]!.map((t) => t.text).join('')).toBe(NOME)
   })
 
   // PDF-24 do doc 05.

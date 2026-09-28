@@ -24,6 +24,8 @@ export type ActionErrorCode =
   | 'art_too_heavy'
   | 'art_unsupported_type'
   | 'art_unreadable'
+  | 'font_variable'
+  | 'font_missing_glyphs'
 
 export type ActionError = {
   code: ActionErrorCode

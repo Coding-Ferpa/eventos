@@ -26,12 +26,24 @@ function montar(artes: ReturnType<typeof arte>[]) {
     return bytes
   })
   const lerFonteCurada = vi.fn(lerFonteCuradaDoDisco)
+  // A "fonte enviada" dos testes é a Poppins Bold, com subset reprovado.
+  const lerFonteEnviada = vi.fn(async (id: string) => {
+    if (id !== ENVIADA) throw new Error(`Fonte enviada não encontrada: ${id}`)
+    return {
+      bytes: await lerFonteCuradaDoDisco('Poppins-Bold.ttf'),
+      weight: 700,
+      subsetOk: false,
+    }
+  })
   return {
-    assets: createCertificateAssets({ baixarBasePdf, lerFonteCurada }),
+    assets: createCertificateAssets({ baixarBasePdf, lerFonteCurada, lerFonteEnviada }),
     baixarBasePdf,
     lerFonteCurada,
+    lerFonteEnviada,
   }
 }
+
+const ENVIADA = '0b4ed4e6-2a4c-4f7e-9d71-1f5e2d3c4b5a'
 
 const SNAPSHOT: Pick<TemplateSnapshot, 'layout_fields'> = {
   layout_fields: [
@@ -121,8 +133,8 @@ describe('fontes no cache de módulo', () => {
     expect(primeira.fonts('curated:poppins-700').weight).toBe(700)
     expect(primeira.fonts('curated:poppins-400').metrics.unitsPerEm).toBe(1000)
     // Mesmos bytes, mesma fonte parseada: o pdf-lib não parseia de novo.
-    expect(segunda.fontBytes('curated:poppins-700')).toBe(
-      primeira.fontBytes('curated:poppins-700'),
+    expect(segunda.fontBytes('curated:poppins-700').bytes).toBe(
+      primeira.fontBytes('curated:poppins-700').bytes,
     )
     expect(segunda.fonts('curated:poppins-700').metrics).toBe(
       primeira.fonts('curated:poppins-700').metrics,
@@ -136,17 +148,21 @@ describe('fontes no cache de módulo', () => {
     expect(() => fontBytes('curated:inter-400')).toThrow(/inter-400/)
   })
 
-  it('fonte enviada ainda não tem leitor: erro claro até o M6', async () => {
-    const { assets } = montar([])
+  it('fonte enviada vem do banco e do Storage, uma vez, com o subset que ela aceita', async () => {
+    const { assets, lerFonteEnviada, lerFonteCurada } = montar([])
     const comEnviada = {
-      layout_fields: [
-        {
-          ...SNAPSHOT.layout_fields[0]!,
-          font: 'custom:0b4ed4e6-2a4c-4f7e-9d71-1f5e2d3c4b5a',
-        },
-      ],
+      layout_fields: [{ ...SNAPSHOT.layout_fields[0]!, font: `custom:${ENVIADA}` }],
     } as Pick<TemplateSnapshot, 'layout_fields'>
-    await expect(assets.fonts(comEnviada)).rejects.toThrow(/enviada/)
+
+    const { fonts, fontBytes } = await assets.fonts(comEnviada)
+    await assets.fonts(comEnviada)
+
+    expect(lerFonteEnviada).toHaveBeenCalledTimes(1)
+    expect(fonts(`custom:${ENVIADA}`).weight).toBe(700)
+    expect(fontBytes(`custom:${ENVIADA}`).subset).toBe(false)
+    // A reserva do peso 700 também vem, para o glifo que faltar.
+    expect(lerFonteCurada).toHaveBeenCalledWith('Poppins-Bold.ttf')
+    expect(fontBytes('curated:poppins-700').subset).toBe(true)
   })
 
   it('a pasta das fontes curadas é lida a partir do diretório do processo', async () => {

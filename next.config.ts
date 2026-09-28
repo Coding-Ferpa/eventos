@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: Object.fromEntries(
     ROTAS_QUE_GERAM_PDF.map((rota) => [rota, FONTES_CURADAS_NO_PACOTE]),
   ),
+  // O pdf.js roda no servidor só para a ida e volta do subset da fonte
+  // enviada (doc 05). Empacotado pelo webpack, o worker falso dele, que é um
+  // import() dinâmico, se perde; de fora do pacote, o Node o carrega do
+  // node_modules como nos testes.
+  serverExternalPackages: ['pdfjs-dist'],
   reactStrictMode: true,
   poweredByHeader: false,
   // O Next transmite a metadata em vez de segurar o shell, e quando a página

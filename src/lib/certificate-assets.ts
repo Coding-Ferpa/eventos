@@ -4,6 +4,10 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
+import { eq } from 'drizzle-orm'
+
+import { db } from '@/db/client'
+import { customFonts } from '@/db/schema'
 import type { FontBytesResolver } from '@/features/certificate/draw/pdf'
 import { fallbackFor, findCuratedFont } from '@/features/certificate/fonts/catalog'
 import { loadFont, type FontMetrics } from '@/features/certificate/fonts/metrics'
@@ -49,12 +53,43 @@ async function baixarBasePdfDoStorage(caminho: string): Promise<Uint8Array> {
   return new Uint8Array(await data.arrayBuffer())
 }
 
+/** A fonte que o admin subiu: a linha de `custom_fonts` e os bytes do bucket privado. */
+async function lerFonteEnviadaDoStorage(id: string) {
+  const [linha] = await db()
+    .select({
+      storagePath: customFonts.storagePath,
+      weight: customFonts.weight,
+      subsetOk: customFonts.subsetOk,
+    })
+    .from(customFonts)
+    .where(eq(customFonts.id, id))
+  if (!linha) throw new Error(`Fonte enviada não encontrada: ${id}`)
+  const { data, error } = await supabaseAdmin()
+    .storage.from('fonts')
+    .download(linha.storagePath)
+  if (error) throw new Error(`Download da fonte enviada falhou: ${error.message}`)
+  return {
+    bytes: new Uint8Array(await data.arrayBuffer()),
+    weight: linha.weight,
+    subsetOk: linha.subsetOk,
+  }
+}
+
 export type CertificateAssetsDeps = {
   baixarBasePdf: (caminho: string) => Promise<Uint8Array>
   lerFonteCurada: (arquivo: string) => Promise<Uint8Array>
+  lerFonteEnviada: (
+    id: string,
+  ) => Promise<{ bytes: Uint8Array; weight: number; subsetOk: boolean }>
 }
 
-type FonteCarregada = { bytes: Uint8Array; metrics: FontMetrics; weight: number }
+type FonteCarregada = {
+  bytes: Uint8Array
+  metrics: FontMetrics
+  weight: number
+  /** Enviada que falhou na ida e volta do subset vai inteira (doc 05). */
+  subset: boolean
+}
 
 const LIMITE_DE_BASES = 8
 
@@ -106,12 +141,19 @@ export function createCertificateAssets(deps: CertificateAssetsDeps) {
     const existente = fontes.get(ref)
     if (existente) return existente
     return lembrar(fontes, ref, async () => {
-      const curada = findCuratedFont(ref)
-      if (!curada) {
-        throw new Error(`Fonte enviada (${ref}) ainda não tem leitor: chega no M6.`)
+      if (ref.startsWith('custom:')) {
+        const enviada = await deps.lerFonteEnviada(ref.slice('custom:'.length))
+        return {
+          bytes: enviada.bytes,
+          metrics: loadFont(enviada.bytes),
+          weight: enviada.weight,
+          subset: enviada.subsetOk,
+        }
       }
+      const curada = findCuratedFont(ref)
+      if (!curada) throw new Error(`Fonte fora do catálogo: ${ref}`)
       const bytes = await deps.lerFonteCurada(curada.file)
-      return { bytes, metrics: loadFont(bytes), weight: curada.weight }
+      return { bytes, metrics: loadFont(bytes), weight: curada.weight, subset: true }
     })
   }
 
@@ -141,15 +183,19 @@ export function createCertificateAssets(deps: CertificateAssetsDeps) {
       const { metrics, weight } = pegar(ref)
       return { metrics, weight }
     }
-    const bytes: FontBytesResolver = (ref) => pegar(ref).bytes
+    const bytes: FontBytesResolver = (ref) => {
+      const { bytes: conteudo, subset } = pegar(ref)
+      return { bytes: conteudo, subset }
+    }
     return { fonts: resolver, fontBytes: bytes }
   }
 
   return { basePdf, fonts }
 }
 
-/** A instância da função: Storage pela chave de serviço, fontes pelo disco. */
+/** A instância da função: Storage pela chave de serviço, curadas pelo disco. */
 export const certificateAssets = createCertificateAssets({
   baixarBasePdf: baixarBasePdfDoStorage,
   lerFonteCurada: lerFonteCuradaDoDisco,
+  lerFonteEnviada: lerFonteEnviadaDoStorage,
 })
