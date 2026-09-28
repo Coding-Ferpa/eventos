@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { keyFromLabel } from '@/features/certificate/key-from-label'
 import type { TemplateDraft } from '@/features/certificate/publish'
 import type { DataField } from '@/features/certificate/schema'
 
@@ -59,19 +60,6 @@ const ESTILOS: Record<Exclude<DataField['type'], 'text'>, [string, string][]> = 
     ['short', '8h'],
     ['long', '8 horas'],
   ],
-}
-
-/** "Título da palestra" → `titulo_palestra`, no formato de chave do doc 05. */
-export function chaveDoRotulo(rotulo: string) {
-  const base = rotulo
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/\b(de|da|do|das|dos|e)\b/g, ' ')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 40)
-  return /^[a-z]/.test(base) ? base : `campo_${base}`.slice(0, 40)
 }
 
 function Formato({ indice }: { indice: number }) {
@@ -173,13 +161,13 @@ export function CamposDeConteudo() {
                       {...field}
                       onChange={(evento) => {
                         const chaveAtual = getValues(`data_fields.${indice}.key`)
-                        const anterior = chaveDoRotulo(field.value)
+                        const anterior = keyFromLabel(field.value)
                         field.onChange(evento)
                         // A chave acompanha o rótulo até alguém mexer nela.
                         if (!chaveAtual || chaveAtual === anterior) {
                           setValue(
                             `data_fields.${indice}.key`,
-                            chaveDoRotulo(evento.target.value),
+                            keyFromLabel(evento.target.value),
                           )
                         }
                       }}
