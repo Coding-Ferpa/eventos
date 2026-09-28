@@ -100,20 +100,26 @@ describe('buildBasePdf: a página canônica', () => {
     expect(qr.yPt).toBeCloseTo(0.7 * 473.56, 1)
   })
 
-  // PDF-06 do doc 05: o critério "de 150 para 300 dpi".
-  it('a mesma arte em 150 e em 300 dpi dá planos idênticos', async () => {
-    const [baixa, alta] = await Promise.all([
-      buildBasePdf([artes.dpi150()]),
-      buildBasePdf([artes.dpi300()]),
-    ])
-    expect(baixa.pages).toEqual(alta.pages)
-    expect(layout(modeloSobre(baixa.pages), CONTEXTO, fontesCuradas)).toEqual(
-      layout(modeloSobre(alta.pages), CONTEXTO, fontesCuradas),
-    )
+  // PDF-06 do doc 05: o critério "de 150 para 300 dpi". A arte de 300 dpi tem
+  // 3508 × 2480 px (26 MB crus), que o pdf-lib decodifica e recomprime: sob a
+  // instrumentação de cobertura, passa dos 5 s padrão.
+  it(
+    'a mesma arte em 150 e em 300 dpi dá planos idênticos',
+    { timeout: 30_000 },
+    async () => {
+      const [baixa, alta] = await Promise.all([
+        buildBasePdf([artes.dpi150()]),
+        buildBasePdf([artes.dpi300()]),
+      ])
+      expect(baixa.pages).toEqual(alta.pages)
+      expect(layout(modeloSobre(baixa.pages), CONTEXTO, fontesCuradas)).toEqual(
+        layout(modeloSobre(alta.pages), CONTEXTO, fontesCuradas),
+      )
 
-    expect(baixa.warnings.map((aviso) => aviso.code)).toEqual(['ART_LOW_RESOLUTION'])
-    expect(alta.warnings).toEqual([])
-  })
+      expect(baixa.warnings.map((aviso) => aviso.code)).toEqual(['ART_LOW_RESOLUTION'])
+      expect(alta.warnings).toEqual([])
+    },
+  )
 
   it('frente e verso: cada página com a sua página canônica', async () => {
     const base = await buildBasePdf([await artes.duasPaginas()])
