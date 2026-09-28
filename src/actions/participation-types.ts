@@ -2,7 +2,12 @@
 
 import { and, count, eq, max, ne } from 'drizzle-orm'
 
-import { certificates, events, participationTypes } from '@/db/schema'
+import {
+  certificateTemplates,
+  certificates,
+  events,
+  participationTypes,
+} from '@/db/schema'
 import { tipoDeParticipacaoSchema } from '@/lib/schemas/participation-type'
 import { z } from '@/lib/zod'
 
@@ -43,6 +48,25 @@ export const upsertParticipationType = defineAction({
           slug: ['Este evento já tem um tipo com esse identificador.'],
         },
       )
+    }
+
+    // O banco também recusa (FK composta com o evento); aqui a recusa vira
+    // mensagem no campo, e não erro genérico.
+    if (entrada.certificateTemplateId) {
+      const [modelo] = await tx
+        .select({ id: certificateTemplates.id })
+        .from(certificateTemplates)
+        .where(
+          and(
+            eq(certificateTemplates.id, entrada.certificateTemplateId),
+            eq(certificateTemplates.eventId, entrada.eventId),
+          ),
+        )
+      if (!modelo) {
+        throw new FalhaDaAction('validation_error', 'Confira os campos destacados.', {
+          certificateTemplateId: ['Esse modelo não é deste evento.'],
+        })
+      }
     }
 
     const valores = {
