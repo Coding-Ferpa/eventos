@@ -1,6 +1,6 @@
 'use server'
 
-import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm'
 
 import type { Transaction } from '@/db/client'
 import {
@@ -8,15 +8,22 @@ import {
   certificates,
   customFonts,
   events,
+  participants,
   participationTypes,
 } from '@/db/schema'
 import { findCuratedFont } from '@/features/certificate/fonts/catalog'
+import { applyTransform } from '@/features/certificate/format'
 import {
   publicationProblems,
   templateDraftSchema,
   type TemplateDraft,
 } from '@/features/certificate/publish'
-import { templateSnapshotSchema, type TemplatePage } from '@/features/certificate/schema'
+import {
+  templateSnapshotSchema,
+  textFieldSchema,
+  type TemplatePage,
+} from '@/features/certificate/schema'
+import { certificateAssets } from '@/lib/certificate-assets'
 import { z } from '@/lib/zod'
 
 import { defineAction, FalhaDaAction } from './define-action'
@@ -251,5 +258,63 @@ export const deleteTemplate = defineAction({
 
     await tx.delete(certificateTemplates).where(eq(certificateTemplates.id, modelo.id))
     return { data: null, entityId: modelo.id, diff: { name: modelo.name } }
+  },
+})
+
+/** O nome do doc 05 para evento ainda sem participantes. */
+export const NOME_CANONICO = 'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues'
+
+type AmostraDeNome = { nome: string; origem: 'evento' | 'canonico' }
+
+/**
+ * "Testar com o nome mais longo deste evento" (doc 05): os 5 nomes com mais
+ * caracteres, medidos com a fonte e a transformação que estão na tela (salvas
+ * ou não), e vale o mais largo. É leitura, mas é action para passar pela
+ * sessão e pelo papel; o nome não vai para a auditoria.
+ */
+export const getLongestNameSample = defineAction({
+  nome: 'template.longest_name_sample',
+  entidade: 'certificate_templates',
+  papelMinimo: 'editor',
+  schema: z.object({
+    templateId: z.uuid(),
+    font: textFieldSchema.shape.font,
+    transform: textFieldSchema.shape.transform,
+  }),
+  async executar({
+    entrada,
+    tx,
+  }): Promise<{ data: AmostraDeNome; entityId: string; diff?: unknown }> {
+    const [modelo] = await tx
+      .select({ eventId: certificateTemplates.eventId })
+      .from(certificateTemplates)
+      .where(eq(certificateTemplates.id, entrada.templateId))
+    if (!modelo) throw new FalhaDaAction('not_found', 'Não encontramos esse modelo.')
+
+    const linhas = await tx
+      .select({ fullName: participants.fullName })
+      .from(participants)
+      .where(eq(participants.eventId, modelo.eventId))
+      .orderBy(desc(sql`char_length(${participants.fullName})`))
+      .limit(5)
+    if (linhas.length === 0) {
+      return {
+        data: { nome: NOME_CANONICO, origem: 'canonico' },
+        entityId: entrada.templateId,
+      }
+    }
+
+    const metrics = await certificateAssets.metrics(entrada.font)
+    const largura = (nome: string) =>
+      metrics.widthAt(applyTransform(nome, entrada.transform), 1)
+    const maisLargo = linhas
+      .map((linha) => linha.fullName)
+      .reduce((melhor, nome) => (largura(nome) > largura(melhor) ? nome : melhor))
+
+    return {
+      data: { nome: maisLargo, origem: 'evento' },
+      entityId: entrada.templateId,
+      diff: { font: entrada.font },
+    }
   },
 })

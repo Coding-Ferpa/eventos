@@ -190,7 +190,12 @@ export function createCertificateAssets(deps: CertificateAssetsDeps) {
     return { fonts: resolver, fontBytes: bytes }
   }
 
-  return { basePdf, fonts }
+  /** A métrica de uma fonte só, para medir texto fora de um modelo. */
+  async function metrics(ref: string) {
+    return (await fonte(ref)).metrics
+  }
+
+  return { basePdf, fonts, metrics }
 }
 
 /** A instância da função: Storage pela chave de serviço, curadas pelo disco. */

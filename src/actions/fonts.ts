@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
 import { customFonts } from '@/db/schema'
 import { avaliarFonteEnviada } from '@/lib/fonte-enviada'
@@ -107,5 +107,32 @@ export const uploadCustomFont = defineAction({
         subsetOk: avaliacao.subsetOk,
       },
     }
+  },
+})
+
+/**
+ * URLs de leitura das fontes enviadas, para a prévia do editor rodar o motor
+ * no navegador: o bucket `fonts` é privado. Valem uma hora.
+ */
+export const createFontReadUrls = defineAction({
+  nome: 'font.read_urls',
+  entidade: 'custom_fonts',
+  papelMinimo: 'editor',
+  schema: z.object({ ids: z.array(z.uuid()).min(1).max(40) }),
+  async executar({ entrada, tx }) {
+    const linhas = await tx
+      .select({ id: customFonts.id, storagePath: customFonts.storagePath })
+      .from(customFonts)
+      .where(inArray(customFonts.id, entrada.ids))
+
+    const urls: Record<string, string> = {}
+    for (const linha of linhas) {
+      const { data, error } = await supabaseAdmin()
+        .storage.from('fonts')
+        .createSignedUrl(linha.storagePath, 60 * 60)
+      if (error) throw error
+      urls[linha.id] = data.signedUrl
+    }
+    return { data: urls, diff: { total: linhas.length } }
   },
 })

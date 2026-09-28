@@ -21,8 +21,14 @@ const { certificateTemplates, certificates, events, participants, participationT
   await import('@/db/schema')
 const { createEvent } = await import('@/actions/events')
 const { upsertParticipationType } = await import('@/actions/participation-types')
-const { createTemplate, deleteTemplate, publishTemplate, saveTemplateDraft } =
-  await import('@/actions/templates')
+const {
+  createTemplate,
+  deleteTemplate,
+  getLongestNameSample,
+  NOME_CANONICO,
+  publishTemplate,
+  saveTemplateDraft,
+} = await import('@/actions/templates')
 
 const sessoes = new Map<Papel, CookiesFalsos>()
 async function entrarComo(papel: Papel) {
@@ -241,13 +247,11 @@ describe('publicar', () => {
       .insert(participants)
       .values({ eventId: eventoId, fullName: 'Pessoa Sintética de Teste' })
       .returning({ id: participants.id })
-    await db()
-      .insert(certificates)
-      .values({
-        eventId: eventoId,
-        participantId: pessoa!.id,
-        participationTypeId: tipo!.id,
-      })
+    await db().insert(certificates).values({
+      eventId: eventoId,
+      participantId: pessoa!.id,
+      participationTypeId: tipo!.id,
+    })
 
     await saveTemplateDraft({
       id,
@@ -342,5 +346,57 @@ describe('apagar', () => {
       ok: false,
       error: { code: 'conflict' },
     })
+  })
+})
+
+describe('nome mais longo', () => {
+  it('evento sem participantes usa o nome canônico do doc 05', async () => {
+    await entrarComo('editor')
+    const vazio = await createEvent({
+      title: `Sem participantes ${Date.now()}`,
+      startsAt: '2027-05-10T19:00',
+    })
+    if (!vazio.ok) throw new Error(vazio.error.message)
+    criados.push(vazio.data.id)
+    const modelo = await createTemplate({ eventId: vazio.data.id, name: 'Vazio' })
+    if (!modelo.ok) throw new Error(modelo.error.message)
+
+    expect(
+      await getLongestNameSample({
+        templateId: modelo.data.id,
+        font: 'curated:poppins-600',
+        transform: 'none',
+      }),
+    ).toEqual({ ok: true, data: { nome: NOME_CANONICO, origem: 'canonico' } })
+  })
+
+  it('vale o mais largo na fonte do campo, e não o de mais letras', async () => {
+    await entrarComo('editor')
+    const evento = await createEvent({
+      title: `Nomes ${Date.now()}`,
+      startsAt: '2027-05-11T19:00',
+    })
+    if (!evento.ok) throw new Error(evento.error.message)
+    criados.push(evento.data.id)
+    // 19 letras largas contra 32 estreitas.
+    const largo = 'Wagner Mawawe Wamba'
+    const comprido = 'Ilidio Lili Iiilli Fiji Tilitili'
+    await db()
+      .insert(participants)
+      .values(
+        [largo, comprido, 'Ana Lima'].map((fullName) => ({
+          eventId: evento.data.id,
+          fullName,
+        })),
+      )
+    const modelo = await createTemplate({ eventId: evento.data.id, name: 'Nomes' })
+    if (!modelo.ok) throw new Error(modelo.error.message)
+
+    const resultado = await getLongestNameSample({
+      templateId: modelo.data.id,
+      font: 'curated:poppins-600',
+      transform: 'none',
+    })
+    expect(resultado).toEqual({ ok: true, data: { nome: largo, origem: 'evento' } })
   })
 })
