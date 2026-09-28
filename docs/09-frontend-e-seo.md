@@ -127,7 +127,7 @@ O público acessa por celular em rede móvel, a partir de um link no WhatsApp. O
 Como o orçamento é cumprido:
 
 - **RSC por padrão.** `'use client'` só em: alternador de tema, formulário de busca, campo de código, formulário de correção, aviso de navegador embutido. O admin não entra nessa conta.
-- **Nenhum pdf.js, fontkit ou pdf-lib no bundle público.** São carregados por `import()` apenas no editor do admin. Um teste de bundle falha o CI se qualquer um deles aparecer em um chunk de rota pública.
+- **Nenhum pdf.js, fontkit ou pdf-lib no bundle público.** São carregados por `import()` apenas no editor do admin. O `check:public-bundle` ([doc 11](11-qualidade.md)) falha o CI se qualquer um deles aparecer em um chunk de rota fora do admin, direto ou por `import()`. A prévia SVG mora em `features/certificate/preview.ts`, sem pdf-lib: no navegador do admin só entram o fontkit e o pdf.js da rasterização da arte.
 - **Prévia do certificado:** SVG inline de poucos KB mais um WebP de até 200 KB (`loading="eager"`, `fetchpriority="high"`, dimensões explícitas: CLS zero). O PDF de até alguns MB só trafega quando a pessoa clica em baixar.
 - **Capa do evento:** `next/image` com `sizes`, `priority` na página do evento e no primeiro card do catálogo, que no celular é o elemento do LCP; os demais cards, lazy (ADR-0015).
 - **Prefetch só com intenção nas listas de links:** o card do catálogo usa `HoverPrefetchLink`, que só faz prefetch com o ponteiro em cima ou com foco do teclado. O prefetch padrão baixaria a rota de cada card que entra na tela, gastando o plano de dados do aluno com eventos que ele não vai abrir. Os links de navegação seguem com o prefetch normal. Um teste E2E em build de produção garante que nenhum evento é pré-carregado antes da intenção.
