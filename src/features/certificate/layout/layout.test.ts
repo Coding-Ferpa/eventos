@@ -194,7 +194,7 @@ describe('layout: conteúdo e avisos', () => {
       semCedilha,
     )
 
-    expect(textoDe(plano).font).toBe('curated:poppins-700')
+    expect(textoDe(plano).font).toBe('curated:inter-700')
     expect(plano.warnings).toEqual([
       { fieldId: 'nome', code: 'GLYPH_FALLBACK', detail: expect.stringContaining('ç') },
     ])

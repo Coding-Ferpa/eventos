@@ -177,7 +177,7 @@ eventos/
 ├── docs/                              # esta documentação
 │   └── adr/
 ├── public/
-│   └── fonts/cert/                    # TTF estáticos das 5 famílias curadas + LICENSES/
+│   └── fonts/cert/                    # TTF estáticos das 4 famílias curadas + LICENSES/
 ├── scripts/                           # check-env, check-schema, check-migrations, check-fonts,
 │                                      # check-fonts-trace, anonymize-csv, load-test-download
 ├── src/

@@ -163,7 +163,7 @@ describe('drawPdf', () => {
       bytes,
     )
 
-    expect((plano.pages[0]!.items[0] as TextItem).font).toBe('curated:poppins-400')
+    expect((plano.pages[0]!.items[0] as TextItem).font).toBe('curated:inter-400')
     expect(plano.warnings.map((aviso) => aviso.code)).toEqual(['GLYPH_FALLBACK'])
     expect((await extrairTexto(pdf))[0]!.map((t) => t.text).join('')).toBe('Conceição')
   })
@@ -179,6 +179,29 @@ describe('drawPdf', () => {
     expect(semSubset.pdf.byteLength).toBeGreaterThan(60 * 1024)
     expect((await extrairTexto(semSubset.pdf))[0]!.map((t) => t.text).join('')).toBe(NOME)
   })
+
+  // A lacuna do M5, fechada pelo ADR-0016: nome fora do Latin-1 num campo em
+  // Poppins cai na Inter e volta idêntico do PDF.
+  it.each([
+    ['vietnamita', 'Nguyễn Thị Ánh Tuyết'],
+    ['grego', 'Γιώργος Παπαδόπουλος'],
+    ['cirílico', 'Дмитрий Соколов'],
+  ])(
+    'nome em %s sai na reserva, inteiro, sem caractere sem cobertura',
+    async (_, nome) => {
+      const { plano, pdf } = await gerar([campo()], nome)
+
+      expect((plano.pages[0]!.items[0] as TextItem).font).toBe('curated:inter-600')
+      expect(plano.warnings).toEqual([
+        {
+          fieldId: 'nome',
+          code: 'GLYPH_FALLBACK',
+          detail: expect.not.stringContaining('Sem cobertura'),
+        },
+      ])
+      expect((await extrairTexto(pdf))[0]!.map((t) => t.text).join('')).toBe(nome)
+    },
+  )
 
   // PDF-24 do doc 05.
   it('com um base.pdf de 3 MB, o PDF final fica abaixo dos 4,5 MB da Vercel', async () => {

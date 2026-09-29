@@ -15,7 +15,7 @@ import { loadFont } from '../src/features/certificate/fonts/metrics'
 const RAIZ = process.cwd()
 const PASTA = path.join(RAIZ, 'public', 'fonts', 'cert')
 
-/** `OFL-Poppins.txt`, `OFL-PlayfairDisplay.txt`: o aviso de copyright muda por família. */
+/** `OFL-Poppins.txt`, `OFL-Montserrat.txt`: o aviso de copyright muda por família. */
 function licencaDa(familia: string): string {
   return path.join(PASTA, 'LICENSES', `OFL-${familia.replaceAll(' ', '')}.txt`)
 }

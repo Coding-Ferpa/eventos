@@ -23,14 +23,45 @@ describe('catálogo curado', () => {
 
   it('a referência acha a fonte, e referência desconhecida não acha', () => {
     expect(findCuratedFont('curated:poppins-600')?.file).toBe('Poppins-SemiBold.ttf')
+    expect(findCuratedFont('curated:inter-700')?.file).toBe('Inter-Bold.ttf')
     expect(findCuratedFont('curated:comic-sans-400')).toBeUndefined()
   })
 
-  it('a fonte de reserva tem o peso mais próximo do pedido', () => {
-    expect(fallbackFor(400).ref).toBe('curated:poppins-400')
-    expect(fallbackFor(500).ref).toBe('curated:poppins-400')
-    expect(fallbackFor(650).ref).toBe('curated:poppins-600')
-    expect(fallbackFor(900).ref).toBe('curated:poppins-700')
+  // ADR-0016: quatro famílias que entregam estático, nos pesos 400, 600 e 700.
+  // O Playfair Display só existe como variável e ficou fora.
+  it('quatro famílias, cada uma nos três pesos', () => {
+    const familias = new Map<string, number[]>()
+    for (const fonte of CURATED_FONTS) {
+      familias.set(fonte.family, [...(familias.get(fonte.family) ?? []), fonte.weight])
+    }
+    expect(Object.fromEntries(familias)).toEqual({
+      Poppins: [400, 600, 700],
+      Inter: [400, 600, 700],
+      Montserrat: [400, 600, 700],
+      Lora: [400, 600, 700],
+    })
+  })
+
+  it('a reserva é a Inter, no peso mais próximo do pedido', () => {
+    expect(fallbackFor(400).ref).toBe('curated:inter-400')
+    expect(fallbackFor(500).ref).toBe('curated:inter-400')
+    expect(fallbackFor(650).ref).toBe('curated:inter-600')
+    expect(fallbackFor(900).ref).toBe('curated:inter-700')
+  })
+
+  // A razão de a reserva ser a Inter (ADR-0016): das quatro, é a única que
+  // cobre os cinco nomes; Montserrat e Lora não têm grego.
+  it.each([
+    ['vietnamita', 'Nguyễn Thị Ánh Tuyết'],
+    ['grego', 'Γιώργος Παπαδόπουλος'],
+    ['cirílico', 'Дмитрий Соколов'],
+    ['turco', 'Şükrü Çağlayan Öztürk'],
+    ['polonês', 'Łukasz Wróbel Żółć'],
+  ])('a reserva cobre nome em %s', (_, nome) => {
+    for (const peso of [400, 600, 700]) {
+      const arquivo = fallbackFor(peso).file
+      expect(loadFont(bytesDe(arquivo)).missingCharacters(nome), arquivo).toEqual([])
+    }
   })
 })
 
@@ -52,34 +83,57 @@ describe('métricas', () => {
     expect(poppins.widthAt('José Gonçalves', 32)).toBeCloseTo(em1 * 32, 6)
   })
 
-  // PDF-11 do doc 05: a mesma conta do pdf-lib, que é quem desenha.
-  //
-  // Limite conhecido: a Poppins do Google Fonts não tem kerning latino nem
-  // ligaduras, então aqui a soma dos avanços e as posições do layout
-  // coincidem, e este teste não distingue as duas contas. Ele passa a
-  // distinguir com a primeira fonte com kerning do catálogo (M6).
-  it('mede como o pdf-lib, para 50 nomes, com tolerância de 0,01 pt', async () => {
-    const doc = await PDFDocument.create()
-    doc.registerFontkit(cachedFontkit)
-    const fonte = await doc.embedFont(bytesDe('Poppins-SemiBold.ttf'), {
-      subset: true,
-      features: FONT_FEATURES,
-    })
+  // PDF-11 do doc 05: a mesma conta do pdf-lib, que é quem desenha, em uma
+  // fonte de cada família. Com a Poppins sozinha (M5) o teste não distinguia
+  // soma de avanços de posições com kerning, porque ela não tem kerning
+  // latino; as outras três têm, e o teste abaixo prova que ali as duas contas
+  // diferem.
+  it.each([
+    'Poppins-SemiBold.ttf',
+    'Inter-SemiBold.ttf',
+    'Montserrat-SemiBold.ttf',
+    'Lora-SemiBold.ttf',
+  ])(
+    '%s mede como o pdf-lib, para 50 nomes, com tolerância de 0,01 pt',
+    async (arquivo) => {
+      const metricas = loadFont(bytesDe(arquivo))
+      const doc = await PDFDocument.create()
+      doc.registerFontkit(cachedFontkit)
+      const fonte = await doc.embedFont(bytesDe(arquivo), {
+        subset: true,
+        features: FONT_FEATURES,
+      })
 
-    const nomes = Array.from({ length: 50 }, (_, i) =>
-      [
-        'José Gonçalves de Assunção',
-        'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues',
-        "Ana-Clara D'Ávila",
-        'João Pedro da Silva',
-        'Ângela Muñoz Ñandú',
-      ][i % 5]!.repeat(1 + (i % 3)),
-    )
-    for (const nome of nomes) {
-      expect(
-        Math.abs(poppins.widthAt(nome, 32) - fonte.widthOfTextAtSize(nome, 32)),
-      ).toBeLessThan(0.01)
-    }
+      const nomes = Array.from({ length: 50 }, (_, i) =>
+        [
+          'José Gonçalves de Assunção',
+          'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues',
+          "Ana-Clara D'Ávila",
+          'Walter Tavares Wyatt',
+          'Ângela Muñoz Ñandú',
+        ][i % 5]!.repeat(1 + (i % 3)),
+      )
+      for (const nome of nomes) {
+        expect(
+          Math.abs(metricas.widthAt(nome, 32) - fonte.widthOfTextAtSize(nome, 32)),
+        ).toBeLessThan(0.01)
+      }
+    },
+  )
+
+  // O que dá dentes ao PDF-11: numa fonte com kerning latino, a soma dos
+  // avanços (a conta do pdf-lib e do motor) e as posições com kerning do
+  // fontkit diferem de verdade. Quem trocasse a medida pelas posições faria o
+  // layout prometer uma largura e o PDF desenhar outra, e o teste acima cai.
+  it('com kerning latino, soma de avanços e posições com kerning diferem', () => {
+    const inter = loadFont(bytesDe('Inter-SemiBold.ttf'))
+    const texto = 'Walter Tavares Wyatt'
+    const posicoes = inter.font.layout(texto, FONT_FEATURES).positions ?? []
+    const comKerning =
+      (posicoes.reduce((soma, posicao) => soma + posicao.xAdvance, 0) /
+        inter.unitsPerEm) *
+      32
+    expect(inter.widthAt(texto, 32) - comKerning).toBeGreaterThan(1)
   })
 
   it('a fonte parseada é a mesma para o layout e para o pdf-lib (cache por identidade)', () => {

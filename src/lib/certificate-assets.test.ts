@@ -125,8 +125,11 @@ describe('fontes no cache de módulo', () => {
     const primeira = await assets.fonts(doisPesos)
     const segunda = await assets.fonts(SNAPSHOT)
 
-    // A reserva de cada peso também é Poppins até o M6: nenhuma leitura a mais.
+    // As dos campos e a reserva (Inter) de cada peso, uma leitura cada, mesmo
+    // com a segunda chamada.
     expect(lerFonteCurada.mock.calls.map(([arquivo]) => arquivo).sort()).toEqual([
+      'Inter-Bold.ttf',
+      'Inter-Regular.ttf',
       'Poppins-Bold.ttf',
       'Poppins-Regular.ttf',
     ])
@@ -161,8 +164,8 @@ describe('fontes no cache de módulo', () => {
     expect(fonts(`custom:${ENVIADA}`).weight).toBe(700)
     expect(fontBytes(`custom:${ENVIADA}`).subset).toBe(false)
     // A reserva do peso 700 também vem, para o glifo que faltar.
-    expect(lerFonteCurada).toHaveBeenCalledWith('Poppins-Bold.ttf')
-    expect(fontBytes('curated:poppins-700').subset).toBe(true)
+    expect(lerFonteCurada).toHaveBeenCalledWith('Inter-Bold.ttf')
+    expect(fontBytes('curated:inter-700').subset).toBe(true)
   })
 
   it('a pasta das fontes curadas é lida a partir do diretório do processo', async () => {

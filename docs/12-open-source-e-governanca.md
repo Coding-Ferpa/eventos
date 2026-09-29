@@ -72,7 +72,7 @@ O certificado sentinela vem do seed `supabase/seeds/01-producao.sql` ([doc 04](0
 
 ## 7. Fontes do certificado
 
-Poppins, Inter, Montserrat, Lora e Playfair Display ficam em `public/fonts/cert/` como **TTF estáticos**, um arquivo por peso usado (doc 05), com o nome do Google Fonts (`Poppins-Regular.ttf`; para família distribuída como variável, a pasta `static/` do download). Fonte variável não é aceita: o embutimento de fontes variáveis pela família pdf-lib não é confiável, e o risco é o peso 700 sair como 400 sem erro nenhum.
+Poppins, Inter, Montserrat e Lora ficam em `public/fonts/cert/` como **TTF estáticos**, um arquivo por peso usado (doc 05), com o nome que a distribuição de cada projeto usa (`Poppins-Regular.ttf`, `Inter-SemiBold.ttf`). A origem de cada uma, e por que o Playfair Display ficou fora, está no [ADR-0016](adr/0016-catalogo-de-fontes-estaticas.md). Fonte variável não é aceita: o embutimento de fontes variáveis pela família pdf-lib não é confiável, e o risco é o peso 700 sair como 400 sem erro nenhum.
 
 Todas são SIL OFL 1.1. `public/fonts/cert/LICENSES/` traz um `OFL-{Familia}.txt` por família (o aviso de copyright muda em cada uma), e `THIRD_PARTY_NOTICES.md` tem a tabela: família, arquivos, versão, copyright, licença, URL de origem. `pnpm check:fonts` reprova TTF com tabela `fvar`, com peso diferente do catálogo, sem os caracteres do português, sem licença em `LICENSES/` ou fora da tabela. Fonte enviada pelo admin vai para o Storage, não para o repositório.
 
