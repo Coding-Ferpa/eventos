@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 import { artes } from '../tests/support/artes'
 import { apagarEventosComPrefixo, apagarFonteEnviada } from './support/banco'
-import { CONTAS, entrar } from './support/sessao'
+import { CONTAS, entrar, esperarHidratacao } from './support/sessao'
 
 /**
  * E07 do doc 11: subir a arte, declarar um campo de conteúdo, posicionar
@@ -14,29 +14,52 @@ import { CONTAS, entrar } from './support/sessao'
  * mostra um aviso abaixo de 1024 px (doc 09).
  */
 
-const PREFIXO = 'E2E modelos'
 const NOME_CANONICO = 'Maria Eduarda dos Santos Albuquerque Pessoa Rodrigues'
 
 test.describe.configure({ mode: 'serial' })
 
-// Uma fonte de verdade, enviada como se fosse da organização.
-const FONTE = readFileSync('public/fonts/cert/Poppins-Bold.ttf')
-const SHA_DA_FONTE = createHash('sha256').update(FONTE).digest('hex')
+/**
+ * O spec roda no Chromium e no Safari desktop (doc 11). Cada projeto tem o
+ * seu prefixo de evento e a sua fonte: a limpeza de um não apaga o que o
+ * outro está usando, e o sha256 da fonte, que é único no banco, não colide.
+ */
+const POR_PROJETO: Record<string, { prefixo: string; arquivo: string; opcao: string }> = {
+  chromium: {
+    prefixo: 'E2E modelos chromium',
+    arquivo: 'Poppins-Bold.ttf',
+    opcao: 'Poppins 700 (enviada)',
+  },
+  'desktop-safari': {
+    prefixo: 'E2E modelos safari',
+    arquivo: 'Inter-Bold.ttf',
+    opcao: 'Inter 700 (enviada)',
+  },
+}
+
+function doProjeto(projeto: string) {
+  const dados = POR_PROJETO[projeto]
+  if (!dados) throw new Error(`Projeto sem dados no spec do editor: ${projeto}`)
+  // Uma fonte de verdade, enviada como se fosse da organização.
+  const fonte = readFileSync(`public/fonts/cert/${dados.arquivo}`)
+  return { ...dados, fonte, sha: createHash('sha256').update(fonte).digest('hex') }
+}
 
 // Antes também: a fonte precisa entrar como nova, para o teste ver o
 // resultado da ida e volta do subset, e não o "já tinha sido enviada".
 test.beforeAll(async () => {
-  await apagarFonteEnviada(SHA_DA_FONTE)
+  await apagarFonteEnviada(doProjeto(test.info().project.name).sha)
 })
 
 test.afterAll(async () => {
-  await apagarEventosComPrefixo(PREFIXO)
-  await apagarFonteEnviada(SHA_DA_FONTE)
+  const { prefixo, sha } = doProjeto(test.info().project.name)
+  await apagarEventosComPrefixo(prefixo)
+  await apagarFonteEnviada(sha)
 })
 
 async function criarEvento(page: Page) {
-  const nome = `${PREFIXO} ${Date.now()}`
+  const nome = `${doProjeto(test.info().project.name).prefixo} ${Date.now()}`
   await page.goto('/admin/eventos/novo')
+  await esperarHidratacao(page)
   await page.getByLabel('Título').fill(nome)
   await page.getByLabel('Início').fill('2027-05-20T19:00')
   await page.getByRole('button', { name: 'Criar evento' }).click()
@@ -46,6 +69,7 @@ async function criarEvento(page: Page) {
 
 async function criarModelo(page: Page, urlDoEvento: string, nome: string) {
   await page.goto(urlDoEvento)
+  await esperarHidratacao(page)
   await page.getByLabel('Nome do modelo novo').fill(nome)
   await page.getByRole('button', { name: 'Criar modelo' }).click()
   await expect(page).toHaveURL(/\/modelos\/[0-9a-f-]{36}$/)
@@ -116,6 +140,7 @@ test.describe('modelo por formulário (E07)', () => {
 
     // O tipo de participação passa a usar o modelo.
     await page.goto(urlDoEvento)
+    await esperarHidratacao(page)
     await page
       .getByRole('combobox', { name: 'Modelo de certificado de Participante' })
       .click()
@@ -161,9 +186,11 @@ test.describe('modelo por formulário (E07)', () => {
     // O servidor avalia a fonte com o pdf.js (ida e volta do subset). A
     // Poppins passa: "falhou no subset" aqui seria o pdf.js quebrado no build
     // de produção, que marcava toda fonte assim sem erro nenhum (M6).
-    await page
-      .locator('input[type="file"][accept=".ttf,.otf"]')
-      .setInputFiles({ name: 'Marca-Bold.ttf', mimeType: 'font/ttf', buffer: FONTE })
+    await page.locator('input[type="file"][accept=".ttf,.otf"]').setInputFiles({
+      name: 'Marca-Bold.ttf',
+      mimeType: 'font/ttf',
+      buffer: doProjeto(test.info().project.name).fonte,
+    })
     await expect(page.getByText('Fonte conferida e disponível.')).toBeVisible({
       timeout: 30_000,
     })
@@ -171,7 +198,9 @@ test.describe('modelo por formulário (E07)', () => {
     await page.getByRole('button', { name: 'Posicionar o nome' }).click()
     const nome = page.getByRole('group', { name: 'Texto: nome' })
     await nome.getByRole('combobox', { name: 'Fonte' }).click()
-    await page.getByRole('option', { name: 'Poppins 700 (enviada)' }).click()
+    await page
+      .getByRole('option', { name: doProjeto(test.info().project.name).opcao })
+      .click()
 
     await expect(linhaDoNome(page)).toHaveAttribute('transform', /translate/)
     // Os glifos da prévia vêm da fonte enviada: o id nasce da referência dela.

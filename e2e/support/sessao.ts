@@ -21,3 +21,12 @@ export async function entrar(page: Page, email: string, senha = SENHA_DE_SEED) {
   // o cookie de sessão e cairia de novo no login.
   await page.waitForURL((url) => !url.pathname.startsWith('/login'))
 }
+
+/**
+ * Espera o admin hidratar (a marca do `MarcaDeHidratacao`). Depois de um
+ * `goto`, digitar antes disso perde o texto nos campos controlados, e no
+ * WebKit isso acontece de verdade (M6).
+ */
+export async function esperarHidratacao(page: Page) {
+  await page.locator('html[data-hidratado]').waitFor({ state: 'attached' })
+}

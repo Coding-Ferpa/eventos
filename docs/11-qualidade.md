@@ -94,7 +94,7 @@ Numeradas: os milestones do [doc 14](14-prompt-de-execucao-opus-5.md) citam este
 | E27 | Meus certificados (M11) | CPF com certificados em dois eventos lista os dois; CPF sem nada responde como não encontrado |
 | E28 | Exportações e LinkedIn (M12) | XLSX baixa e abre; célula iniciada por `=` sai como texto; o link do LinkedIn tem `certUrl` e `certId` corretos |
 
-Os fluxos públicos (E11 a E19, E22) rodam em viewport de celular (390×844) no WebKit e no Chromium.
+Os fluxos públicos (E11 a E19, E22) rodam em viewport de celular (390×844) no WebKit e no Chromium. O admin roda só no Chromium desktop, com uma exceção desde o M6: o spec do editor de modelos (E07) roda também no Safari desktop (WebKit). É a única tela do admin que depende de API que muda por motor (o worker do pdf.js, o WebP gerado no canvas, o `createImageBitmap`), e a falha seria silenciosa, com arte subindo no formato errado.
 
 ## Cobertura mínima
 

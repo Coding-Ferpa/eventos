@@ -21,6 +21,14 @@ export default defineConfig({
     // celular só rodam o que está em `e2e/publico/`: rodar o admin em três
     // motores triplicaria o tempo sem cobrir nada que o desktop não cubra.
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Exceção no admin: o editor de modelos depende de API que muda por motor
+    // (worker do pdf.js, WebP no canvas, createImageBitmap), e a falha seria
+    // silenciosa, com arte subindo no formato errado (doc 11, M6).
+    {
+      name: 'desktop-safari',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: /admin-modelos\.spec\.ts/,
+    },
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 7'] },
