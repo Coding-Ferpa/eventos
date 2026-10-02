@@ -7,7 +7,7 @@ import { semBanco } from '@/lib/ambiente'
 import { abrirRetirada, COOKIE_DE_RETIRADA } from '@/lib/cookies/retrieval'
 import { avisoDePedidoDeCorrecao, enviarEmail } from '@/lib/email'
 import { serverEnv, siteEnv } from '@/lib/env'
-import { formatarEspera } from '@/lib/espera'
+import { textoDaContagem } from '@/lib/espera'
 import { origemDoSite, problema, SEM_CACHE } from '@/lib/problema'
 import { consumirBalde, LIMITES } from '@/lib/rate-limit'
 import { requisitante } from '@/lib/requisicao'
@@ -85,7 +85,7 @@ export async function POST(
     return problema(
       429,
       'rate_limited',
-      `Muitas tentativas seguidas. Você pode tentar de novo em ${formatarEspera(resultado.limite)}.`,
+      `Muitas tentativas seguidas. Você pode tentar de novo em ${textoDaContagem(resultado.limite)}.`,
       { headers: { 'Retry-After': String(resultado.limite) } },
     )
   }

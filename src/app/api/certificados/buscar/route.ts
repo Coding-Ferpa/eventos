@@ -18,7 +18,7 @@ import {
 } from '@/lib/cookies/retrieval'
 import { cookieSeguro } from '@/lib/cookies/seguro'
 import { serverEnv } from '@/lib/env'
-import { formatarEspera } from '@/lib/espera'
+import { textoDaContagem } from '@/lib/espera'
 import { hmacCpf } from '@/lib/hmac'
 import { origemDoSite, problema, SEM_CACHE } from '@/lib/problema'
 import { consultarBalde, consumirBalde, LIMITES } from '@/lib/rate-limit'
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       return problema(
         429,
         'rate_limited',
-        `Muitas tentativas seguidas. Você pode tentar de novo em ${formatarEspera(porIp.esperarSegundos)}.`,
+        `Muitas tentativas seguidas. Você pode tentar de novo em ${textoDaContagem(porIp.esperarSegundos)}.`,
         { headers: { 'Retry-After': String(porIp.esperarSegundos) } },
       )
     }

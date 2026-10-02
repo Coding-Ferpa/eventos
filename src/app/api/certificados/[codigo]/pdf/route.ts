@@ -18,7 +18,7 @@ import {
 } from '@/lib/cookies/retrieval'
 import { db } from '@/db/client'
 import { serverEnv, siteEnv } from '@/lib/env'
-import { formatarEspera } from '@/lib/espera'
+import { textoDaContagem } from '@/lib/espera'
 import { problema } from '@/lib/problema'
 import { consumirBalde, LIMITES } from '@/lib/rate-limit'
 import { requisitante } from '@/lib/requisicao'
@@ -73,7 +73,7 @@ export async function GET(
       return problema(
         429,
         'rate_limited',
-        `Muitas tentativas seguidas. Você pode tentar de novo em ${formatarEspera(veredito.esperarSegundos)}.`,
+        `Muitas tentativas seguidas. Você pode tentar de novo em ${textoDaContagem(veredito.esperarSegundos)}.`,
         { headers: { 'Retry-After': String(veredito.esperarSegundos) } },
       )
     }

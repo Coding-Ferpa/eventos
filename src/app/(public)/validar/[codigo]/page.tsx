@@ -14,7 +14,7 @@ import { canonicalizeCode, isValidCode } from '@/features/certificate/code'
 import { formatDateLong, formatHours } from '@/features/certificate/format'
 import { semBanco } from '@/lib/ambiente'
 import { serverEnv } from '@/lib/env'
-import { formatarEspera } from '@/lib/espera'
+import { textoDaContagem } from '@/lib/espera'
 import { formatarPeriodo } from '@/lib/format'
 import { hashDiario } from '@/lib/hmac'
 import { consumirBalde, LIMITES } from '@/lib/rate-limit'
@@ -190,7 +190,7 @@ export default async function ValidacaoPage({ params }: Props) {
         ) : null}
         {tentarDeNovo ? <p>{DICA}</p> : null}
         {consulta.estado === 'limite' ? (
-          <p>Você pode tentar de novo em {formatarEspera(consulta.esperar)}.</p>
+          <p>Você pode tentar de novo em {textoDaContagem(consulta.esperar)}.</p>
         ) : null}
       </section>
 
