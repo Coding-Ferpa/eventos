@@ -7,6 +7,23 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
+// As proibições de import de todo o código. Ficam numa constante porque um
+// bloco posterior que configure `no-restricted-imports` substitui as opções
+// inteiras nos arquivos dele: sem repetir estas, a regra do `zod` sumiria ali
+// sem aviso.
+const IMPORTS_PROIBIDOS = [
+  {
+    name: 'zod',
+    message: "Importe `z` de '@/lib/zod': é a instância com o locale pt-BR (ADR-0016).",
+  },
+  {
+    name: '@cantoo/pdf-lib',
+    importNames: ['StandardFonts'],
+    message:
+      'Fonte do certificado é sempre TTF embutida (doc 05): a fonte-padrão não vai dentro do PDF.',
+  },
+]
+
 export default tseslint.config(
   {
     ignores: [
@@ -30,24 +47,7 @@ export default tseslint.config(
     files: ['**/*.{ts,tsx}'],
     ignores: ['src/lib/zod.ts'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: 'zod',
-              message:
-                "Importe `z` de '@/lib/zod': é a instância com o locale pt-BR (ADR-0016).",
-            },
-            {
-              name: '@cantoo/pdf-lib',
-              importNames: ['StandardFonts'],
-              message:
-                'Fonte do certificado é sempre TTF embutida (doc 05): a fonte-padrão não vai dentro do PDF.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { paths: IMPORTS_PROIBIDOS }],
       // A outra porta para as fontes-padrão, que nem passa por import.
       'no-restricted-properties': [
         'error',
@@ -131,6 +131,36 @@ export default tseslint.config(
               allowTypeImports: true,
               message:
                 'Componentes não acessam o banco: recebem dados por props de Server Components (doc 02).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // `public-lookup.ts` é a única porta da área pública para dado de pessoa, e
+  // só as rotas públicas que precisam dele passam por ela (doc 08, ADR-0012).
+  // Importá-lo de outro lugar é abrir uma segunda porta sem o rate limit.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      'src/lib/zod.ts',
+      'src/db/queries/public-lookup.ts',
+      'src/app/api/certificados/**',
+      'src/app/(public)/validar/**',
+      'src/app/(public)/eventos/[[]slug]/certificado/**',
+      'src/app/(public)/certificado/**',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: IMPORTS_PROIBIDOS,
+          patterns: [
+            {
+              group: ['@/db/queries/public-lookup', '**/public-lookup'],
+              message:
+                'public-lookup só é importado pelas rotas públicas de certificado (doc 08): é a única porta para dado de pessoa.',
             },
           ],
         },
