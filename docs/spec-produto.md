@@ -141,7 +141,7 @@ Admin sobe a arte (PDF ou PNG/JPG de alta resolução) e posiciona os campos arr
 - Por campo: origem do dado, página, posição, caixa (largura e altura), alinhamento horizontal e vertical, fonte, tamanho, tamanho mínimo, peso, cor, transformação (maiúsculas, capitalização de nomes próprios em pt-BR).
 - **Prévia ao vivo** com dados de teste, incluindo um botão "testar com o nome mais longo do evento".
 - Suporte a modelo de duas páginas (frente e verso com conteúdo programático), comum em evento acadêmico.
-- Fontes: conjunto curado (Poppins, Inter, Montserrat, Lora, Playfair Display) mais upload de TTF/OTF próprio.
+- Fontes: conjunto curado (Poppins, Inter, Montserrat, Lora) mais upload de TTF/OTF próprio. O Playfair Display saiu porque só existe como fonte variável ([ADR-0016](adr/0016-catalogo-de-fontes-estaticas.md)).
 
 **Aceite**
 - [ ] Trocar a arte de 150 para 300 dpi mantém todos os campos no lugar.

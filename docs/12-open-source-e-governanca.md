@@ -2,9 +2,11 @@
 
 A governança é a do CF Jobs (`Coding-Ferpa/cf-jobs`), copiada arquivo a arquivo. Só muda o que decorre de uma diferença: este repositório gira em torno de dado pessoal de estudante, inclusive menor de idade.
 
-## 1. Repositório público desde o commit inicial
+## 1. Repositório privado, na conta da comunidade
 
-Fecha a questão aberta 8 do PRD: `Coding-Ferpa/eventos` nasce público, como o CF Jobs. Nada no repositório é segredo: pepper, chaves e participantes ficam em env e no banco; schema, RLS e algoritmo de hash são públicos de propósito (a segurança está no pepper, não em esconder o método). Rejeitado: privado até o primeiro evento, porque abrir depois custa uma auditoria de histórico. Ligados no commit zero: secret scanning com push protection, private vulnerability reporting e a regra da seção 6.
+Decisão do mantenedor (2026-10-02), definitiva: `Coding-Ferpa/eventos` é privado, na conta da organização da comunidade. A regra de antes continua valendo como se fosse público: nada no repositório é segredo; pepper, chaves e participantes ficam em env e no banco, e schema, RLS e algoritmo de hash não dependem de ficar escondidos (a segurança está no pepper, não no método). Push, PRs, Vercel e publicação são do mantenedor.
+
+Secret scanning e push protection ficam de fora enquanto o repositório for privado: em repositório privado de organização são recursos pagos. A defesa contra segredo commitado fica no `.gitignore`, no `.env.example` sem valor real e na revisão do PR.
 
 ## 2. Licença
 
@@ -56,7 +58,7 @@ Roda 1 vez por dia (`cron: '17 9 * * *'`) e por `workflow_dispatch`.
 1. `curl --fail --max-time 30 --retry 3` em `https://eventos.codingferpa.org/validar/${{ vars.SMOKE_VALIDATION_CODE }}`.
 2. `grep -qF "${{ vars.SMOKE_EXPECTED_NAME }}"` no HTML. Status 200 sem o nome é falha.
 3. Na falha: `gh issue create` com label `smoke-producao`, ou comentário na issue já aberta. O corpo lembra que projeto pausado só volta por restauração manual no dashboard do Supabase.
-4. Sempre: `gh workflow enable smoke-producao.yml`, porque o GitHub desativa workflow agendado de repositório público após 60 dias sem atividade.
+4. Se o repositório um dia ficar público: `gh workflow enable smoke-producao.yml` periodicamente, porque o GitHub desativa workflow agendado de repositório público após 60 dias sem atividade. Privado, como é hoje, isso não acontece.
 
 Dupla função: smoke test de produção e atividade de **banco** que impede o Supabase gratuito de pausar o projeto após 7 dias de baixa atividade, o normal entre um evento e outro. Request que só toca a Vercel não conta; por isso o alvo é `/validar/{código}`, dinâmica e com consulta ao Postgres a cada request ([doc 09](09-frontend-e-seo.md)). É um contrato: cache nessa rota mata o keep-alive sem avisar.
 
