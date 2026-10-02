@@ -28,8 +28,9 @@ as $$
     regexp_replace(
       regexp_replace(
         lower(translate(
+          -- 0. acento decomposto (NFD) vira composto, senão o mapa não o vê
           -- 1. apóstrofo some sem virar espaço: Sant'Ana e Santana casam
-          replace(replace(raw, '''', ''), '’', ''),
+          replace(replace(normalize(raw, NFC), '''', ''), '’', ''),
           'ÁÀÂÃÄÅáàâãäåÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÕÖóòôõöÚÙÛÜúùûüÇçÑñÝýÿ',
           'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNnYyy')),
         -- 2. pontuação e hífen viram espaço

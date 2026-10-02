@@ -9,7 +9,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(22);
 
 -- ---------------------------------------------------------------------------
 -- normalize_person_name: a tabela de casos do doc 04
@@ -38,6 +38,11 @@ select is(public.normalize_person_name('Maria da de Souza'),
 select is(public.normalize_person_name('Ñuñez ÝÿÇ'),
   'nunez yyc', 'o mapa cobre maiúsculas e minúsculas, independente do locale');
 select is(public.normalize_person_name(null), null, 'nulo continua nulo');
+-- Escrito com chr() para nenhum editor recompor o acento sem ninguém ver.
+select is(
+  public.normalize_person_name('Conceic' || chr(807) || 'a' || chr(771) || 'o Arau' || chr(769) || 'jo'),
+  'conceicao araujo',
+  'acento decomposto (NFD, de arquivo vindo de Mac) casa com o composto');
 
 -- Os critérios de aceite do R2, na forma em que o banco os responde.
 select is(public.normalize_person_name('MARIA EDUARDA SANTOS'),

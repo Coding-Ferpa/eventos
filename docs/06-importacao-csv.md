@@ -115,6 +115,7 @@ Algoritmo exato, sem dependência:
 3. `new TextDecoder('utf-8', { fatal: true }).decode(bytes)`. Deu certo → UTF-8. ASCII puro cai aqui.
 4. Falhou → `new TextDecoder('windows-1252').decode(bytes)`, que nunca falha. Windows-1252 é superconjunto imprimível do ISO-8859-1, então cobre os dois.
 5. Conferência pós-decodificação: se o texto contém `U+FFFD` ou alguma das assinaturas `Ã§`, `Ã£`, `Ã¡`, `Ã©`, `Ãª`, `Ã­`, `Ã³`, `Ãµ`, `Ãº`, emite `MOJIBAKE_SUSPECTED` (arquivo que já chegou estragado de outro sistema: não dá para consertar, mas dá para avisar).
+6. O texto sai recomposto em NFC (`text.normalize('NFC')`). Acento decomposto, comum em arquivo vindo de Mac, parece igual na tela, mas não casava com o nome digitado na busca nem com o homônimo (medido; ver `normalize_person_name` no doc 04, que também recompõe).
 
 Por que funciona sem heurística estatística: texto em Windows-1252 com acento quase nunca é UTF-8 válido (um `ç` isolado, byte `E7`, exige dois bytes de continuação que não estarão lá), e UTF-8 válido com caracteres não ASCII quase nunca é o que um Excel pt-BR produz por acidente. O passo 3 decide com exatidão o caso que importa, e bibliotecas como `chardet` erram justamente em arquivos pequenos. O Node 24 tem ICU completo: `windows-1252`, `utf-16le` e `utf-16be` estão disponíveis no `TextDecoder`. Mac Roman (Excel antigo de Mac) não é suportado: é raro, e o passo 5 não o detecta; está registrado como limitação no texto de ajuda da tela.
 

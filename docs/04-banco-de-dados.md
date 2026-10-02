@@ -234,7 +234,7 @@ as $$
     regexp_replace(
       regexp_replace(
         lower(translate(
-          replace(replace(raw, '''', ''), '’', ''),          -- 1. apóstrofo some sem virar espaço: Sant'Ana = Santana
+          replace(replace(normalize(raw, NFC), '''', ''), '’', ''),  -- 0. NFD vira NFC; 1. apóstrofo some sem virar espaço: Sant'Ana = Santana
           'ÁÀÂÃÄÅáàâãäåÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÕÖóòôõöÚÙÛÜúùûüÇçÑñÝýÿ',
           'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNnYyy')),
         '[^a-z0-9]+', ' ', 'g'),                             -- 2. pontuação e hífen viram espaço
@@ -243,9 +243,11 @@ as $$
 $$;
 ```
 
+Por que o `normalize(raw, NFC)` primeiro: o mapa do `translate` só conhece o acento composto. Medido no Postgres 17 local: `Conceição Araújo` com acento decomposto (NFD, comum em arquivo vindo de Mac) virava `conceic a o arau jo` e não casava com o mesmo nome digitado na busca. A importação também recompõe o texto na decodificação (doc 06); a função cobre os outros caminhos, a edição manual e a busca. `normalize` é `immutable` no catálogo, então a função continua servindo à coluna gerada.
+
 Por que o mapa cobre maiúsculas: `lower()` em caractere não ASCII depende do locale do cluster. Traduzir antes de baixar a caixa torna o resultado independente disso. Por que tirar partículas: o aluno digita "Maria Eduarda Santos" para quem está na planilha como "Maria Eduarda dos Santos". É a normalização agressiva que o PRD pede, sem abrir mão do casamento por inteiro: "maria" continua não encontrando ninguém.
 
-Tabela de casos obrigatória no teste de integração (entrada → saída): `José Gonçalves de Assunção` → `jose goncalves assuncao` · `  MARIA   EDUARDA dos Santos ` → `maria eduarda santos` · `Ana-Clara D'Ávila` → `ana clara davila` · `João e Maria` → `joao maria` · `Müller` → `muller` · `de da do` → string vazia (o check de tamanho mínimo rejeita).
+Tabela de casos obrigatória no teste de integração (entrada → saída): `José Gonçalves de Assunção` → `jose goncalves assuncao` · `  MARIA   EDUARDA dos Santos ` → `maria eduarda santos` · `Ana-Clara D'Ávila` → `ana clara davila` · `João e Maria` → `joao maria` · `Müller` → `muller` · `de da do` → string vazia (o check de tamanho mínimo rejeita) · `Conceição Araújo` em NFD → `conceicao araujo`.
 
 ## RLS: matriz completa
 

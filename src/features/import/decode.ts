@@ -71,7 +71,10 @@ function decodificar(bytes: Uint8Array): Omit<Decoded, 'warnings'> {
 }
 
 export function decodeCsv(bytes: Uint8Array): Decoded {
-  const decodificado = decodificar(bytes)
+  const { text, encoding } = decodificar(bytes)
+  // Acento decomposto (NFD, comum em arquivo vindo de Mac) parece igual na
+  // tela, mas não casa com o nome digitado na busca nem com o homônimo.
+  const decodificado = { text: text.normalize('NFC'), encoding }
   const estragado = ASSINATURAS_DE_MOJIBAKE.some((assinatura) =>
     decodificado.text.includes(assinatura),
   )

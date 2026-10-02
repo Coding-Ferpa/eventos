@@ -75,6 +75,13 @@ describe('decodeCsv', () => {
     expect(decodeCsv(bytes).warnings).toEqual(['MOJIBAKE_SUSPECTED'])
   })
 
+  it('acento decomposto (NFD, como sai de um Mac) volta composto', () => {
+    const decomposto = 'Nome\nConceição Araújo'
+    const { text } = decodeCsv(new TextEncoder().encode(decomposto))
+    expect(text).toBe('Nome\nConceição Araújo')
+    expect(text).toBe(decomposto.normalize('NFC'))
+  })
+
   it('arquivo vazio é UTF-8 vazio', () => {
     expect(decodeCsv(new Uint8Array())).toEqual({
       text: '',
