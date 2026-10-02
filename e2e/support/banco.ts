@@ -172,6 +172,11 @@ export const PESSOAS = {
     cpf: '864.213.579-46',
     email: 'maria.e2e@example.com',
   },
+  paulo: {
+    nome: 'Paulo Henrique Brandão',
+    cpf: '111.444.777-35',
+    email: 'paulo.e2e@example.com',
+  },
 } as const
 
 export type EventoLiberado = {
@@ -259,6 +264,7 @@ export async function criarEventoComCertificados(
       ['organizador', 16],
     ])
     await cadastrar('maria', [['participante', 8]])
+    await cadastrar('paulo', [['participante', 8]])
 
     return { id: evento!.id, slug, codigos }
   } finally {
@@ -278,6 +284,19 @@ export async function apagarEventoComCertificados(id: string) {
       await storageAdmin()
         .from('templates')
         .remove(modelos.map((modelo) => `${modelo.id}/base.pdf`))
+  } finally {
+    await sql.end()
+  }
+}
+
+/** Revoga direto no banco, como a ação da lista faria (E19 na área pública). */
+export async function revogarCertificado(codigo: string, motivo: string) {
+  const sql = conectar()
+  try {
+    await sql`
+      update public.certificates
+         set status = 'revoked', revoked_at = now(), revoked_reason = ${motivo}
+       where code = ${codigo}`
   } finally {
     await sql.end()
   }

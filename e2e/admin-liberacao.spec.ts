@@ -35,8 +35,11 @@ test('liberação: falha com o que falta; com tudo certo, a busca aparece (E21)'
   await page.goto(`/admin/eventos/${evento.id}`)
   await esperarHidratacao(page)
   const resumo = page.getByRole('region', { name: 'Certificados' })
+  const total = Object.keys(evento.codigos).length
   await expect(
-    resumo.locator('div').filter({ hasText: /^Certificados ativos3$/ }),
+    resumo
+      .locator('div')
+      .filter({ hasText: new RegExp(`^Certificados ativos${total}$`) }),
   ).toBeVisible()
 
   const liberar = async () => {
@@ -68,10 +71,12 @@ test('liberação: falha com o que falta; com tudo certo, a busca aparece (E21)'
 
   await liberar()
   await expect(resumo.getByRole('status')).toHaveText(
-    'Certificados no ar. 3 certificados emitidos agora.',
+    `Certificados no ar. ${total} certificados emitidos agora.`,
   )
   await expect(resumo.getByText(/Os certificados estão no ar desde \d+ de/)).toBeVisible()
-  await expect(resumo.locator('div').filter({ hasText: /^Emitidos3$/ })).toBeVisible()
+  await expect(
+    resumo.locator('div').filter({ hasText: new RegExp(`^Emitidos${total}$`) }),
+  ).toBeVisible()
 
   await page.goto(`/eventos/${evento.slug}`)
   await expect(page.getByText('Os certificados já estão no ar.')).toBeVisible()

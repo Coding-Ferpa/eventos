@@ -405,7 +405,7 @@ export function BuscaDoCertificado({
 
         <button
           aria-busy={estado.tipo === 'buscando'}
-          className="bg-primary-solid text-primary-foreground min-h-12 w-full rounded-full px-6 font-semibold transition duration-150 disabled:opacity-60 sm:w-fit"
+          className="bg-primary-solid text-primary-foreground min-h-12 w-full rounded-full px-6 font-semibold transition-colors duration-150 disabled:opacity-60 sm:w-fit"
           disabled={!hidratado || estado.tipo === 'limite'}
           type="submit"
         >

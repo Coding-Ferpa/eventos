@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 
 import { artes } from '../tests/support/artes'
+import { esperarSemViolacoesGraves } from './support/axe'
 import { apagarEventosComPrefixo, apagarFonteEnviada } from './support/banco'
 import { CONTAS, entrar, esperarHidratacao } from './support/sessao'
 
@@ -127,6 +128,8 @@ test.describe('modelo por formulário (E07)', () => {
       `Prévia do certificado de ${NOME_CANONICO}`,
     )
     await page.screenshot({ path: testInfo.outputPath('editor.png'), fullPage: true })
+    // E23: o editor no axe, com arte, campos e prévia carregados.
+    await esperarSemViolacoesGraves(page)
 
     await page.getByRole('button', { name: 'Salvar rascunho' }).click()
     await expect(

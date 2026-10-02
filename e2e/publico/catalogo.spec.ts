@@ -62,9 +62,12 @@ test.describe('catálogo (E01)', () => {
     // reporta todo cookie como `SameSite=None`.
     const setCookie = (await resposta?.allHeaders())?.['set-cookie'] ?? ''
     expect(setCookie).toMatch(/cf-dispositivo=v1\./)
-    for (const atributo of [/HttpOnly/i, /Secure/i, /SameSite=lax/i, /Max-Age=2592000/]) {
+    for (const atributo of [/HttpOnly/i, /SameSite=lax/i, /Max-Age=2592000/]) {
       expect(setCookie).toMatch(atributo)
     }
+    // Em http://localhost vai sem Secure, que o WebKit não devolveria (doc 08);
+    // em qualquer outro host vai com ele (teste unitário de cookieSeguro).
+    expect(setCookie).not.toMatch(/Secure/i)
   })
 
   test('sem violações graves de acessibilidade', async ({ page }) => {

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { esperarSemViolacoesGraves } from './support/axe'
+
 /**
  * E05 do doc 11: quem não tem papel suficiente não entra no admin, e o editor
  * não vê a gestão de usuários. Depende do Supabase local com o seed de
@@ -26,6 +28,8 @@ test.describe('autorização do admin', () => {
 
     await expect(page).toHaveURL(/\/login\?proximo=%2Fadmin%2Fusuarios/)
     await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
+    // E23: o login no axe.
+    await esperarSemViolacoesGraves(page)
   })
 
   test('editor entra e alcança o painel', async ({ page }) => {
