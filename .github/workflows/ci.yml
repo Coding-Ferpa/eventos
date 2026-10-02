@@ -140,6 +140,7 @@ jobs:
           export DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos
           export IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo
           export CPF_PEPPER=desenvolvimento-local-pepper-do-cpf-cf-eventos-nao-usar
+          export RETRIEVAL_COOKIE_KEY=ZGVzZW52b2x2aW1lbnRvLWxvY2FsLXJldGlyYWRhMzI=
           pnpm test:integration
       - name: Derruba o Supabase
         if: ${{ always() }}
@@ -171,6 +172,7 @@ jobs:
             echo "DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos"
             echo "IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo"
             echo "CPF_PEPPER=desenvolvimento-local-pepper-do-cpf-cf-eventos-nao-usar"
+            echo "RETRIEVAL_COOKIE_KEY=ZGVzZW52b2x2aW1lbnRvLWxvY2FsLXJldGlyYWRhMzI="
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
       - run: pnpm build
@@ -222,6 +224,7 @@ jobs:
             echo "DEVICE_COOKIE_SECRET=desenvolvimento-local-cookie-de-dispositivo-cf-eventos"
             echo "IP_HASH_SECRET=desenvolvimento-local-hash-diario-de-ip-e-dispositivo"
             echo "CPF_PEPPER=desenvolvimento-local-pepper-do-cpf-cf-eventos-nao-usar"
+            echo "RETRIEVAL_COOKIE_KEY=ZGVzZW52b2x2aW1lbnRvLWxvY2FsLXJldGlyYWRhMzI="
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
       # O build roda pelo `webServer` do playwright.config.ts.

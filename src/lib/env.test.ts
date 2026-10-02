@@ -97,6 +97,7 @@ describe('parseServerEnv', () => {
     IP_HASH_SECRET: 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns',
     SUPABASE_SERVICE_ROLE_KEY: 'chave-de-servico',
     CPF_PEPPER: 'cGVwcGVyLWRvLWNwZi1nZXJhZG8tcGVsby1vcGVuc3Ns',
+    RETRIEVAL_COOKIE_KEY: 'aizH4cjxZz4Jl2jNHcqWKcMUjTEKJDEnQZ6Nd5q4VNY=',
   }
 
   it('aceita o pooler e os segredos, sem exigir o GitHub', () => {
@@ -162,6 +163,30 @@ describe('parseServerEnv', () => {
         }),
       ).toThrowError(/CPF_PEPPER[\s\S]*openssl rand -base64 32/)
     })
+  })
+
+  it('a chave do cookie de retirada precisa ser 32 bytes em base64', () => {
+    expect(() =>
+      parseServerEnv({ ...SERVIDOR_VALIDO, RETRIEVAL_COOKIE_KEY: 'curta' }),
+    ).toThrowError(/RETRIEVAL_COOKIE_KEY[\s\S]*32 bytes em base64/)
+    // 31 bytes: o base64 certinho, mas a chave errada para o AES-256.
+    expect(() =>
+      parseServerEnv({
+        ...SERVIDOR_VALIDO,
+        RETRIEVAL_COOKIE_KEY: Buffer.alloc(31, 1).toString('base64'),
+      }),
+    ).toThrowError(/RETRIEVAL_COOKIE_KEY/)
+  })
+
+  it('a chave de desenvolvimento do cookie de retirada é recusada dentro da Vercel', () => {
+    const DE_DESENVOLVIMENTO = 'ZGVzZW52b2x2aW1lbnRvLWxvY2FsLXJldGlyYWRhMzI='
+    expect(() =>
+      parseServerEnv({ ...SERVIDOR_VALIDO, RETRIEVAL_COOKIE_KEY: DE_DESENVOLVIMENTO }),
+    ).not.toThrow()
+    vi.stubEnv('VERCEL', '1')
+    expect(() =>
+      parseServerEnv({ ...SERVIDOR_VALIDO, RETRIEVAL_COOKIE_KEY: DE_DESENVOLVIMENTO }),
+    ).toThrowError(/RETRIEVAL_COOKIE_KEY[\s\S]*openssl rand -base64 32/)
   })
 
   it('recusa sem o pepper do CPF, dizendo qual variável falta', () => {

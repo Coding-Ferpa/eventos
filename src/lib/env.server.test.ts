@@ -18,6 +18,7 @@ function stubServidorValido() {
   vi.stubEnv('IP_HASH_SECRET', 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns')
   vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'chave-de-servico')
   vi.stubEnv('CPF_PEPPER', 'cGVwcGVyLWRvLWNwZi1nZXJhZG8tcGVsby1vcGVuc3Ns')
+  vi.stubEnv('RETRIEVAL_COOKIE_KEY', 'aizH4cjxZz4Jl2jNHcqWKcMUjTEKJDEnQZ6Nd5q4VNY=')
 }
 
 async function envNovo() {

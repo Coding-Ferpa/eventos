@@ -81,6 +81,18 @@ function segredo() {
   return z.string().min(32, 'curto demais para um HMAC: use 32 caracteres ou mais.')
 }
 
+/** Chave de AES-256: 32 bytes em base64, como sai do `openssl rand -base64 32`. */
+function chaveAes() {
+  return z
+    .string()
+    .refine(
+      (valor) =>
+        /^[A-Za-z0-9+/]+={0,2}$/.test(valor) &&
+        Buffer.from(valor, 'base64').length === 32,
+      'precisa ser 32 bytes em base64: gere com `openssl rand -base64 32`.',
+    )
+}
+
 function recusarSegredoDeDesenvolvimento(
   chave: string,
   valor: string | undefined,
@@ -150,6 +162,10 @@ export const serverEnvSchema = z
 
     // M7: HMAC do CPF (ADR-0005). Nunca rotacionar, nunca perder (doc 08).
     CPF_PEPPER: segredo(),
+
+    // M8: AES-256-GCM do cookie de retirada (ADR-0010). Trocar só derruba as
+    // retiradas abertas, que duram 30 minutos.
+    RETRIEVAL_COOKIE_KEY: chaveAes(),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(
@@ -161,6 +177,12 @@ export const serverEnvSchema = z
     recusarSegredoDeDesenvolvimento('DEVICE_COOKIE_SECRET', env.DEVICE_COOKIE_SECRET, ctx)
     recusarSegredoDeDesenvolvimento('IP_HASH_SECRET', env.IP_HASH_SECRET, ctx)
     recusarSegredoDeDesenvolvimento('CPF_PEPPER', env.CPF_PEPPER, ctx)
+    // A chave é base64: o prefixo de desenvolvimento está no texto decodificado.
+    recusarSegredoDeDesenvolvimento(
+      'RETRIEVAL_COOKIE_KEY',
+      Buffer.from(env.RETRIEVAL_COOKIE_KEY, 'base64').toString('latin1'),
+      ctx,
+    )
   })
 
 export type SiteEnv = z.infer<typeof siteEnvSchema>
