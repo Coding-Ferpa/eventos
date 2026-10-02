@@ -3,7 +3,7 @@ import 'server-only'
 import { and, count, desc, eq, ilike } from 'drizzle-orm'
 
 import { db } from '@/db/client'
-import { certificates, events, participationTypes } from '@/db/schema'
+import { certificates, events, participationTypes, vEventSummary } from '@/db/schema'
 import type { StatusDoEvento } from '@/lib/schemas/event'
 
 /**
@@ -107,3 +107,34 @@ export async function buscarEventoDoAdmin(id: string) {
 }
 
 export type EventoDoAdmin = NonNullable<Awaited<ReturnType<typeof buscarEventoDoAdmin>>>
+
+/** Os números do evento (doc 10): uma consulta à `v_event_summary`. */
+export type ResumoDoEvento = {
+  participantes: number
+  ativos: number
+  emitidos: number
+  retirados: number
+  /** De 0 a 1, ou `null` sem certificado emitido. */
+  taxaDeRetirada: number | null
+  correcoesPendentes: number
+  /** De 0 a 1, nos últimos 7 dias, ou `null` sem busca. */
+  buscaSemResultado: number | null
+}
+
+export async function resumoDoEvento(id: string): Promise<ResumoDoEvento | null> {
+  const [linha] = await db()
+    .select()
+    .from(vEventSummary)
+    .where(eq(vEventSummary.eventId, id))
+  if (!linha) return null
+  const fracao = (valor: string | null) => (valor === null ? null : Number(valor))
+  return {
+    participantes: linha.participants,
+    ativos: linha.certificatesActive,
+    emitidos: linha.certificatesIssued,
+    retirados: linha.certificatesDownloaded,
+    taxaDeRetirada: fracao(linha.downloadRate),
+    correcoesPendentes: linha.pendingCorrections,
+    buscaSemResultado: fracao(linha.notFoundRate7d),
+  }
+}

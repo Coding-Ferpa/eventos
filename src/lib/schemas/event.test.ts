@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   atualizacaoDeEventoSchema,
   novoEventoSchema,
+  pendenciasDaLiberacao,
   problemasDaBusca,
   problemaNaTransicao,
   TIPOS_PADRAO,
@@ -196,5 +197,47 @@ describe('TIPOS_PADRAO (doc 04)', () => {
       'monitor',
     ])
     expect(TIPOS_PADRAO.every((tipo) => tipo.defaultHours === '0')).toBe(true)
+  })
+})
+
+describe('pendenciasDaLiberacao (doc 07)', () => {
+  const PRONTO = {
+    certificadosAtivos: 3,
+    tiposSemModeloPublicado: [],
+    busca: {
+      searchByCpf: true,
+      searchByEmail: false,
+      searchByName: false,
+      searchBirthDate: false,
+      searchMode: 'any' as const,
+    },
+  }
+
+  it('com tudo certo, não falta nada', () => {
+    expect(pendenciasDaLiberacao(PRONTO)).toEqual([])
+  })
+
+  it('lista cada coisa que falta, numa frase que diz o que fazer', () => {
+    expect(
+      pendenciasDaLiberacao({
+        certificadosAtivos: 0,
+        tiposSemModeloPublicado: ['Palestrante', 'Monitor'],
+        busca: { ...PRONTO.busca, searchByCpf: false },
+      }),
+    ).toEqual([
+      'Nenhum certificado ativo: importe os participantes antes de liberar.',
+      'O tipo Palestrante tem certificados, mas o modelo dele não está publicado.',
+      'O tipo Monitor tem certificados, mas o modelo dele não está publicado.',
+      'Com os certificados no ar, a busca precisa de ao menos uma chave: CPF, e-mail ou nome.',
+    ])
+  })
+
+  it('a regra da data de nascimento do ADR-0009 também barra', () => {
+    expect(
+      pendenciasDaLiberacao({
+        ...PRONTO,
+        busca: { ...PRONTO.busca, searchBirthDate: true },
+      }),
+    ).toEqual(['No modo "qualquer um", a data de nascimento só entra junto com o nome.'])
   })
 })

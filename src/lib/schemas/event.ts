@@ -201,6 +201,31 @@ export function problemasDaBusca(
   return problemas
 }
 
+/**
+ * O que falta para liberar os certificados (doc 07), em frases prontas para a
+ * tela. A busca é conferida pela mesma regra do formulário do evento, com o
+ * status de destino: o que ela recusaria depois, a liberação recusa antes.
+ */
+export function pendenciasDaLiberacao(fatos: {
+  certificadosAtivos: number
+  tiposSemModeloPublicado: string[]
+  busca: ConfiguracaoDeBusca
+}): string[] {
+  const pendencias: string[] = []
+  if (fatos.certificadosAtivos === 0)
+    pendencias.push(
+      'Nenhum certificado ativo: importe os participantes antes de liberar.',
+    )
+  for (const tipo of fatos.tiposSemModeloPublicado)
+    pendencias.push(
+      `O tipo ${tipo} tem certificados, mas o modelo dele não está publicado.`,
+    )
+  pendencias.push(
+    ...Object.values(problemasDaBusca(fatos.busca, 'certificates_available')).flat(),
+  )
+  return pendencias
+}
+
 /** Por que a mudança de status não pode acontecer, ou `null` se pode. */
 export function problemaNaTransicao(
   de: StatusDoEvento,

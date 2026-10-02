@@ -2,15 +2,21 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { and, count, eq, ne } from 'drizzle-orm'
+import { and, count, eq, isNull, ne, or, sql } from 'drizzle-orm'
 
 import type { Transaction } from '@/db/client'
-import { certificates, events, participationTypes } from '@/db/schema'
+import {
+  certificates,
+  certificateTemplates,
+  events,
+  participationTypes,
+} from '@/db/schema'
 import { supabaseEnv } from '@/lib/env'
 import { tipoDeImagemPelosBytes } from '@/lib/image-signature'
 import {
   atualizacaoDeEventoSchema,
   novoEventoSchema,
+  pendenciasDaLiberacao,
   problemaNaTransicao,
   problemasDaBusca,
   STATUS_DO_EVENTO,
@@ -240,6 +246,87 @@ export const setEventStatus = defineAction({
       data: { status: entrada.status },
       entityId: entrada.id,
       diff: { status: [atual.status, entrada.status] },
+      tags: [`event:${atual.slug}`],
+    }
+  },
+  revalidar: ['events'],
+})
+
+export const releaseCertificates = defineAction({
+  nome: 'event.release_certificates',
+  entidade: 'events',
+  papelMinimo: 'editor',
+  schema: z.object({ id: z.uuid() }),
+  async executar({ entrada, tx }) {
+    const atual = await eventoParaAlterar(tx, entrada.id)
+    // Liberar de novo mudaria a data da liberação, que o resumo e o
+    // `issued_at` dos novos certificados usam.
+    if (atual.status === 'certificates_available')
+      throw new FalhaDaAction('conflict', 'Os certificados deste evento já estão no ar.')
+
+    const ativos = and(
+      eq(certificates.eventId, entrada.id),
+      eq(certificates.status, 'active'),
+    )
+    const [contagem] = await tx
+      .select({ total: count() })
+      .from(certificates)
+      .where(ativos)
+    const semModelo = await tx
+      .selectDistinct({
+        label: participationTypes.label,
+        ordem: participationTypes.sortOrder,
+      })
+      .from(certificates)
+      .innerJoin(
+        participationTypes,
+        eq(participationTypes.id, certificates.participationTypeId),
+      )
+      .leftJoin(
+        certificateTemplates,
+        eq(certificateTemplates.id, participationTypes.certificateTemplateId),
+      )
+      .where(
+        and(
+          ativos,
+          or(
+            isNull(certificateTemplates.id),
+            ne(certificateTemplates.status, 'published'),
+          ),
+        ),
+      )
+      .orderBy(participationTypes.sortOrder)
+
+    const pendencias = pendenciasDaLiberacao({
+      certificadosAtivos: contagem?.total ?? 0,
+      tiposSemModeloPublicado: semModelo.map((tipo) => tipo.label),
+      busca: atual,
+    })
+    if (pendencias.length > 0) {
+      throw new FalhaDaAction(
+        'release_preconditions_failed',
+        'Ainda não dá para liberar os certificados.',
+        { liberar: pendencias },
+      )
+    }
+
+    await tx
+      .update(events)
+      .set({ status: 'certificates_available', certificatesReleasedAt: sql`now()` })
+      .where(eq(events.id, entrada.id))
+    const emitidos = await tx
+      .update(certificates)
+      .set({ issuedAt: sql`now()` })
+      .where(and(eq(certificates.eventId, entrada.id), isNull(certificates.issuedAt)))
+      .returning({ id: certificates.id })
+
+    return {
+      data: { emitidos: emitidos.length },
+      entityId: entrada.id,
+      diff: {
+        status: [atual.status, 'certificates_available'],
+        emitidos: emitidos.length,
+      },
       tags: [`event:${atual.slug}`],
     }
   },

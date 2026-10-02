@@ -15,6 +15,7 @@ export type ActionErrorCode =
   | 'conflict'
   // Eventos (doc 07). Os códigos de cada domínio entram com a action que os usa.
   | 'slug_locked'
+  | 'release_preconditions_failed'
   // Modelos (doc 07).
   | 'template_publish_blocked'
   | 'art_encrypted'

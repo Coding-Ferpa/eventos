@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import {
-  apagarEventoLiberado,
-  criarEventoLiberado,
+  apagarEventoComCertificados,
+  criarEventoComCertificados,
   ipDeTeste,
   PESSOAS,
   type EventoLiberado,
@@ -21,11 +21,11 @@ const NAO_ENCONTRADO = 'Não encontramos ninguém com esses dados neste evento.'
 let evento: EventoLiberado
 
 test.beforeAll(async () => {
-  evento = await criarEventoLiberado(PREFIXO)
+  evento = await criarEventoComCertificados(PREFIXO)
 })
 
 test.afterAll(async () => {
-  await apagarEventoLiberado(evento.id)
+  await apagarEventoComCertificados(evento.id)
 })
 
 // Cada teste tem o seu IP: os baldes valem de verdade, e testes em paralelo

@@ -22,10 +22,22 @@ const updateTag = vi.hoisted(() => vi.fn())
 vi.mock('next/cache', () => ({ updateTag }))
 
 const { db } = await import('@/db/client')
-const { auditLogs, certificates, events, participants, participationTypes } =
-  await import('@/db/schema')
-const { createCoverUploadUrl, createEvent, deleteEvent, setEventStatus, updateEvent } =
-  await import('@/actions/events')
+const {
+  auditLogs,
+  certificates,
+  certificateTemplates,
+  events,
+  participants,
+  participationTypes,
+} = await import('@/db/schema')
+const {
+  createCoverUploadUrl,
+  createEvent,
+  deleteEvent,
+  releaseCertificates,
+  setEventStatus,
+  updateEvent,
+} = await import('@/actions/events')
 const { deleteParticipationType, upsertParticipationType } =
   await import('@/actions/participation-types')
 
@@ -257,6 +269,172 @@ describe('setEventStatus', () => {
 
     await setEventStatus({ id, status: 'completed' })
     expect(await setEventStatus({ id, status: 'draft' })).toMatchObject({
+      ok: false,
+      error: { code: 'conflict' },
+    })
+  })
+})
+
+describe('releaseCertificates (E21)', () => {
+  async function tipoDoEvento(eventoId: string, slug: string) {
+    const [tipo] = await db()
+      .select({ id: participationTypes.id })
+      .from(participationTypes)
+      .where(
+        and(eq(participationTypes.eventId, eventoId), eq(participationTypes.slug, slug)),
+      )
+    return tipo!.id
+  }
+
+  async function certificado(
+    eventoId: string,
+    tipoId: string,
+    status: 'active' | 'revoked' = 'active',
+  ) {
+    const [pessoa] = await db()
+      .insert(participants)
+      .values({ eventId: eventoId, fullName: `Pessoa ${status} ${Date.now()}` })
+      .returning({ id: participants.id })
+    const [criado] = await db()
+      .insert(certificates)
+      .values({
+        eventId: eventoId,
+        participantId: pessoa!.id,
+        participationTypeId: tipoId,
+        hours: '2',
+        status,
+        ...(status === 'revoked'
+          ? { revokedAt: new Date(), revokedReason: 'Teste de liberação' }
+          : {}),
+      })
+      .returning({ id: certificates.id })
+    return criado!.id
+  }
+
+  async function publicarModeloDo(eventoId: string, tipoId: string) {
+    const [modelo] = await db()
+      .insert(certificateTemplates)
+      .values({
+        eventId: eventoId,
+        name: 'Modelo publicado',
+        status: 'published',
+        version: 1,
+        publishedSnapshot: { version: 1 },
+        publishedAt: new Date(),
+      })
+      .returning({ id: certificateTemplates.id })
+    await db()
+      .update(participationTypes)
+      .set({ certificateTemplateId: modelo!.id })
+      .where(eq(participationTypes.id, tipoId))
+  }
+
+  it('leitor não libera', async () => {
+    const { id } = await novoEvento()
+    await entrarComo('reader')
+    expect(await releaseCertificates({ id })).toMatchObject({
+      ok: false,
+      error: { code: 'forbidden' },
+    })
+  })
+
+  it('falha com a lista do que falta, e nada muda', async () => {
+    const { id } = await novoEvento()
+    await entrarComo('editor')
+    const vazio = await releaseCertificates({ id })
+    expect(vazio).toMatchObject({
+      ok: false,
+      error: { code: 'release_preconditions_failed' },
+    })
+    expect(!vazio.ok && vazio.error.fieldErrors?.liberar).toEqual([
+      'Nenhum certificado ativo: importe os participantes antes de liberar.',
+      'Com os certificados no ar, a busca precisa de ao menos uma chave: CPF, e-mail ou nome.',
+    ])
+
+    // Revogado não conta como ativo, nem pede modelo.
+    await certificado(id, await tipoDoEvento(id, 'monitor'), 'revoked')
+    const soRevogado = await releaseCertificates({ id })
+    expect(!soRevogado.ok && soRevogado.error.fieldErrors?.liberar).toEqual(
+      !vazio.ok && vazio.error.fieldErrors?.liberar,
+    )
+
+    await certificado(id, await tipoDoEvento(id, 'palestrante'))
+    await db().update(events).set({ searchByCpf: true }).where(eq(events.id, id))
+    const semModelo = await releaseCertificates({ id })
+    expect(!semModelo.ok && semModelo.error.fieldErrors?.liberar).toEqual([
+      'O tipo Palestrante tem certificados, mas o modelo dele não está publicado.',
+    ])
+
+    // Modelo em rascunho é o mesmo que nenhum: o PDF sai da versão publicada.
+    const [rascunho] = await db()
+      .insert(certificateTemplates)
+      .values({ eventId: id, name: 'Ainda em rascunho' })
+      .returning({ id: certificateTemplates.id })
+    await db()
+      .update(participationTypes)
+      .set({ certificateTemplateId: rascunho!.id })
+      .where(eq(participationTypes.id, await tipoDoEvento(id, 'palestrante')))
+    const comRascunho = await releaseCertificates({ id })
+    expect(!comRascunho.ok && comRascunho.error.fieldErrors?.liberar).toEqual(
+      !semModelo.ok && semModelo.error.fieldErrors?.liberar,
+    )
+
+    const [evento] = await db().select().from(events).where(eq(events.id, id))
+    expect(evento).toMatchObject({ status: 'draft', certificatesReleasedAt: null })
+  })
+
+  it('com tudo certo, muda o status, emite os certificados e audita', async () => {
+    const { id, slug } = await novoEvento()
+    const palestrante = await tipoDoEvento(id, 'palestrante')
+    const ativo = await certificado(id, palestrante)
+    const revogado = await certificado(id, await tipoDoEvento(id, 'monitor'), 'revoked')
+    // Emitido numa liberação anterior: a data fica.
+    const antes = new Date('2026-09-14T15:00:00Z')
+    const jaEmitido = await certificado(id, palestrante)
+    await db()
+      .update(certificates)
+      .set({ issuedAt: antes })
+      .where(eq(certificates.id, jaEmitido))
+    await publicarModeloDo(id, palestrante)
+    await db().update(events).set({ searchByEmail: true }).where(eq(events.id, id))
+
+    await entrarComo('editor')
+    updateTag.mockClear()
+    const resultado = await releaseCertificates({ id })
+    expect(resultado).toEqual({ ok: true, data: { emitidos: 2 } })
+
+    const [evento] = await db().select().from(events).where(eq(events.id, id))
+    expect(evento!.status).toBe('certificates_available')
+    expect(evento!.certificatesReleasedAt).toBeInstanceOf(Date)
+    const emitidos = await db()
+      .select({ id: certificates.id, issuedAt: certificates.issuedAt })
+      .from(certificates)
+      .where(inArray(certificates.id, [ativo, revogado]))
+    expect(emitidos.every((linha) => linha.issuedAt instanceof Date)).toBe(true)
+    const [mantido] = await db()
+      .select({ issuedAt: certificates.issuedAt })
+      .from(certificates)
+      .where(eq(certificates.id, jaEmitido))
+    expect(mantido!.issuedAt).toEqual(antes)
+    expect(updateTag).toHaveBeenCalledWith('events')
+    expect(updateTag).toHaveBeenCalledWith(`event:${slug}`)
+
+    const [auditoria] = await db()
+      .select()
+      .from(auditLogs)
+      .where(
+        and(
+          eq(auditLogs.entityId, id),
+          eq(auditLogs.action, 'event.release_certificates'),
+        ),
+      )
+    expect(auditoria!.diff).toEqual({
+      status: ['draft', 'certificates_available'],
+      emitidos: 2,
+    })
+
+    // Liberar de novo mudaria a data da liberação.
+    expect(await releaseCertificates({ id })).toMatchObject({
       ok: false,
       error: { code: 'conflict' },
     })

@@ -182,13 +182,18 @@ export type EventoLiberado = {
 }
 
 /**
- * Evento já liberado, com modelo publicado de verdade (o base.pdf vai para o
- * bucket privado) e busca por CPF, e-mail ou nome: o ponto de partida das
- * E2E da área pública (E11 a E19, E22). José é palestrante e organizador
- * (E15); Maria tem um certificado só. Cada chamada cria o seu evento, para os
- * projetos do Playwright rodarem em paralelo sem dividir pessoa nem balde.
+ * Evento com modelo publicado de verdade (o base.pdf vai para o bucket
+ * privado) e certificados ativos. Liberado, com busca por CPF, e-mail ou nome,
+ * é o ponto de partida das E2E da área pública (E11 a E19, E22); sem liberar,
+ * realizado e sem chave de busca, é o da liberação (E21). José é palestrante
+ * e organizador (E15); Maria tem um certificado só. Cada chamada cria o seu
+ * evento, para os projetos do Playwright rodarem em paralelo sem dividir
+ * pessoa nem balde.
  */
-export async function criarEventoLiberado(prefixo: string): Promise<EventoLiberado> {
+export async function criarEventoComCertificados(
+  prefixo: string,
+  { liberado = true }: { liberado?: boolean } = {},
+): Promise<EventoLiberado> {
   const sql = conectar()
   try {
     const slug = `e2e-busca-${randomUUID().slice(0, 8)}`
@@ -198,7 +203,8 @@ export async function criarEventoLiberado(prefixo: string): Promise<EventoLibera
         search_by_cpf, search_by_email, search_by_name, contact_email
       ) values (
         ${slug}, ${`${prefixo} ${slug}`}, '2026-09-12 11:00:00+00', '2026-09-12 21:00:00+00',
-        'Fernandópolis', 'SP', 'certificates_available', now(), true, true, true,
+        'Fernandópolis', 'SP', ${liberado ? 'certificates_available' : 'completed'},
+        ${liberado ? new Date() : null}, ${liberado}, ${liberado}, ${liberado},
         'organizacao@example.com'
       ) returning id, cpf_salt as salt`
 
@@ -242,7 +248,8 @@ export async function criarEventoLiberado(prefixo: string): Promise<EventoLibera
         const [certificado] = await sql<{ code: string }[]>`
           insert into public.certificates
             (event_id, participant_id, participation_type_id, hours, issued_at)
-          values (${evento!.id}, ${participante!.id}, ${tipo(slugDoTipo)}, ${horas}, now())
+          values (${evento!.id}, ${participante!.id}, ${tipo(slugDoTipo)}, ${horas},
+            ${liberado ? new Date() : null})
           returning code`
         codigos[`${chave}:${slugDoTipo}`] = certificado!.code
       }
@@ -259,8 +266,8 @@ export async function criarEventoLiberado(prefixo: string): Promise<EventoLibera
   }
 }
 
-/** Apaga um evento criado por `criarEventoLiberado`, com o base.pdf do bucket. */
-export async function apagarEventoLiberado(id: string) {
+/** Apaga um evento criado por `criarEventoComCertificados`, com o base.pdf do bucket. */
+export async function apagarEventoComCertificados(id: string) {
   const sql = conectar()
   try {
     const modelos = await sql<{ id: string }[]>`

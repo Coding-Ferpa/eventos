@@ -7,16 +7,18 @@ import { ApagarEvento } from '@/components/admin/eventos/apagar-evento'
 import { BuscaDoEvento } from '@/components/admin/eventos/busca-do-evento'
 import { CapaDoEvento } from '@/components/admin/eventos/capa-do-evento'
 import { FormularioDeEvento } from '@/components/admin/eventos/formulario-de-evento'
+import { LiberarCertificados } from '@/components/admin/eventos/liberar-certificados'
+import { ResumoDoEvento } from '@/components/admin/eventos/resumo-do-evento'
 import { StatusDoEvento } from '@/components/admin/eventos/status-do-evento'
 import { TiposDeParticipacao } from '@/components/admin/eventos/tipos-de-participacao'
 import { ModelosDoEvento } from '@/components/admin/modelos/modelos-do-evento'
 import { StatusBadge } from '@/components/eventos/status-badge'
 import { Button } from '@/components/ui/button'
-import { buscarEventoDoAdmin } from '@/db/queries/admin-events'
+import { buscarEventoDoAdmin, resumoDoEvento } from '@/db/queries/admin-events'
 import { listarModelosDoEvento } from '@/db/queries/admin-templates'
 import { getCurrentUser } from '@/lib/auth'
 import { srcDaCapa } from '@/lib/capa'
-import { utcParaDataHoraDeSaoPaulo } from '@/lib/format'
+import { formatarPeriodo, utcParaDataHoraDeSaoPaulo } from '@/lib/format'
 import { hasRole } from '@/lib/roles'
 import { z } from '@/lib/zod'
 
@@ -66,10 +68,12 @@ export default async function EventoDoAdminPage({ params }: Props) {
   if (!dados) notFound()
 
   const { evento, tipos, certificados } = dados
-  const [usuario, modelos] = await Promise.all([
+  const [usuario, modelos, resumo] = await Promise.all([
     getCurrentUser(),
     listarModelosDoEvento(evento.id),
+    resumoDoEvento(evento.id),
   ])
+  const liberado = evento.status === 'certificates_available'
   const podeApagar =
     usuario !== null &&
     hasRole(usuario.role, 'admin') &&
@@ -119,6 +123,26 @@ export default async function EventoDoAdminPage({ params }: Props) {
           </Link>
         </Button>
       </nav>
+
+      <Secao
+        descricao={
+          liberado
+            ? undefined
+            : 'Liberar põe a busca na página pública e emite os certificados ativos.'
+        }
+        titulo="Certificados"
+      >
+        {resumo ? <ResumoDoEvento resumo={resumo} /> : null}
+        <LiberarCertificados
+          ativos={resumo?.ativos ?? 0}
+          id={evento.id}
+          liberadoEm={
+            liberado && evento.certificatesReleasedAt
+              ? formatarPeriodo(evento.certificatesReleasedAt, null)
+              : null
+          }
+        />
+      </Secao>
 
       <Secao titulo="Status">
         <StatusDoEvento atual={evento.status} id={evento.id} />
