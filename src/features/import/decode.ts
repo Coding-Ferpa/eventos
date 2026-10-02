@@ -35,7 +35,11 @@ function comeca(bytes: Uint8Array, prefixo: number[]) {
   return prefixo.every((byte, i) => bytes[i] === byte)
 }
 
-function decodificar(bytes: Uint8Array): Omit<Decoded, 'warnings'> {
+/**
+ * Só a decodificação, sem recompor em NFC nem procurar mojibake: é o que o
+ * anonimizador de fixtures precisa para devolver as peculiaridades do arquivo.
+ */
+export function decodeBytes(bytes: Uint8Array): Omit<Decoded, 'warnings'> {
   if (comeca(bytes, [0xef, 0xbb, 0xbf])) {
     return {
       text: new TextDecoder('utf-8').decode(bytes.subarray(3)),
@@ -71,7 +75,7 @@ function decodificar(bytes: Uint8Array): Omit<Decoded, 'warnings'> {
 }
 
 export function decodeCsv(bytes: Uint8Array): Decoded {
-  const { text, encoding } = decodificar(bytes)
+  const { text, encoding } = decodeBytes(bytes)
   // Acento decomposto (NFD, comum em arquivo vindo de Mac) parece igual na
   // tela, mas não casa com o nome digitado na busca nem com o homônimo.
   const decodificado = { text: text.normalize('NFC'), encoding }

@@ -232,7 +232,7 @@ Todas **sintéticas**: nomes fictícios, CPFs fictícios com dígito verificador
 | `homonyms.csv` | dois "João Pedro da Silva" |
 | `reimport-name-fixed.csv` | par com o arquivo principal: nome corrigido casa por CPF e vira `update` |
 | `reimport-cpf-added.csv` | primeira planilha sem CPF, segunda com: casa por `name_birth` e ganha o CPF |
-| `ferpa-tech-day.anon.csv` | **pendente**: derivada da planilha real quando ela chegar, por `pnpm fixtures:anonymize` (troca nomes, e-mails e CPFs; preserva encoding, BOM, delimitador e cabeçalhos byte a byte). A planilha real fica em `/local/`, que está no `.gitignore`. |
+| `ferpa-tech-day.anon.csv` | **pendente**: derivada da planilha real quando ela chegar, por `pnpm fixtures:anonymize` (pronto desde o M7: troca nome, CPF, e-mail, nascimento e colunas livres; preserva encoding, BOM, delimitador, fim de linha e cabeçalhos byte a byte; detalhes no doc 12). A planilha real fica em `/local/`, que está no `.gitignore`. |
 
 Testes de integração (Supabase local) que fecham os critérios de aceite do R5:
 
