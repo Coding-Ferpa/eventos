@@ -90,10 +90,14 @@ export default async function ParticipantesPage({ params, searchParams }: Props)
       <ListaDeCertificados
         eventId={evento.id}
         liberado={liberado}
-        linhas={linhas.map((linha) => ({
+        linhas={linhas.map(({ correcaoNome, correcaoContato, ...linha }) => ({
           ...linha,
           hours: Number(linha.hours),
           baixado: linha.baixado !== null,
+          correcao:
+            correcaoNome && correcaoContato
+              ? { nome: correcaoNome, contato: correcaoContato }
+              : null,
         }))}
         podeRemoverDepoisDaLiberacao={usuario !== null && hasRole(usuario.role, 'admin')}
         total={total}

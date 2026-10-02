@@ -48,6 +48,8 @@ export type LinhaDeCertificado = {
   birthDate: string | null
   cpfLast3: string | null
   tipo: string
+  /** O pedido de correção de nome pendente, se houver. */
+  correcao: { nome: string; contato: string } | null
 }
 
 const ROTULO_DO_STATUS = {
@@ -219,7 +221,18 @@ export function ListaDeCertificados({
                     type="checkbox"
                   />
                 </TableCell>
-                <TableCell className="font-medium">{linha.fullName}</TableCell>
+                <TableCell className="font-medium">
+                  {linha.fullName}
+                  {linha.correcao ? (
+                    <p className="text-caption text-muted-foreground font-normal">
+                      Pede correção para{' '}
+                      <span className="text-foreground font-medium">
+                        {linha.correcao.nome}
+                      </span>
+                      . Contato: {linha.correcao.contato}
+                    </p>
+                  ) : null}
+                </TableCell>
                 <TableCell>{linha.tipo}</TableCell>
                 <TableCell>{String(linha.hours).replace('.', ',')}</TableCell>
                 <TableCell className="font-mono text-sm">{linha.code}</TableCell>
@@ -231,6 +244,9 @@ export function ListaDeCertificados({
                       {ROTULO_DO_STATUS[linha.status]}
                     </Badge>
                     {linha.baixado ? <Badge variant="secondary">Baixado</Badge> : null}
+                    {linha.correcao ? (
+                      <Badge variant="secondary">Correção pendente</Badge>
+                    ) : null}
                     {pedemRevogacao.has(linha.certificateId) ? (
                       <Badge variant="destructive">Pede revogação</Badge>
                     ) : null}

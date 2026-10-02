@@ -6,6 +6,7 @@ import { db } from '@/db/client'
 import {
   certificates,
   importBatches,
+  nameCorrectionRequests,
   participants,
   participationTypes,
 } from '@/db/schema'
@@ -54,12 +55,23 @@ export async function listarCertificadosDoEvento(
         cpfLast3: participants.cpfLast3,
         tipo: participationTypes.label,
         tipoId: participationTypes.id,
+        // O pedido de correção pendente (um por certificado, pelo índice
+        // parcial): é aqui que o link do e-mail de aviso traz o admin (doc 07).
+        correcaoNome: nameCorrectionRequests.requestedName,
+        correcaoContato: nameCorrectionRequests.contact,
       })
       .from(certificates)
       .innerJoin(participants, eq(participants.id, certificates.participantId))
       .innerJoin(
         participationTypes,
         eq(participationTypes.id, certificates.participationTypeId),
+      )
+      .leftJoin(
+        nameCorrectionRequests,
+        and(
+          eq(nameCorrectionRequests.certificateId, certificates.id),
+          eq(nameCorrectionRequests.status, 'pending'),
+        ),
       )
       .where(condicoes)
       .orderBy(asc(participants.fullNameNormalized), asc(participationTypes.sortOrder))
