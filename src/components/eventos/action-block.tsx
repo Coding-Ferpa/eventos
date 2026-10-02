@@ -1,6 +1,10 @@
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
+import {
+  BuscaDoCertificado,
+  type Contato,
+} from '@/components/eventos/busca-do-certificado'
 import type { EventoPublico } from '@/db/queries/events'
 
 /**
@@ -66,9 +70,17 @@ function Conteudo({ evento }: { evento: EventoPublico }) {
       )
 
     case 'certificates_available':
-      // O formulário de busca entra logo abaixo deste texto no M8 (doc 14).
       return (
-        <p className="text-body">Os certificados já estão no ar. Busque o seu abaixo.</p>
+        <>
+          <p className="text-body">
+            Os certificados já estão no ar. Busque o seu abaixo.
+          </p>
+          <BuscaDoCertificado
+            busca={evento.search}
+            contato={contatoDoEvento(evento)}
+            slug={evento.slug}
+          />
+        </>
       )
 
     case 'archived':
@@ -86,4 +98,11 @@ function Conteudo({ evento }: { evento: EventoPublico }) {
     case 'draft':
       return null
   }
+}
+
+function contatoDoEvento(evento: EventoPublico): Contato | null {
+  if (evento.contactEmail)
+    return { texto: evento.contactEmail, href: `mailto:${evento.contactEmail}` }
+  if (evento.contactUrl) return { texto: evento.contactUrl, href: evento.contactUrl }
+  return null
 }

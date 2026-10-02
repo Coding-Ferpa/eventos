@@ -1,5 +1,6 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { useState } from 'react'
 
 /**
@@ -15,16 +16,21 @@ export function PreviaComVerso({ paginas }: { paginas: string[] }) {
           {['Frente', 'Verso'].map((rotulo, i) => (
             <button
               aria-pressed={atual === i}
+              // Estado nunca só por cor (doc 03, seção 8): o marcado ganha o
+              // ícone e o peso.
               className={[
-                'min-h-11 rounded-full border px-4 text-sm',
+                'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm',
                 atual === i
-                  ? 'border-primary text-primary'
+                  ? 'border-primary text-foreground font-semibold'
                   : 'border-border text-muted-foreground',
               ].join(' ')}
               key={rotulo}
               onClick={() => setAtual(i)}
               type="button"
             >
+              {atual === i ? (
+                <Check aria-hidden="true" className="text-primary size-4" />
+              ) : null}
               {rotulo}
             </button>
           ))}

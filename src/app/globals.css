@@ -219,3 +219,20 @@
     padding-left: 1rem;
   }
 }
+
+/* O seletor "Buscar por" da busca do certificado (doc 03, 6b): é o rádio
+   marcado que mostra o grupo de campos, e não um estado do React, para valer
+   também antes da hidratação. Sem rádio (um método só, ou o modo "todos"),
+   nada se esconde. Nos `[data-metodo]` não entra classe de `display`: a camada
+   de utilitários venceria esta. */
+@layer components {
+  .busca:has(input[type='radio'][name='method']) [data-metodo] {
+    display: none;
+  }
+
+  .busca:has(input[name='method'][value='cpf']:checked) [data-metodo='cpf'],
+  .busca:has(input[name='method'][value='email']:checked) [data-metodo='email'],
+  .busca:has(input[name='method'][value='name']:checked) [data-metodo='name'] {
+    display: block;
+  }
+}

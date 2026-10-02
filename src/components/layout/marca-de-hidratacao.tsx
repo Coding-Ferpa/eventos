@@ -3,10 +3,11 @@
 import { useEffect } from 'react'
 
 /**
- * Marca o documento quando o admin hidrata. O E2E espera por ela antes de
+ * Marca o documento quando a página hidrata. O E2E espera por ela antes de
  * digitar: o que se digita antes da hidratação some nos campos controlados
  * do react-hook-form, e o WebKit, mais lento para hidratar, perdia o título
- * do evento (medido no M6, no spec do editor).
+ * do evento (medido no M6, no spec do editor). Mora no layout raiz desde o
+ * M8, porque a busca do certificado também é ilha interativa.
  */
 export function MarcaDeHidratacao() {
   useEffect(() => {

@@ -4,7 +4,6 @@ import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
 import { sair } from '@/actions/auth'
 import { AdminNav } from '@/components/admin/admin-nav'
-import { MarcaDeHidratacao } from '@/components/admin/marca-de-hidratacao'
 import { requireRole } from '@/lib/auth'
 import { MIN_ADMIN_ROLE, ROTULO_DO_PAPEL } from '@/lib/roles'
 
@@ -68,7 +67,6 @@ export default async function AdminLayout({
 
         <main className="flex min-w-0 flex-1 flex-col gap-6">
           {/* Filtros e paginação das tabelas moram na URL (doc 09). */}
-          <MarcaDeHidratacao />
           <NuqsAdapter>{children}</NuqsAdapter>
         </main>
       </div>

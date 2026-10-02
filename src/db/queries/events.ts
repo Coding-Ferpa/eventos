@@ -6,6 +6,7 @@ import { unstable_cache } from 'next/cache'
 import { queryAsAnon } from '@/db/client'
 import { events } from '@/db/schema'
 import { semBanco } from '@/lib/ambiente'
+import type { ConfiguracaoDaBusca } from '@/lib/busca'
 
 /**
  * Leituras da área pública (doc 09). Todas passam por `queryAsAnon`, para que a
@@ -41,6 +42,10 @@ export type EventoPublico = EventoDoCatalogo & {
   locationName: string | null
   externalUrl: string | null
   updatedAt: string
+  /** Quais campos o formulário de busca mostra (doc 03, 6b). */
+  search: ConfiguracaoDaBusca
+  contactEmail: string | null
+  contactUrl: string | null
 }
 
 const UMA_HORA = 3600
@@ -107,6 +112,13 @@ export async function buscarEventoPublico(slug: string): Promise<EventoPublico |
             locationName: events.locationName,
             externalUrl: events.externalUrl,
             updatedAt: events.updatedAt,
+            searchMode: events.searchMode,
+            searchByCpf: events.searchByCpf,
+            searchByEmail: events.searchByEmail,
+            searchByName: events.searchByName,
+            searchBirthDate: events.searchBirthDate,
+            contactEmail: events.contactEmail,
+            contactUrl: events.contactUrl,
           })
           .from(events)
           .where(and(eq(events.slug, slug), ne(events.status, 'draft')))
@@ -120,6 +132,15 @@ export async function buscarEventoPublico(slug: string): Promise<EventoPublico |
         locationName: linha.locationName,
         externalUrl: linha.externalUrl,
         updatedAt: linha.updatedAt.toISOString(),
+        search: {
+          mode: linha.searchMode,
+          byCpf: linha.searchByCpf,
+          byEmail: linha.searchByEmail,
+          byName: linha.searchByName,
+          birthDateRequired: linha.searchBirthDate,
+        },
+        contactEmail: linha.contactEmail,
+        contactUrl: linha.contactUrl,
       }
     },
     ['evento-publico', slug],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatarEspera } from './espera'
+import { formatarEspera, textoDaContagem } from './espera'
 
 describe('formatarEspera (doc 03: "tente de novo em {tempo}")', () => {
   it.each([
@@ -20,5 +20,17 @@ describe('formatarEspera (doc 03: "tente de novo em {tempo}")', () => {
   it('nunca promete menos de um segundo', () => {
     expect(formatarEspera(0)).toBe('1 segundo')
     expect(formatarEspera(-5)).toBe('1 segundo')
+  })
+})
+
+describe('textoDaContagem (doc 03, 6b: a contagem do painel de 429)', () => {
+  it.each([
+    [42, '42 segundos'],
+    [1, '1 segundo'],
+    [60, '60 segundos'],
+    [61, 'cerca de 2 minutos'],
+    [180, 'cerca de 3 minutos'],
+  ])('%i s viram "%s"', (segundos, texto) => {
+    expect(textoDaContagem(segundos)).toBe(texto)
   })
 })

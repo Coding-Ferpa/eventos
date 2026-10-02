@@ -28,6 +28,15 @@ const EVENTO: EventoPublico = {
   locationName: 'Auditório da Faculdade',
   externalUrl: null,
   updatedAt: '2026-09-14T15:00:00.000Z',
+  search: {
+    mode: 'any',
+    byCpf: true,
+    byEmail: false,
+    byName: false,
+    birthDateRequired: false,
+  },
+  contactEmail: null,
+  contactUrl: null,
 }
 
 describe('textoDoMarkdown', () => {

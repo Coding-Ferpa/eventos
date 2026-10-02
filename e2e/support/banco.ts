@@ -1,5 +1,11 @@
+import { randomUUID } from 'node:crypto'
+
 import { createClient } from '@supabase/supabase-js'
 import postgres from 'postgres'
+
+import { arteDeExemplo, modeloDeExemplo } from '@/app/api/dev/certificado-exemplo/exemplo'
+import { buildBasePdf } from '@/features/certificate/base-pdf'
+import { hmacCpf } from '@/lib/hmac'
 
 /**
  * Limpeza do que as E2E criam, direto no banco local. Sem ela, cada execução
@@ -144,4 +150,134 @@ export async function apagarEventosComCertificados(prefixo: string) {
   } finally {
     await sql.end()
   }
+}
+
+function storageAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  ).storage
+}
+
+/** As pessoas do evento liberado, com dados sintéticos (CPFs de exemplo válidos). */
+export const PESSOAS = {
+  jose: {
+    nome: 'José Gonçalves de Assunção',
+    cpf: '529.982.247-25',
+    email: 'jose.e2e@example.com',
+  },
+  maria: {
+    nome: 'Maria Eduarda dos Santos',
+    cpf: '864.213.579-46',
+    email: 'maria.e2e@example.com',
+  },
+} as const
+
+export type EventoLiberado = {
+  id: string
+  slug: string
+  /** Código de cada certificado, por pessoa e tipo: `jose:palestrante`. */
+  codigos: Record<string, string>
+}
+
+/**
+ * Evento já liberado, com modelo publicado de verdade (o base.pdf vai para o
+ * bucket privado) e busca por CPF, e-mail ou nome: o ponto de partida das
+ * E2E da área pública (E11 a E19, E22). José é palestrante e organizador
+ * (E15); Maria tem um certificado só. Cada chamada cria o seu evento, para os
+ * projetos do Playwright rodarem em paralelo sem dividir pessoa nem balde.
+ */
+export async function criarEventoLiberado(prefixo: string): Promise<EventoLiberado> {
+  const sql = conectar()
+  try {
+    const slug = `e2e-busca-${randomUUID().slice(0, 8)}`
+    const [evento] = await sql<{ id: string; salt: string }[]>`
+      insert into public.events (
+        slug, title, starts_at, ends_at, city, state, status, certificates_released_at,
+        search_by_cpf, search_by_email, search_by_name, contact_email
+      ) values (
+        ${slug}, ${`${prefixo} ${slug}`}, '2026-09-12 11:00:00+00', '2026-09-12 21:00:00+00',
+        'Fernandópolis', 'SP', 'certificates_available', now(), true, true, true,
+        'organizacao@example.com'
+      ) returning id, cpf_salt as salt`
+
+    const base = await buildBasePdf([await arteDeExemplo()])
+    const modeloId = randomUUID()
+    const caminho = `${modeloId}/base.pdf`
+    const { error } = await storageAdmin()
+      .from('templates')
+      .upload(caminho, base.bytes, { contentType: 'application/pdf' })
+    if (error) throw error
+    const snapshot = { ...modeloDeExemplo(base), base_pdf_path: caminho }
+    await sql`
+      insert into public.certificate_templates
+        (id, event_id, name, status, version, published_snapshot, published_at)
+      values (${modeloId}, ${evento!.id}, 'Modelo E2E', 'published', 1,
+        ${sql.json(snapshot as never)}, now())`
+
+    const tipos = await sql<{ id: string; slug: string }[]>`
+      insert into public.participation_types
+        (event_id, slug, label, default_hours, certificate_template_id, sort_order)
+      values
+        (${evento!.id}, 'participante', 'Participante', 8, ${modeloId}, 1),
+        (${evento!.id}, 'palestrante', 'Palestrante', 2, ${modeloId}, 2),
+        (${evento!.id}, 'organizador', 'Organizador', 16, ${modeloId}, 3)
+      returning id, slug`
+    const tipo = (s: string) => tipos.find((t) => t.slug === s)!.id
+
+    const codigos: Record<string, string> = {}
+    const cadastrar = async (
+      chave: keyof typeof PESSOAS,
+      certificados: [string, number][],
+    ) => {
+      const pessoa = PESSOAS[chave]
+      const cpf = pessoa.cpf.replace(/\D/g, '')
+      const [participante] = await sql<{ id: string }[]>`
+        insert into public.participants (event_id, full_name, email, cpf_hash, cpf_last3)
+        values (${evento!.id}, ${pessoa.nome}, ${pessoa.email},
+          ${hmacCpf(process.env.CPF_PEPPER!, evento!.salt, cpf)}, ${cpf.slice(-3)})
+        returning id`
+      for (const [slugDoTipo, horas] of certificados) {
+        const [certificado] = await sql<{ code: string }[]>`
+          insert into public.certificates
+            (event_id, participant_id, participation_type_id, hours, issued_at)
+          values (${evento!.id}, ${participante!.id}, ${tipo(slugDoTipo)}, ${horas}, now())
+          returning code`
+        codigos[`${chave}:${slugDoTipo}`] = certificado!.code
+      }
+    }
+    await cadastrar('jose', [
+      ['palestrante', 2],
+      ['organizador', 16],
+    ])
+    await cadastrar('maria', [['participante', 8]])
+
+    return { id: evento!.id, slug, codigos }
+  } finally {
+    await sql.end()
+  }
+}
+
+/** Apaga um evento criado por `criarEventoLiberado`, com o base.pdf do bucket. */
+export async function apagarEventoLiberado(id: string) {
+  const sql = conectar()
+  try {
+    const modelos = await sql<{ id: string }[]>`
+      select id from public.certificate_templates where event_id = ${id}`
+    await sql`delete from public.certificates where event_id = ${id}`
+    await sql`delete from public.events where id = ${id}`
+    if (modelos.length > 0)
+      await storageAdmin()
+        .from('templates')
+        .remove(modelos.map((modelo) => `${modelo.id}/base.pdf`))
+  } finally {
+    await sql.end()
+  }
+}
+
+/** Um IP só deste teste: os baldes do rate limit valem de verdade no build. */
+export function ipDeTeste() {
+  const octeto = () => Math.floor(Math.random() * 250) + 1
+  return `198.18.${octeto()}.${octeto()}`
 }

@@ -23,7 +23,7 @@ export async function entrar(page: Page, email: string, senha = SENHA_DE_SEED) {
 }
 
 /**
- * Espera o admin hidratar (a marca do `MarcaDeHidratacao`). Depois de um
+ * Espera a página hidratar (a marca do `MarcaDeHidratacao`). Depois de um
  * `goto`, digitar antes disso perde o texto nos campos controlados, e no
  * WebKit isso acontece de verdade (M6).
  */

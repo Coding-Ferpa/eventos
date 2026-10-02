@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { JetBrains_Mono, Poppins } from 'next/font/google'
 
+import { MarcaDeHidratacao } from '@/components/layout/marca-de-hidratacao'
 import { siteEnv } from '@/lib/env'
 import { OPEN_GRAPH_BASE } from '@/lib/metadata'
 
@@ -54,6 +55,7 @@ export default function RootLayout({
     >
       <body>
         {children}
+        <MarcaDeHidratacao />
 
         {/* Visão de páginas sem cookie e sem identificador persistente
             (doc 10). Fora da Vercel o script responde 404 e o pacote loga o
