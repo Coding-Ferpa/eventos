@@ -30,6 +30,7 @@ import {
   type Mapping,
   type MappingContext,
 } from '@/features/import/mapping'
+import { warnNamesBelowMin } from '@/features/import/name-fit-warnings'
 import { parseCsv } from '@/features/import/parse'
 import { validateRow, type StagedRow } from '@/features/import/validate-row'
 import { serverEnv } from '@/lib/env'
@@ -338,6 +339,7 @@ export const stageImport = defineAction({
         ctxLinha,
       ),
     )
+    await warnNamesBelowMin(tx, contexto, linhas)
 
     const [lote] = await tx
       .insert(importBatches)

@@ -339,6 +339,58 @@ describe('o preset do modelo', () => {
   })
 })
 
+/// --- Nome que não cabe ---------------------------------------------------------
+
+describe('LAYOUT_BELOW_MIN_SIZE', () => {
+  it('a prévia mede o nome no modelo do tipo, com as fontes de verdade', async () => {
+    const evento = await novoEvento()
+    const [tipo] = await db()
+      .select({ modelo: participationTypes.certificateTemplateId })
+      .from(participationTypes)
+      .where(eq(participationTypes.id, evento.tipoId))
+    await db()
+      .update(certificateTemplates)
+      .set({
+        pages: [{ width_pt: 841.89, height_pt: 595.28, preview_path: null }],
+        layoutFields: [
+          {
+            id: 'nome',
+            kind: 'text',
+            page: 1,
+            // Uns 250 pt de largura e uma linha só.
+            box: { x: 0.35, y: 0.4, w: 0.3, h: 0.06 },
+            content: '{{participant.full_name}}',
+            font: 'curated:poppins-600',
+            size_pt: 24,
+            min_size_pt: 16,
+            color: '#1E1E1E',
+            h_align: 'center',
+            v_align: 'middle',
+            line_height: 1.15,
+            max_lines: 1,
+            fit: 'shrink_then_wrap',
+            transform: 'none',
+          },
+        ],
+      })
+      .where(eq(certificateTemplates.id, tipo!.modelo!))
+
+    const arquivo = textoUtf8(
+      'nomes.csv',
+      'Nome;CPF\r\nAna Lima;\r\nMaria Eduarda dos Santos Albuquerque Pessoa Rodrigues Vasconcelos;\r\n',
+    )
+    const { batchId, summary } = await previa(evento, arquivo)
+    expect(summary.warnings.LAYOUT_BELOW_MIN_SIZE).toBe(1)
+    const avisos = await listImportRows({ batchId, filter: 'warning' })
+    const comAviso = avisos.ok
+      ? avisos.data.rows.filter((linha) =>
+          linha.issues.some((p) => p.code === 'LAYOUT_BELOW_MIN_SIZE'),
+        )
+      : []
+    expect(comAviso.map((linha) => linha.rowNumber)).toEqual([3])
+  })
+})
+
 // --- CSV-I3 e I4 --------------------------------------------------------------
 
 describe('500 linhas', () => {

@@ -39,6 +39,8 @@ export type RowIssueCode =
   | 'CONTENT_LOOKS_LIKE_CPF'
   | 'FIELD_NOT_IN_TEMPLATE'
   | 'NO_SEARCHABLE_KEY'
+  // Medido na prévia, com o motor e as fontes (name-fit-warnings.ts).
+  | 'LAYOUT_BELOW_MIN_SIZE'
 
 export type RowIssue = {
   code: RowIssueCode

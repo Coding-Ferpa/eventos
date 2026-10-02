@@ -163,7 +163,7 @@ Normalizações de entrada:
 | `HOMONYM_IN_EVENT` | aviso | outro participante do evento tem o mesmo nome normalizado: a busca só por nome não encontrará nenhum dos dois |
 | `POSSIBLE_DUPLICATE` | decisão | ver conciliação |
 | `CERTIFICATE_REVOKED` | aviso | ver regras de escrita |
-| `LAYOUT_BELOW_MIN_SIZE` | aviso | o nome, no modelo do tipo, cai abaixo de `min_size_pt` (o `layout()` do doc 05 roda na prévia só para medir) |
+| `LAYOUT_BELOW_MIN_SIZE` | aviso | o nome, no modelo do tipo, cai abaixo de `min_size_pt` (o `layout()` do doc 05 roda na prévia só para medir, nos campos de texto que citam `{{participant.full_name}}`, com as fontes de verdade; vale o snapshot publicado e, sem publicação, o rascunho; modelo sem arte não é medido, e fonte que não carrega só deixa de avisar, com log) |
 
 `DUPLICATE_IN_FILE`, `HOMONYM_IN_EVENT`, `POSSIBLE_DUPLICATE`, `NAME_TOO_SHORT` e `NAME_SINGLE_WORD` são calculados em SQL, porque dependem do nome normalizado pelo banco. Os dois últimos foram para lá na implementação: "de da do" tem 8 caracteres e normaliza para vazio, e uma aproximação em TypeScript deixaria passar uma linha que o `check` de `participants` recusa, derrubando a aplicação inteira por ela.
 
