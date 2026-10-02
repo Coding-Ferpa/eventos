@@ -109,7 +109,7 @@ Regras de escrita:
 - **Coluna não mapeada não é comparada nem tocada.**
 - O `default` de um `data_field` só preenche certificado **novo**. Na atualização, campo vazio ou sem coluna fica como está.
 - Mudança de `full_name` incrementa `version` de todos os certificados ativos da pessoa. O código não muda.
-- Certificado `revoked` ou `erased` nunca é atualizado nem recriado pela importação: a linha vira `skipped` com o aviso `CERTIFICATE_REVOKED`.
+- Certificado `revoked` ou `erased` nunca é atualizado nem recriado pela importação: a linha vira `skipped` com o aviso `CERTIFICATE_REVOKED`. **Pendente para `erased`:** depois da eliminação nada reconhece a pessoa (doc 08), e esta regra é impossível como está escrita; ver a proposta do [ADR-0017](adr/0017-reimportacao-de-quem-pediu-eliminacao.md). `revoked` funciona como descrito.
 
 ## Detecção de encoding, BOM e delimitador (`features/import/decode.ts`)
 
