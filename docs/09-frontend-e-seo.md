@@ -122,7 +122,7 @@ O público acessa por celular em rede móvel, a partir de um link no WhatsApp. O
 | Acessibilidade | ≥ 95 | ≥ 95 |
 | Boas práticas e SEO | ≥ 95 | ≥ 95 |
 
-**Tripwire de JavaScript por rota (comprimido)**: piso do framework (130,6 KB: `react-dom`, runtime do App Router, runtime do webpack e `main-app`), mais o nosso código medido, mais uma folga de feature de 5 KB. Hoje: 157,4 KB em `/`, 156,4 KB na página do evento e 157,4 KB em `/validar`. Cada linha, e cada acréscimo futuro com a medição que o justifica, está no ADR-0015. Nada é pré-alocado: o M8 acrescenta a linha do formulário de busca quando ele existir.
+**Tripwire de JavaScript por rota (comprimido)**: piso do framework (130,6 KB: `react-dom`, runtime do App Router, runtime do webpack e `main-app`), mais o nosso código medido, mais uma folga de feature de 5 KB. Hoje: 157,4 KB em `/`, 161,7 KB na página do evento e 157,4 KB em `/validar`. Cada linha, e cada acréscimo futuro com a medição que o justifica, está no ADR-0015. Nada é pré-alocado: a linha do formulário de busca (5,3 KB) entrou no M8, com a medição.
 
 Como o orçamento é cumprido:
 
