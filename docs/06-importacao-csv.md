@@ -96,7 +96,7 @@ Entrada: `batch_id` e o `preview_digest` que a tela recebeu. Tudo dentro de `app
 
 1. `pg_advisory_xact_lock(hashtext('import:' || event_id))`: duas importações do mesmo evento nunca correm juntas.
 2. Recalcula o diff com o estado **atual** do banco.
-3. Calcula o digest do plano (sha256 de `row_number:action:matched_certificate_id` de todas as linhas, em ordem). Se for diferente do esperado, grava o novo resumo, **não escreve nada** e devolve `preview_stale`: a tela mostra a prévia nova com o aviso "a lista mudou desde a prévia".
+3. Calcula o digest do plano (sha256 de `row_number:action:matched_participant_id:matched_certificate_id` de todas as linhas, em ordem). O participante entrou na implementação, mais estrito que o desenho original: sem ele, alguém cadastrar à mão, entre a prévia e a aplicação, a pessoa que a linha ia criar mudaria o plano (o certificado passa a ir para quem já existe) sem mudar a ação, e a prévia não ficaria velha. Se for diferente do esperado, grava o novo resumo, **não escreve nada** e devolve `preview_stale`: a tela mostra a prévia nova com o aviso "a lista mudou desde a prévia".
 4. Se ainda houver linha `needs_decision` sem `resolution`, devolve `decisions_pending`.
 5. Aplica: insere participantes novos; atualiza os existentes; insere certificados (`code` por `generate_certificate_code()`, `sequence_number` contínuo por evento, `issued_at = now()` se o evento já estiver liberado); atualiza certificados (o trigger incrementa `version`). Linhas `error` e `skipped` são ignoradas.
 6. Marca o lote `applied`, grava os contadores finais e o `audit_logs` (`import.apply`, com contadores, **sem linhas e sem nomes**).
@@ -185,6 +185,10 @@ A condição "um dos lados não tem `cpf_hash`" resolve a reimportação em que 
 **Possível duplicata.** Linha que cairia em `create` mas tem, no evento, um participante com (a) mesmo e-mail, ou (b) mesma data de nascimento e `similarity(full_name_normalized) >= 0.6`, ou (c) mesmo nome normalizado e CPF diferente, vira `needs_decision`. É o caso real da chave natural: o admin corrigiu justamente o nome (ou o CPF) na planilha, e sem isso a correção viraria uma segunda pessoa com um segundo certificado. A tela mostra os dois lado a lado: **"É a mesma pessoa"** (vira `update`, com `matched_participant_id`), **"É outra pessoa"** (vira `create`), **"Pular linha"**. A similaridade por trigrama só existe aqui, no admin; a busca pública continua exata.
 
 Depois de casar a pessoa, o certificado é procurado por `(participant_id, participation_type_id)`: não existe → `create`; existe e algum valor mapeado difere → `update`; senão `unchanged`.
+
+**A mesma pessoa em mais de uma linha** (modo vários tipos: participante e palestrante na mesma planilha). A cascata também vale entre linhas do arquivo, e as linhas ligadas por ela formam um grupo, guardado em `person_row` (a primeira linha do grupo). Pessoa nova vira **um** participante com um certificado por linha; linha que não casou sozinha com ninguém do evento, mas casou com outra linha que casou, herda o participante dela. A possível duplicata é decidida por pessoa: vale a decisão da primeira linha do grupo, e as outras mostram "segue a decisão da linha N". `DUPLICATE_IN_FILE` é a mesma pessoa e o mesmo tipo de uma linha anterior.
+
+Implementação em `compute_import_diff` (migration 0007), com a tabela de casos em pgTAP (`supabase/tests/11_conciliacao.sql`): uma linha por regra, as três resoluções, o recálculo determinístico e a prévia que fica velha.
 
 **Idempotência:** reimportar o mesmo arquivo casa todas as linhas pela mesma regra, encontra todos os certificados e não acha diferença: 0 criados, 0 atualizados. A unicidade `(event_id, cpf_hash)` e `(participant_id, participation_type_id)` no banco é a rede de segurança se o diff tiver bug: a transação falha inteira em vez de duplicar.
 

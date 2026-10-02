@@ -160,7 +160,7 @@ Unique `(participant_id, participation_type_id)`. Check `(status = 'erased') = (
 
 `import_batches`: `event_id` · `participation_type_id` null (null = roteamento por coluna de tipo) · `status import_status` · `file_name text` · `file_sha256 text` · `encoding text` · `delimiter text` · `row_count int` · `mapping jsonb` (o mapeamento usado) · `summary jsonb` (contadores da prévia) · `preview_digest text` (sha256 do plano, [doc 06](06-importacao-csv.md)) · `error_message text` · `created_by` · `applied_at`. **O arquivo em si nunca é persistido.**
 
-`import_rows`: `batch_id` FK cascade · `row_number int` (linha do arquivo, 1 é o cabeçalho) · `participation_type_id` · `full_name` · `full_name_normalized` (gerada, mesma função) · `cpf_hash` · `cpf_last3` · `birth_date` · `email` · `hours` · `data jsonb` · `issues jsonb` (`[{ code, severity, field?, detail? }]`) · `action import_row_action` · `matched_participant_id` · `matched_certificate_id` · `match_rule text` (`cpf`, `name_birth`, `name_email`, `name`) · `resolution text` null (`same_person`, `different_person`, `skip`). PK `(batch_id, row_number)`. Contém dado pessoal (nome, e-mail): mesma proteção de `participants`, e é apagado no descarte, 7 dias após a aplicação ou 24 horas sem aplicar.
+`import_rows`: `batch_id` FK cascade · `row_number int` (linha do arquivo, 1 é o cabeçalho) · `participation_type_id` · `full_name` · `full_name_normalized` (gerada, mesma função) · `cpf_hash` · `cpf_last3` · `birth_date` · `email` · `hours` · `data jsonb` (só o que veio preenchido) · `data_defaults jsonb` (o padrão do modelo para os campos vazios, usado só no certificado novo) · `issues jsonb` (`[{ code, severity, field?, detail? }]`, da validação em TypeScript) · `computed_issues jsonb` (do diff, refeito a cada cálculo) · `person_row int` (primeira linha do arquivo que é a mesma pessoa) · `action import_row_action` · `matched_participant_id` · `matched_certificate_id` · `match_rule text` (`cpf`, `name_birth`, `name_email`, `name`) · `resolution text` null (`same_person`, `different_person`, `skip`). PK `(batch_id, row_number)`. Contém dado pessoal (nome, e-mail): mesma proteção de `participants`, e é apagado no descarte, 7 dias após a aplicação ou 24 horas sem aplicar.
 
 ### `name_correction_requests`
 
@@ -195,6 +195,7 @@ Unique `(participant_id, participation_type_id)`. Check `(status = 'erased') = (
 | certificates | `(event_id, status)`, `(participant_id)`, `(created_by_batch_id)` | listas do admin, remoção por lote |
 | certificates | `(event_id) where first_downloaded_at is null and status = 'active'` | "quem ainda não baixou" |
 | import_rows | `(batch_id, action)` | prévia paginada |
+| import_rows | `(batch_id, full_name_normalized)` e `(batch_id, cpf_hash)` parcial | agrupamento da mesma pessoa dentro do arquivo, sem comparar todos os pares |
 | name_correction_requests | `(status, created_at)` | fila |
 | search_attempts | BRIN `occurred_at`; `(event_id, occurred_at)` | rollup e poda |
 | certificate_downloads | `(event_id, occurred_at)` | série temporal |

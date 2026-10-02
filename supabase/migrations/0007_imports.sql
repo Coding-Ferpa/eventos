@@ -91,10 +91,20 @@ create table public.import_rows (
   birth_date date,
   email text,
   hours numeric(5, 1),
+  -- Só o que veio preenchido na planilha. O padrão do modelo fica à parte,
+  -- porque vale só para o certificado novo: na atualização, célula vazia e
+  -- coluna não mapeada não tocam em nada (doc 06).
   data jsonb not null default '{}' check (jsonb_typeof(data) = 'object'),
+  data_defaults jsonb not null default '{}' check (jsonb_typeof(data_defaults) = 'object'),
 
-  -- [{ code, severity, field?, detail? }] (doc 06).
+  -- [{ code, severity, field?, detail? }] (doc 06). `issues` vem da validação
+  -- em TypeScript e não muda; `computed_issues` é do diff e é refeito a cada
+  -- cálculo.
   issues jsonb not null default '[]' check (jsonb_typeof(issues) = 'array'),
+  computed_issues jsonb not null default '[]' check (jsonb_typeof(computed_issues) = 'array'),
+  -- Primeira linha do arquivo que é a mesma pessoa (no modo vários tipos, uma
+  -- pessoa nova aparece em mais de uma linha e vira um participante só).
+  person_row integer,
   -- Nulo até o diff ser calculado.
   action public.import_row_action,
   matched_participant_id uuid,
@@ -108,6 +118,10 @@ create table public.import_rows (
 );
 
 create index import_rows_batch_action_idx on public.import_rows (batch_id, action);
+-- O agrupamento dentro do arquivo só compara linhas com o mesmo nome ou o
+-- mesmo CPF: sem estes, 5.000 linhas seriam 12 milhões de pares.
+create index import_rows_batch_name_idx on public.import_rows (batch_id, full_name_normalized);
+create index import_rows_batch_cpf_idx on public.import_rows (batch_id, cpf_hash) where cpf_hash is not null;
 
 alter table public.import_rows enable row level security;
 
@@ -115,6 +129,356 @@ create policy import_rows_all_editor on public.import_rows
   for all to authenticated
   using (public.authorize('editor'))
   with check (public.authorize('editor'));
+
+-- ---------------------------------------------------------------------------
+-- Conciliação (doc 06, ADR-0011)
+-- ---------------------------------------------------------------------------
+
+-- Linha com erro, venha ele da validação em TypeScript ou do diff.
+create function public.import_row_has_error(issues jsonb, computed jsonb)
+returns boolean
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $$
+  select exists (
+    select 1 from jsonb_array_elements(issues || computed) p where p->>'severity' = 'error'
+  )
+$$;
+
+-- A cascata do doc 06 entre duas fichas (linha e participante, ou duas linhas
+-- do mesmo arquivo). Devolve a regra que casou, ou nulo. Dois CPFs diferentes
+-- são duas pessoas, por definição, mesmo com nome e nascimento iguais.
+create function public.import_same_person(
+  a_nome text, a_cpf text, a_nascimento date, a_email text,
+  b_nome text, b_cpf text, b_nascimento date, b_email text
+)
+returns text
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $$
+  select case
+    when a_cpf is not null and b_cpf is not null then
+      case when a_cpf = b_cpf then 'cpf' end
+    when a_nome is null or a_nome <> b_nome then null
+    when a_nascimento = b_nascimento then 'name_birth'
+    when a_email = b_email then 'name_email'
+    when a_cpf is null and b_cpf is null
+     and a_nascimento is null and b_nascimento is null
+     and a_email is null and b_email is null then 'name'
+  end
+$$;
+
+-- Calcula o plano do lote contra o estado atual do evento e grava, em cada
+-- linha, a ação, quem casou e por qual regra; no lote, o resumo e o digest.
+-- Roda na prévia e de novo dentro do `apply_import`. Refazer do zero é
+-- seguro: só a decisão do admin (`resolution`) sobrevive entre um cálculo e
+-- outro.
+create function public.compute_import_diff(p_batch uuid)
+returns jsonb
+language plpgsql
+set search_path = ''
+as $$
+declare
+  lote public.import_batches%rowtype;
+  mudou integer;
+  resumo jsonb;
+begin
+  select * into lote from public.import_batches where id = p_batch;
+  if not found then
+    raise exception 'Lote % não encontrado.', p_batch using errcode = 'P0002';
+  end if;
+
+  update public.import_rows
+     set action = null, matched_participant_id = null, matched_certificate_id = null,
+         match_rule = null, person_row = row_number, computed_issues = '[]'
+   where batch_id = p_batch;
+
+  -- 1. O que depende do nome normalizado pelo banco. Uma aproximação em
+  -- TypeScript deixaria passar o nome que o check de participants recusa.
+  update public.import_rows
+     set computed_issues = computed_issues || jsonb_build_array(jsonb_build_object(
+           'code', 'NAME_TOO_SHORT', 'severity', 'error',
+           'detail', 'O nome precisa de pelo menos 3 letras além de de, da, do, das, dos e e.'))
+   where batch_id = p_batch
+     and full_name is not null
+     and (char_length(full_name) < 3 or char_length(full_name_normalized) < 3);
+  update public.import_rows
+     set computed_issues = computed_issues || jsonb_build_array(jsonb_build_object(
+           'code', 'NAME_SINGLE_WORD', 'severity', 'warning',
+           'detail', 'Nome de uma palavra só: a busca por nome exige o nome completo.'))
+   where batch_id = p_batch
+     and char_length(full_name_normalized) >= 3
+     and position(' ' in full_name_normalized) = 0;
+
+  -- 2. Cascata contra quem já está no evento: a primeira regra que casar.
+  -- Nas regras por nome, mais de um candidato é ambíguo e não casa.
+  update public.import_rows r
+     set matched_participant_id = m.participante, match_rule = m.regra
+    from (
+      select r2.row_number,
+             coalesce(c1.id, c2.id, c3.id, c4.id) as participante,
+             case when c1.id is not null then 'cpf'
+                  when c2.id is not null then 'name_birth'
+                  when c3.id is not null then 'name_email'
+                  when c4.id is not null then 'name' end as regra
+        from public.import_rows r2
+        left join lateral (
+          select p.id from public.participants p
+           where p.event_id = lote.event_id and p.cpf_hash = r2.cpf_hash
+        ) c1 on true
+        left join lateral (
+          select (array_agg(p.id))[1] as id from public.participants p
+           where p.event_id = lote.event_id
+             and p.full_name_normalized = r2.full_name_normalized
+             and p.birth_date = r2.birth_date
+             and (p.cpf_hash is null or r2.cpf_hash is null)
+          having count(*) = 1
+        ) c2 on true
+        left join lateral (
+          select (array_agg(p.id))[1] as id from public.participants p
+           where p.event_id = lote.event_id
+             and p.full_name_normalized = r2.full_name_normalized
+             and p.email = r2.email
+             and (p.cpf_hash is null or r2.cpf_hash is null)
+          having count(*) = 1
+        ) c3 on true
+        left join lateral (
+          select (array_agg(p.id))[1] as id from public.participants p
+           where p.event_id = lote.event_id
+             and p.full_name_normalized = r2.full_name_normalized
+             and r2.cpf_hash is null and r2.birth_date is null and r2.email is null
+          having count(*) = 1
+             and bool_and(p.cpf_hash is null and p.birth_date is null and p.email is null)
+        ) c4 on true
+       where r2.batch_id = p_batch
+         and not public.import_row_has_error(r2.issues, r2.computed_issues)
+    ) m
+   where r.batch_id = p_batch and r.row_number = m.row_number and m.participante is not null;
+
+  -- 3. A mesma pessoa em mais de uma linha (modo vários tipos): componentes
+  -- conexos pela cascata, rotulados pela menor linha. Converge em poucas
+  -- voltas, porque a cadeia mais longa é rara.
+  loop
+    update public.import_rows r
+       set person_row = v.menor
+      from (
+        select b.row_number, min(a.person_row) as menor
+          from public.import_rows a
+          join public.import_rows b
+            on b.batch_id = a.batch_id
+           and b.row_number <> a.row_number
+           and (b.full_name_normalized = a.full_name_normalized or b.cpf_hash = a.cpf_hash)
+         where a.batch_id = p_batch
+           and not public.import_row_has_error(a.issues, a.computed_issues)
+           and not public.import_row_has_error(b.issues, b.computed_issues)
+           and public.import_same_person(
+                 a.full_name_normalized, a.cpf_hash, a.birth_date, a.email,
+                 b.full_name_normalized, b.cpf_hash, b.birth_date, b.email) is not null
+         group by b.row_number
+      ) v
+     where r.batch_id = p_batch and r.row_number = v.row_number and v.menor < r.person_row;
+    get diagnostics mudou = row_count;
+    exit when mudou = 0;
+  end loop;
+
+  -- 4. Linha do grupo que não casou sozinha herda o participante do grupo,
+  -- se ele for um só.
+  update public.import_rows r
+     set matched_participant_id = g.participante, match_rule = g.regra
+    from (
+      select person_row,
+             (array_agg(matched_participant_id order by row_number)
+               filter (where matched_participant_id is not null))[1] as participante,
+             (array_agg(match_rule order by row_number)
+               filter (where matched_participant_id is not null))[1] as regra
+        from public.import_rows
+       where batch_id = p_batch and not public.import_row_has_error(issues, computed_issues)
+       group by person_row
+      having count(distinct matched_participant_id) = 1
+    ) g
+   where r.batch_id = p_batch and r.person_row = g.person_row
+     and r.matched_participant_id is null
+     and not public.import_row_has_error(r.issues, r.computed_issues);
+
+  -- 5. Possível duplicata de quem seria criado: (a) mesmo e-mail, (b) mesmo
+  -- nascimento e nome parecido, (c) mesmo nome e CPF diferente. A decisão é
+  -- por pessoa: vale a da primeira linha do grupo.
+  with candidatos as (
+    select r.row_number, r.person_row, cand.id as candidato
+      from public.import_rows r
+      cross join lateral (
+        select p.id from public.participants p
+         where p.event_id = lote.event_id
+           and ((r.email is not null and p.email = r.email)
+             or (r.birth_date is not null and p.birth_date = r.birth_date
+                 and extensions.similarity(p.full_name_normalized, r.full_name_normalized) >= 0.6)
+             or (r.cpf_hash is not null and p.cpf_hash is not null and p.cpf_hash <> r.cpf_hash
+                 and p.full_name_normalized = r.full_name_normalized))
+         order by (p.email = r.email) desc nulls last,
+                  extensions.similarity(p.full_name_normalized, r.full_name_normalized) desc,
+                  p.id
+         limit 1
+      ) cand
+     where r.batch_id = p_batch
+       and r.matched_participant_id is null
+       and not public.import_row_has_error(r.issues, r.computed_issues)
+  ), grupos as (
+    select person_row, (array_agg(candidato order by row_number))[1] as candidato
+      from candidatos group by person_row
+  )
+  update public.import_rows r
+     set matched_participant_id = case when raiz.resolution in ('same_person', 'skip') or raiz.resolution is null
+                                       then g.candidato end,
+         action = case raiz.resolution
+                    when 'skip' then 'skipped'
+                    when 'same_person' then null
+                    when 'different_person' then null
+                    else 'needs_decision' end::public.import_row_action,
+         computed_issues = r.computed_issues || case when raiz.resolution is null then
+           jsonb_build_array(jsonb_build_object(
+             'code', 'POSSIBLE_DUPLICATE', 'severity', 'decision',
+             'detail', case when r.row_number = g.person_row
+                            then 'Pode ser alguém que já está no evento.'
+                            else format('Segue a decisão da linha %s.', g.person_row) end))
+           else '[]'::jsonb end
+    from grupos g
+    join public.import_rows raiz on raiz.batch_id = p_batch and raiz.row_number = g.person_row
+   where r.batch_id = p_batch and r.person_row = g.person_row
+     and r.matched_participant_id is null
+     and not public.import_row_has_error(r.issues, r.computed_issues);
+
+  -- 6. A mesma pessoa e o mesmo tipo de uma linha anterior: a primeira vale.
+  update public.import_rows r
+     set computed_issues = r.computed_issues || jsonb_build_array(jsonb_build_object(
+           'code', 'DUPLICATE_IN_FILE', 'severity', 'error',
+           'detail', format('Repete a linha %s.', d.primeira)))
+    from (
+      select row_number,
+             first_value(row_number) over (
+               partition by participation_type_id,
+                            coalesce(matched_participant_id::text, 'linha:' || person_row)
+               order by row_number) as primeira
+        from public.import_rows
+       where batch_id = p_batch and action is null
+         and not public.import_row_has_error(issues, computed_issues)
+    ) d
+   where r.batch_id = p_batch and r.row_number = d.row_number and d.primeira <> d.row_number;
+
+  -- 7. O certificado da pessoa naquele tipo, e a ação. Só o que veio
+  -- preenchido é comparado: célula vazia é "sem informação".
+  update public.import_rows r
+     set matched_certificate_id = c.id
+    from public.certificates c
+   where r.batch_id = p_batch and r.action is null
+     and c.participant_id = r.matched_participant_id
+     and c.participation_type_id = r.participation_type_id;
+
+  update public.import_rows r
+     set action = x.acao::public.import_row_action
+    from (
+      select r2.row_number,
+             case
+               when public.import_row_has_error(r2.issues, r2.computed_issues) then 'error'
+               when r2.matched_certificate_id is null then 'create'
+               when c.status <> 'active' then 'skipped'
+               when r2.full_name is distinct from p.full_name
+                 or (r2.cpf_hash is not null and r2.cpf_hash is distinct from p.cpf_hash)
+                 or (r2.birth_date is not null and r2.birth_date is distinct from p.birth_date)
+                 or (r2.email is not null and r2.email is distinct from p.email)
+                 or (r2.hours is not null and r2.hours is distinct from c.hours)
+                 or exists (select 1 from jsonb_each(r2.data) d where c.data -> d.key is distinct from d.value)
+               then 'update'
+               else 'unchanged'
+             end as acao
+        from public.import_rows r2
+        left join public.participants p on p.id = r2.matched_participant_id
+        left join public.certificates c on c.id = r2.matched_certificate_id
+       where r2.batch_id = p_batch and r2.action is null
+    ) x
+   where r.batch_id = p_batch and r.row_number = x.row_number;
+
+  update public.import_rows
+     set computed_issues = computed_issues || jsonb_build_array(jsonb_build_object(
+           'code', 'CERTIFICATE_REVOKED', 'severity', 'warning',
+           'detail', 'O certificado desta pessoa foi revogado: a linha não muda nada.'))
+   where batch_id = p_batch and action = 'skipped' and matched_certificate_id is not null;
+
+  -- 8. Homônimo: outra pessoa do evento, ou do próprio arquivo, com o mesmo
+  -- nome normalizado. A busca só por nome não acharia nenhuma das duas.
+  update public.import_rows r
+     set computed_issues = r.computed_issues || jsonb_build_array(jsonb_build_object(
+           'code', 'HOMONYM_IN_EVENT', 'severity', 'warning',
+           'detail', 'Outra pessoa do evento tem o mesmo nome: a busca só por nome não encontra nenhuma das duas.'))
+   where r.batch_id = p_batch
+     and r.action in ('create', 'update', 'unchanged')
+     and (exists (
+            select 1 from public.participants p
+             where p.event_id = lote.event_id
+               and p.full_name_normalized = r.full_name_normalized
+               and p.id is distinct from r.matched_participant_id)
+       or exists (
+            select 1 from public.import_rows o
+             where o.batch_id = p_batch
+               and o.action in ('create', 'update', 'unchanged')
+               and o.full_name_normalized = r.full_name_normalized
+               and coalesce(o.matched_participant_id::text, 'linha:' || o.person_row)
+                   <> coalesce(r.matched_participant_id::text, 'linha:' || r.person_row)));
+
+  -- 9. Resumo, em certificados, e o digest do plano: o que o admin vê é o que
+  -- a aplicação confere.
+  select jsonb_build_object(
+           'create', count(*) filter (where action = 'create'),
+           'update', count(*) filter (where action = 'update'),
+           'unchanged', count(*) filter (where action = 'unchanged'),
+           'error', count(*) filter (where action = 'error'),
+           'needs_decision', count(*) filter (where action = 'needs_decision'),
+           'skipped', count(*) filter (where action = 'skipped'),
+           'new_people', count(distinct person_row)
+                           filter (where action = 'create' and matched_participant_id is null),
+           'total', count(*),
+           'absent', case when lote.participation_type_id is null then 0 else (
+             select count(*) from public.certificates c
+              where c.event_id = lote.event_id
+                and c.participation_type_id = lote.participation_type_id
+                and c.status = 'active'
+                and not exists (
+                  select 1 from public.import_rows o
+                   where o.batch_id = p_batch and o.matched_participant_id = c.participant_id)
+           ) end,
+           'warnings', (
+             select coalesce(jsonb_object_agg(codigo, n), '{}') from (
+               select p->>'code' as codigo, count(*) as n
+                 from public.import_rows, jsonb_array_elements(issues || computed_issues) p
+                where batch_id = p_batch and p->>'severity' = 'warning'
+                group by 1) avisos))
+    into resumo
+    from public.import_rows
+   where batch_id = p_batch;
+
+  update public.import_batches
+     set summary = resumo,
+         preview_digest = (
+           select encode(sha256(convert_to(coalesce(string_agg(
+                    format('%s:%s:%s:%s', row_number, action,
+                           coalesce(matched_participant_id::text, ''),
+                           coalesce(matched_certificate_id::text, '')),
+                    E'\n' order by row_number), ''), 'UTF8')), 'hex')
+             from public.import_rows where batch_id = p_batch)
+   where id = p_batch;
+
+  return resumo;
+end;
+$$;
+
+-- Só o servidor calcula, depois do `defineAction` (doc 07).
+revoke execute on function public.import_row_has_error(jsonb, jsonb) from anon, authenticated, public;
+revoke execute on function public.import_same_person(text, text, date, text, text, text, date, text)
+  from anon, authenticated, public;
+revoke execute on function public.compute_import_diff(uuid) from anon, authenticated, public;
 
 -- ---------------------------------------------------------------------------
 -- Poda do staging (agendada em 0013)

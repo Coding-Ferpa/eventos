@@ -75,8 +75,17 @@ export const importRows = pgTable(
     email: text('email'),
     hours: numeric('hours', { precision: 5, scale: 1 }),
     data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+    dataDefaults: jsonb('data_defaults')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
 
     issues: jsonb('issues').$type<ImportRowIssue[]>().notNull().default([]),
+    computedIssues: jsonb('computed_issues')
+      .$type<ImportRowIssue[]>()
+      .notNull()
+      .default([]),
+    personRow: integer('person_row'),
     action: importRowAction('action'),
     matchedParticipantId: uuid('matched_participant_id'),
     matchedCertificateId: uuid('matched_certificate_id'),
