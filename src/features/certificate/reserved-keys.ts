@@ -1,3 +1,5 @@
+import { isValidCpf } from '@/lib/cpf'
+
 /**
  * Guardrail inegociável do doc 05: CPF nunca é conteúdo do certificado. Duas
  * barreiras, porque uma só falha.
@@ -37,23 +39,10 @@ export function isReservedKey(chaveOuRotulo: string): boolean {
   return RESERVADAS.has(normalizada) || normalizada.includes('cpf')
 }
 
-function digitoVerificador(digitos: number[], pesoInicial: number): number {
-  const soma = digitos.reduce((total, digito, i) => total + digito * (pesoInicial - i), 0)
-  const resto = (soma * 10) % 11
-  return resto === 10 ? 0 : resto
-}
-
 /**
  * O valor, reduzido a dígitos, tem 11 dígitos e verificadores de CPF válidos?
  * Número de 11 dígitos com verificador errado não conta: é só um número.
  */
 export function looksLikeCpf(valor: string): boolean {
-  const digitos = valor.replace(/\D/g, '')
-  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false
-
-  const numeros = [...digitos].map(Number)
-  return (
-    digitoVerificador(numeros.slice(0, 9), 10) === numeros[9] &&
-    digitoVerificador(numeros.slice(0, 10), 11) === numeros[10]
-  )
+  return isValidCpf(valor.replace(/\D/g, ''))
 }
