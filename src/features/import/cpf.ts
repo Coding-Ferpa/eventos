@@ -29,3 +29,18 @@ export function parseCpfCell(texto: string): CpfCell {
   if (!isValidCpf(digitos)) return { ok: false, code: 'CPF_INVALID' }
   return { ok: true, cpf: digitos }
 }
+
+/**
+ * A amostra da inspeção vai para o navegador do admin antes de existir
+ * mapeamento, então a máscara vai pela forma, em qualquer coluna: célula só
+ * de dígitos e separadores, com 9 dígitos ou mais (o Excel come o zero
+ * inicial), sai como `***.***.**7-25`. Pega também telefone sem formatação,
+ * o que só esconde mais dado pessoal da tela.
+ */
+export function mascararNaAmostra(celula: string): string {
+  if (!/^[\d\s./-]+$/.test(celula)) return celula
+  const digitos = celula.replace(/\D/g, '')
+  if (digitos.length < 9) return celula
+  const ultimos = digitos.slice(-3)
+  return `***.***.**${ultimos[0]}-${ultimos.slice(1)}`
+}

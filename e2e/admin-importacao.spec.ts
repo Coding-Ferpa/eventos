@@ -74,11 +74,23 @@ test('E08: a planilha do Excel pt-BR, da inspeção à lista de participantes', 
   await expect(amostra.getByText('Ângela Muñoz Ñandú')).toBeVisible()
   await expect(
     page.getByText(
-      /codificação Windows \(Excel em português\), separada por ponto e vírgula/,
+      /Codificação: Windows \(Excel em português\) · Separador: ponto e vírgula · \d+ linhas/,
     ),
   ).toBeVisible()
   await expect(page.getByLabel(/Nome completo/)).toHaveValue('Nome completo')
   await expect(page.getByLabel(/^CPF/)).toHaveValue('CPF')
+
+  // O stepper do doc 03 (6f), e de onde veio a sugestão.
+  const etapas = page
+    .getByRole('list', { name: 'Etapas da importação' })
+    .getByRole('listitem')
+  await expect(etapas.nth(1)).toHaveAttribute('aria-current', 'step')
+  await expect(etapas.nth(0)).toContainText('(concluída)')
+  await expect(page.getByText('Sugestão pela semelhança dos cabeçalhos.')).toBeVisible()
+  // O CPF chega ao navegador mascarado, na amostra e no exemplo (doc 06).
+  await expect(page.getByText('Exemplo: ***.***.**7-25')).toBeVisible()
+  await expect(amostra.getByText('***.***.**7-25')).toBeVisible()
+  await expect(amostra.getByText(/\d{3}\.\d{3}\.\d{3}-\d{2}/)).toHaveCount(0)
 
   await verPrevia(page)
   await expect(contador(page, 'A criar')).toHaveText('7')
@@ -113,6 +125,8 @@ test('E09: o mesmo arquivo não muda nada; o nome corrigido vira atualização c
   await abrirImportacao(page)
   await enviar(page, 'excel-ptbr-cp1252-semicolon.csv')
   await expect(page.getByText(/Este mesmo arquivo já foi aplicado em/)).toBeVisible()
+  // A primeira importação gravou o mapeamento no modelo.
+  await expect(page.getByText(/^Mapeamento do modelo aplicado/)).toBeVisible()
   await verPrevia(page)
   await expect(contador(page, 'A criar')).toHaveText('0')
   await expect(contador(page, 'A atualizar')).toHaveText('0')
@@ -184,7 +198,9 @@ test('a planilha de quase 2 MB passa pelo limite de corpo da Server Action', asy
   await entrar(page, CONTAS.editor)
   await abrirImportacao(page)
   await enviar(page, { name: 'grande.csv', mimeType: 'text/csv', buffer })
-  await expect(page.getByText(/grande\.csv: 4900 linhas/)).toBeVisible()
+  await expect(
+    page.getByText(/grande\.csv\. Codificação: .+ · 4900 linhas/),
+  ).toBeVisible()
 })
 
 test('E20: antes da liberação remove; depois, com download, recusa e oferece revogar', async ({

@@ -1,5 +1,6 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { inspectCsv, stageImport, type ImportSummary } from '@/actions/imports'
@@ -19,6 +20,56 @@ import { PassoPrevia } from './passo-previa'
  */
 
 export type TipoDaImportacao = { id: string; label: string; temModelo: boolean }
+
+const ETAPAS = [
+  ['arquivo', 'Arquivo'],
+  ['mapeamento', 'Colunas'],
+  ['previa', 'Prévia'],
+  ['concluido', 'Aplicação'],
+] as const
+
+/**
+ * O stepper do doc 03 (6f): a atual com `aria-current="step"` e marcador
+ * `primary`, as concluídas com check `success`, as futuras apagadas. Não
+ * navega: voltar é pelo botão de cada passo, e pular adiante não existe.
+ */
+function Etapas({ atual }: { atual: (typeof ETAPAS)[number][0] }) {
+  const indice = ETAPAS.findIndex(([passo]) => passo === atual)
+  return (
+    <ol aria-label="Etapas da importação" className="flex flex-wrap gap-x-6 gap-y-2">
+      {ETAPAS.map(([passo, rotulo], i) => (
+        <li
+          aria-current={i === indice ? 'step' : undefined}
+          className={[
+            'text-caption flex items-center gap-2',
+            i === indice
+              ? 'font-semibold'
+              : i < indice
+                ? 'text-foreground'
+                : 'text-muted-foreground',
+          ].join(' ')}
+          key={passo}
+        >
+          <span
+            aria-hidden="true"
+            className={[
+              'inline-flex size-6 items-center justify-center rounded-full border text-xs',
+              i === indice
+                ? 'border-primary bg-primary-solid text-primary-foreground'
+                : i < indice
+                  ? 'border-success text-success'
+                  : 'border-border',
+            ].join(' ')}
+          >
+            {i < indice ? <Check className="size-3.5" /> : i + 1}
+          </span>
+          {rotulo}
+          {i < indice ? <span className="sr-only"> (concluída)</span> : null}
+        </li>
+      ))}
+    </ol>
+  )
+}
 
 type Inspecao = Extract<Awaited<ReturnType<typeof inspectCsv>>, { ok: true }>['data']
 export type InspecaoDaTela = Inspecao
@@ -109,6 +160,7 @@ export function AssistenteDeImportacao({
 
   return (
     <section aria-labelledby="titulo-do-passo" className="flex flex-col gap-6">
+      <Etapas atual={estado.passo} />
       <h2
         className="text-h3 font-semibold outline-none"
         id="titulo-do-passo"

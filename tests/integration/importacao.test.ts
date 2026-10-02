@@ -311,6 +311,14 @@ describe('o preset do modelo', () => {
       'cracha.csv',
       'Nome;Nome civil;E-mail\r\nAna;Ana Lima Souza;ana@exemplo.org\r\n',
     )
+    const primeira = await inspectCsv(
+      formulario(arquivo, {
+        eventId: evento.eventoId,
+        participationTypeId: evento.tipoId,
+      }),
+    )
+    // Sem preset, a tela diz que a sugestão veio da semelhança (doc 03, 6f).
+    expect(primeira.ok && primeira.data.presetApplied).toBe(false)
     await previa(evento, arquivo, (sugerido) => ({
       ...sugerido,
       full_name: 'Nome civil',
@@ -336,6 +344,7 @@ describe('o preset do modelo', () => {
       full_name: 'Nome civil',
       email: 'E-mail',
     })
+    expect(deNovo.ok && deNovo.data.presetApplied).toBe(true)
   })
 })
 
@@ -574,7 +583,7 @@ describe('descarte, papel e CPF em claro', () => {
     }
   })
 
-  it('CSV-I9: o CPF em claro não aparece em tabela nenhuma nem no log', async () => {
+  it('CSV-I9: o CPF em claro não aparece em tabela nenhuma, no log nem no navegador', async () => {
     const saidas: string[] = []
     const espioes = (['log', 'info', 'warn', 'error'] as const).map((metodo) =>
       vi.spyOn(console, metodo).mockImplementation((...args: unknown[]) => {
@@ -583,10 +592,20 @@ describe('descarte, papel e CPF em claro', () => {
     )
     try {
       const evento = await novoEvento()
+      // O que as actions devolvem vai para o navegador do admin: a amostra da
+      // inspeção (M8: saía com o CPF em claro), a prévia e a lista de linhas.
+      const inspecao = await inspectCsv(
+        formulario(fixture('google-sheets-utf8-comma.csv'), {
+          eventId: evento.eventoId,
+          participationTypeId: evento.tipoId,
+        }),
+      )
       const { batchId, previewDigest } = await previa(
         evento,
         fixture('google-sheets-utf8-comma.csv'),
       )
+      const linhas = await listImportRows({ batchId })
+      saidas.push(JSON.stringify(inspecao), JSON.stringify(linhas))
       await aplicar(batchId, previewDigest)
 
       const despejo = await db().execute<{ texto: string }>(sql`

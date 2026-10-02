@@ -19,6 +19,13 @@ import { ROTULO_DO_DELIMITADOR, ROTULO_DO_ENCODING } from './rotulos'
 
 const NAO_IMPORTAR = ''
 
+/** O primeiro valor preenchido da coluna na amostra (já com o CPF mascarado). */
+function exemploDaColuna(inspecao: InspecaoDaTela, cabecalho: string | undefined) {
+  if (!cabecalho) return null
+  const indice = inspecao.headers.indexOf(cabecalho)
+  return inspecao.sampleRows.map((linha) => linha[indice]?.trim()).find(Boolean) ?? null
+}
+
 /**
  * Segundo passo (doc 06): as 10 primeiras linhas já decodificadas, para o
  * acento errado aparecer aqui e não no banco, e um seletor por alvo. A
@@ -57,10 +64,9 @@ export function PassoMapeamento({
   return (
     <div className="flex flex-col gap-6">
       <p className="text-caption text-muted-foreground">
-        {inspecao.fileName}: {inspecao.rowCount}{' '}
-        {inspecao.rowCount === 1 ? 'linha' : 'linhas'}, codificação{' '}
-        {ROTULO_DO_ENCODING[inspecao.encoding]}, separada por{' '}
-        {ROTULO_DO_DELIMITADOR[inspecao.delimiter]}.
+        {inspecao.fileName}. Codificação: {ROTULO_DO_ENCODING[inspecao.encoding]} ·
+        Separador: {ROTULO_DO_DELIMITADOR[inspecao.delimiter]} · {inspecao.rowCount}{' '}
+        {inspecao.rowCount === 1 ? 'linha' : 'linhas'}
       </p>
 
       {inspecao.warnings.map((aviso) => (
@@ -100,14 +106,24 @@ export function PassoMapeamento({
           </TableBody>
         </Table>
       </div>
+      <p>
+        Os acentos apareceram certos? Se algum saiu estranho, volte e exporte a planilha
+        de novo como CSV UTF-8.
+      </p>
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-2 font-medium">Que coluna é o quê</legend>
+        <p className="text-caption text-muted-foreground">
+          {inspecao.presetApplied
+            ? 'Mapeamento do modelo aplicado: as colunas vieram da última importação deste modelo.'
+            : 'Sugestão pela semelhança dos cabeçalhos. Confira cada coluna.'}
+        </p>
         {inspecao.targets.map((alvo) => {
           const id = `${prefixo}-${alvo.target}`
+          const exemplo = exemploDaColuna(inspecao, mapping[alvo.target])
           return (
             <div
-              className="grid items-center gap-2 sm:grid-cols-[14rem_1fr]"
+              className="grid items-center gap-2 sm:grid-cols-[14rem_1fr_minmax(0,14rem)]"
               key={alvo.target}
             >
               <label className="flex items-center gap-2" htmlFor={id}>
@@ -128,6 +144,9 @@ export function PassoMapeamento({
                   </option>
                 ))}
               </select>
+              <span className="text-caption text-muted-foreground truncate">
+                {exemplo ? `Exemplo: ${exemplo}` : null}
+              </span>
             </div>
           )
         })}

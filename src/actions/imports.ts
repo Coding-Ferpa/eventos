@@ -19,11 +19,13 @@ import {
   importRows,
   participants,
 } from '@/db/schema'
+import { mascararNaAmostra } from '@/features/import/cpf'
 import { decodeCsv } from '@/features/import/decode'
 import {
   cellsForRow,
   checkMapping,
   mappingTargets,
+  normalizeHeader,
   presetFromMapping,
   suggestMapping,
   targetLabel,
@@ -266,6 +268,7 @@ export const inspectCsv = defineAction({
     const { decodificado, csv, sha256 } = await lerPlanilha(entrada.file)
     const ctx = mappingContextFor(contexto, entrada.participationTypeId)
     const aplicadoEm = await lastAppliedWithSameFile(tx, entrada.eventId, sha256)
+    const sugestao = suggestMapping(csv.headers, ctx)
 
     return {
       data: {
@@ -273,10 +276,19 @@ export const inspectCsv = defineAction({
         encoding: decodificado.encoding,
         delimiter: csv.delimiter,
         headers: csv.headers,
-        sampleRows: csv.rows.slice(0, 10).map((linha) => linha.cells),
+        // Vai para o navegador: CPF em claro só existe dentro do validate-row.
+        sampleRows: csv.rows
+          .slice(0, 10)
+          .map((linha) => linha.cells.map(mascararNaAmostra)),
         rowCount: csv.rows.length,
         fileSha256: sha256,
-        suggestedMapping: suggestMapping(csv.headers, ctx),
+        suggestedMapping: sugestao,
+        // O preset corre primeiro na sugestão e guarda o cabeçalho normalizado:
+        // alvo sugerido com ele veio do modelo (doc 03, 6f).
+        presetApplied: Object.entries(ctx.preset).some(([alvo, cabecalho]) => {
+          const sugerido = sugestao[alvo as keyof typeof sugestao]
+          return sugerido !== undefined && normalizeHeader(sugerido) === cabecalho
+        }),
         targets: alvosDaTela(ctx),
         warnings: [
           ...decodificado.warnings.map((code) => ({ code, appliedAt: null })),
