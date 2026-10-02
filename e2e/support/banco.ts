@@ -91,3 +91,57 @@ export async function apagarFonteEnviada(sha256: string) {
     await sql.end()
   }
 }
+
+/**
+ * Evento pronto para importar (E08 a E10, E20): busca por CPF, e participante
+ * e palestrante ligados a um modelo em rascunho. Direto no banco, porque o
+ * que estas E2E exercitam é a importação, e não o cadastro do evento.
+ */
+export async function criarEventoParaImportacao(titulo: string) {
+  const sql = conectar()
+  try {
+    const slug = `e2e-importacao-${Date.now()}`
+    const [evento] = await sql<{ id: string }[]>`
+      insert into public.events (slug, title, starts_at, search_by_cpf)
+      values (${slug}, ${titulo}, now() + interval '30 days', true) returning id`
+    const [modelo] = await sql<{ id: string }[]>`
+      insert into public.certificate_templates (event_id, name)
+      values (${evento!.id}, 'Participantes') returning id`
+    await sql`
+      insert into public.participation_types
+        (event_id, slug, label, aliases, default_hours, certificate_template_id, sort_order)
+      values
+        (${evento!.id}, 'participante', 'Participante', '{ouvinte}', 8, ${modelo!.id}, 1),
+        (${evento!.id}, 'palestrante', 'Palestrante', '{speaker}', 2, ${modelo!.id}, 2)`
+    return evento!.id
+  } finally {
+    await sql.end()
+  }
+}
+
+/** Libera o evento e marca como baixado o certificado da pessoa (E20). */
+export async function liberarComDownload(eventoId: string, nome: string) {
+  const sql = conectar()
+  try {
+    await sql`update public.events set certificates_released_at = now() where id = ${eventoId}`
+    await sql`
+      update public.certificates c set first_downloaded_at = now()
+        from public.participants p
+       where p.id = c.participant_id and p.event_id = ${eventoId} and p.full_name = ${nome}`
+  } finally {
+    await sql.end()
+  }
+}
+
+/** Certificado barra a remoção do evento (`on delete restrict`): sai antes. */
+export async function apagarEventosComCertificados(prefixo: string) {
+  const sql = conectar()
+  try {
+    const eventos = sql`select id from public.events where title like ${`${prefixo}%`}`
+    await sql`delete from public.certificates where event_id in (${eventos})`
+    await sql`delete from public.participants where event_id in (${eventos})`
+    await sql`delete from public.events where title like ${`${prefixo}%`}`
+  } finally {
+    await sql.end()
+  }
+}

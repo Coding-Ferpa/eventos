@@ -11,6 +11,7 @@ import { StatusDoEvento } from '@/components/admin/eventos/status-do-evento'
 import { TiposDeParticipacao } from '@/components/admin/eventos/tipos-de-participacao'
 import { ModelosDoEvento } from '@/components/admin/modelos/modelos-do-evento'
 import { StatusBadge } from '@/components/eventos/status-badge'
+import { Button } from '@/components/ui/button'
 import { buscarEventoDoAdmin } from '@/db/queries/admin-events'
 import { listarModelosDoEvento } from '@/db/queries/admin-templates'
 import { getCurrentUser } from '@/lib/auth'
@@ -104,6 +105,20 @@ export default async function EventoDoAdminPage({ params }: Props) {
           </Link>
         )}
       </header>
+
+      <nav aria-label="Participantes do evento" className="flex flex-wrap gap-3">
+        <Button asChild>
+          <Link href={`/admin/eventos/${evento.id}/importar`}>
+            Importar participantes
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/admin/eventos/${evento.id}/participantes`}>
+            Participantes ({certificados}{' '}
+            {certificados === 1 ? 'certificado' : 'certificados'})
+          </Link>
+        </Button>
+      </nav>
 
       <Secao titulo="Status">
         <StatusDoEvento atual={evento.status} id={evento.id} />

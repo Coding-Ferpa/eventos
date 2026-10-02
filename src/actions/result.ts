@@ -59,3 +59,14 @@ export function actionError(
 ): ActionResult<never> {
   return { ok: false, error: { code, message, fieldErrors } }
 }
+
+/**
+ * A action nem respondeu (rede caiu, servidor fora). Sem isto, o botão volta
+ * ao normal e a pessoa fica sem saber o que aconteceu.
+ */
+export function falhaDeConexao(): ActionResult<never> {
+  return actionError(
+    'validation_error',
+    'Não conseguimos falar com o servidor. Confira a conexão e tente de novo.',
+  )
+}

@@ -75,6 +75,7 @@ export async function buscarEventoDoAdmin(id: string) {
       searchMode: events.searchMode,
       contactEmail: events.contactEmail,
       contactUrl: events.contactUrl,
+      certificatesReleasedAt: events.certificatesReleasedAt,
     })
     .from(events)
     .where(eq(events.id, id))
