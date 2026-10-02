@@ -242,7 +242,13 @@ export async function getRetrieval(
         inArray(certificates.status, ['active', 'revoked']),
       ),
     )
-    .orderBy(asc(participants.fullName), asc(participationTypes.sortOrder))
+    // A numeração desempata tipos com a mesma ordem: sem ela, o Postgres
+    // devolve o empate em qualquer ordem (o teste da retirada piscava).
+    .orderBy(
+      asc(participants.fullName),
+      asc(participationTypes.sortOrder),
+      asc(certificates.sequenceNumber),
+    )
 
   const porPessoa = new Map<string, PessoaNaRetirada>()
   for (const linha of linhas) {
