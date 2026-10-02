@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     if (usaNome) {
       if (!entrada.full_name) return campoFaltando('full_name', 'Digite o nome completo.')
       criterios.fullName = entrada.full_name
-      if (search.birthDate) {
+      if (search.birthDateRequired) {
         if (!entrada.birth_date)
           return campoFaltando('birth_date', 'Digite a data de nascimento.')
         criterios.birthDate = entrada.birth_date

@@ -1,20 +1,22 @@
 // @vitest-environment node
 
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { ROTAS_QUE_GERAM_PDF } from './rotas-pdf'
+import { ROTAS_QUE_LEEM_AS_FONTES } from './rotas-pdf'
 
-const APP = path.resolve(process.cwd(), 'src/app')
+const SRC = path.resolve(process.cwd(), 'src')
+const APP = path.join(SRC, 'app')
+const ASSETS = path.join(SRC, 'lib', 'certificate-assets.ts')
 
-/** `src/app/(public)/x/route.ts` → `/x`: grupos de rota não entram no caminho. */
+/** `src/app/(public)/x/page.tsx` → `/x`: grupos de rota não entram no caminho. */
 function rotaDoArquivo(arquivo: string): string {
   const partes = path
     .relative(APP, path.dirname(arquivo))
     .split(path.sep)
-    .filter((parte) => !/^\(.*\)$/.test(parte))
+    .filter((parte) => parte && !/^\(.*\)$/.test(parte))
   return `/${partes.join('/')}`
 }
 
@@ -22,28 +24,59 @@ function arquivosDeRota(pasta: string): string[] {
   return readdirSync(pasta, { withFileTypes: true }).flatMap((entrada) => {
     const caminho = path.join(pasta, entrada.name)
     if (entrada.isDirectory()) return arquivosDeRota(caminho)
-    return entrada.name === 'route.ts' ? [caminho] : []
+    return /^(page\.tsx?|route\.ts)$/.test(entrada.name) ? [caminho] : []
   })
 }
 
-describe('rotas que geram PDF', () => {
+function resolver(de: string, alvo: string): string | null {
+  const base = alvo.startsWith('@/')
+    ? path.join(SRC, alvo.slice(2))
+    : alvo.startsWith('.')
+      ? path.resolve(path.dirname(de), alvo)
+      : null
+  if (!base) return null
+  for (const sufixo of ['', '.ts', '.tsx', '/index.ts', '/index.tsx']) {
+    const candidato = base + sufixo
+    if (existsSync(candidato) && statSync(candidato).isFile()) return candidato
+  }
+  return null
+}
+
+// `import type` some no build e não puxa o módulo para o pacote.
+const IMPORT =
+  /(?:^|\n)\s*(import|export)(?!\s+type\s)[^'"]*?from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
+
+/**
+ * O grafo de imports do arquivo alcança o `certificate-assets`, que lê as
+ * fontes do disco? Server Action referenciada por componente cliente roda
+ * dentro da função da página que o usa, então o caminho atravessa o cliente.
+ */
+function alcancaAsFontes(arquivo: string, vistos = new Set<string>()): boolean {
+  if (arquivo === ASSETS) return true
+  if (vistos.has(arquivo)) return false
+  vistos.add(arquivo)
+  for (const casamento of readFileSync(arquivo, 'utf8').matchAll(IMPORT)) {
+    const destino = resolver(arquivo, casamento[2] ?? casamento[3]!)
+    if (destino && alcancaAsFontes(destino, vistos)) return true
+  }
+  return false
+}
+
+describe('rotas que leem as fontes do disco', () => {
   it('toda rota da lista existe em src/app', () => {
     const existentes = arquivosDeRota(APP).map(rotaDoArquivo)
-    for (const rota of ROTAS_QUE_GERAM_PDF) {
-      expect(existentes, rota).toContain(rota)
-    }
+    for (const rota of ROTAS_QUE_LEEM_AS_FONTES) expect(existentes, rota).toContain(rota)
   })
 
-  // Rota nova que gera PDF sem estar na lista funcionaria no `pnpm dev` e
-  // sairia sem fonte no deploy: a armadilha 14 do doc 14.
-  it('toda rota que chama o motor está na lista', () => {
-    const geramPdf = arquivosDeRota(APP)
-      .filter((arquivo) =>
-        readFileSync(arquivo, 'utf8').includes('generateCertificatePdf'),
-      )
+  // Rota nova que lê fonte sem estar na lista funcionaria no `pnpm dev` e
+  // sairia sem fonte no deploy: a armadilha 14 do doc 14. Medido no M8: a
+  // checagem antiga só olhava `route.ts` com `generateCertificatePdf`, e o
+  // editor do M6 e a prévia da importação do M7 ficaram de fora.
+  it('toda página ou rota cujo grafo alcança o certificate-assets está na lista', () => {
+    const leem = arquivosDeRota(APP)
+      .filter((arquivo) => alcancaAsFontes(arquivo))
       .map(rotaDoArquivo)
-
-    expect(geramPdf.length).toBeGreaterThan(0)
-    expect([...ROTAS_QUE_GERAM_PDF].sort()).toEqual(geramPdf.sort())
+    expect(leem.length).toBeGreaterThan(0)
+    expect([...ROTAS_QUE_LEEM_AS_FONTES].sort()).toEqual([...new Set(leem)].sort())
   })
 })

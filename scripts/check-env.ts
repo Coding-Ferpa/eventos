@@ -6,7 +6,12 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { serverEnvSchema, siteEnvSchema, supabaseEnvSchema } from '../src/lib/env'
+import {
+  emailEnvSchema,
+  serverEnvSchema,
+  siteEnvSchema,
+  supabaseEnvSchema,
+} from '../src/lib/env'
 
 const EXAMPLE_PATH = resolve(process.cwd(), '.env.example')
 
@@ -24,6 +29,7 @@ function main(): void {
     ...Object.keys(siteEnvSchema.shape),
     ...Object.keys(supabaseEnvSchema.shape),
     ...Object.keys(serverEnvSchema.shape),
+    ...Object.keys(emailEnvSchema.shape),
   ].sort()
 
   const exampleKeys = keysFromExample(readFileSync(EXAMPLE_PATH, 'utf8'))

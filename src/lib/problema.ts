@@ -13,6 +13,7 @@ export type CodigoPublico =
   | 'event_unavailable'
   | 'forbidden'
   | 'correction_already_pending'
+  | 'unauthorized'
 
 export const SEM_CACHE = { 'Cache-Control': 'no-store' } as const
 

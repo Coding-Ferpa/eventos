@@ -190,6 +190,36 @@ export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>
 export type ServerEnv = z.infer<typeof serverEnvSchema>
 
 /**
+ * E-mail, com a env "preguiçosa" do doc 01: validada no ponto de uso. Sem ela
+ * o app sobe e o pedido de correção é gravado; só a notificação não sai, com
+ * log. Faltar aqui nunca derruba uma página.
+ */
+export const emailEnvSchema = z.object({
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(3).optional(),
+  ADMIN_NOTIFICATION_EMAIL: z.email().optional(),
+})
+
+export type EmailEnv = { apiKey: string; from: string; adminTo: string | null }
+
+/** A configuração de e-mail completa, ou `null` quando falta a chave ou o remetente. */
+export function emailEnv(): EmailEnv | null {
+  const lido = emailEnvSchema.safeParse(
+    semVazios({
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      ADMIN_NOTIFICATION_EMAIL: process.env.ADMIN_NOTIFICATION_EMAIL,
+    }),
+  )
+  if (!lido.success || !lido.data.RESEND_API_KEY || !lido.data.EMAIL_FROM) return null
+  return {
+    apiKey: lido.data.RESEND_API_KEY,
+    from: lido.data.EMAIL_FROM,
+    adminTo: lido.data.ADMIN_NOTIFICATION_EMAIL ?? null,
+  }
+}
+
+/**
  * `VARIAVEL=` em um arquivo .env significa "não informei", não "informei
  * vazio": sem isto, deixar em branco uma variável opcional quebraria a
  * validação em vez de acionar o padrão.

@@ -12,30 +12,47 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { ROTAS_QUE_GERAM_PDF } from '../src/lib/rotas-pdf'
+import { ROTAS_QUE_LEEM_AS_FONTES } from '../src/lib/rotas-pdf'
 
 const RAIZ = process.cwd()
 const PASTA_DAS_FONTES = path.join(RAIZ, 'public', 'fonts', 'cert')
+const APP_DO_BUILD = path.join(RAIZ, '.next', 'server', 'app')
+
+/**
+ * Rastro por caminho de rota. Rota de API tem `route.js`; página tem `page.js`
+ * (e as Server Actions dela). O build guarda o grupo de rota na pasta
+ * (`(public)/eventos/...`), e o caminho da rota não o tem.
+ */
+function rastrosDoBuild(pasta = APP_DO_BUILD, mapa = new Map<string, string>()) {
+  if (!existsSync(pasta)) return mapa
+  for (const entrada of readdirSync(pasta, { withFileTypes: true })) {
+    const caminho = path.join(pasta, entrada.name)
+    if (entrada.isDirectory()) rastrosDoBuild(caminho, mapa)
+    else if (
+      entrada.name === 'route.js.nft.json' ||
+      entrada.name === 'page.js.nft.json'
+    ) {
+      const rota = path
+        .relative(APP_DO_BUILD, pasta)
+        .split(path.sep)
+        .filter((parte) => parte && !/^\(.*\)$/.test(parte))
+      mapa.set(`/${rota.join('/')}`, caminho)
+    }
+  }
+  return mapa
+}
 
 function main(): void {
   const fontes = readdirSync(PASTA_DAS_FONTES).filter((arquivo) =>
     arquivo.endsWith('.ttf'),
   )
   const problemas: string[] = []
+  const rastros = rastrosDoBuild()
 
-  for (const rota of ROTAS_QUE_GERAM_PDF) {
-    const rastro = path.join(
-      RAIZ,
-      '.next',
-      'server',
-      'app',
-      ...rota.split('/'),
-      'route.js.nft.json',
-    )
-    if (!existsSync(rastro)) {
-      problemas.push(
-        `${rota}: sem rastro em ${path.relative(RAIZ, rastro)}. Rode \`pnpm build\` antes.`,
-      )
+  for (const rota of ROTAS_QUE_LEEM_AS_FONTES) {
+    const rastro = rastros.get(rota)
+    if (!rastro) {
+      problemas.push(`${rota}: sem rastro no build. Rode \`pnpm build\` antes.`)
       continue
     }
 
@@ -72,7 +89,7 @@ function main(): void {
   }
 
   console.log(
-    `✔ ${fontes.length} fontes no pacote de ${ROTAS_QUE_GERAM_PDF.length} rota(s) de PDF.`,
+    `✔ ${fontes.length} fontes no pacote de ${ROTAS_QUE_LEEM_AS_FONTES.length} página(s) e rota(s) que leem fontes.`,
   )
 }
 
