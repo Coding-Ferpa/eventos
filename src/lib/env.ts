@@ -147,6 +147,9 @@ export const serverEnvSchema = z
     // M4: URL assinada de upload no Storage, e a leitura do que foi enviado.
     // Ignora a RLS: só é usada depois de sessão e papel conferidos.
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+
+    // M7: HMAC do CPF (ADR-0005). Nunca rotacionar, nunca perder (doc 08).
+    CPF_PEPPER: segredo(),
   })
   .superRefine((env, ctx) => {
     recusarEnderecoLocal(
@@ -157,6 +160,7 @@ export const serverEnvSchema = z
     )
     recusarSegredoDeDesenvolvimento('DEVICE_COOKIE_SECRET', env.DEVICE_COOKIE_SECRET, ctx)
     recusarSegredoDeDesenvolvimento('IP_HASH_SECRET', env.IP_HASH_SECRET, ctx)
+    recusarSegredoDeDesenvolvimento('CPF_PEPPER', env.CPF_PEPPER, ctx)
   })
 
 export type SiteEnv = z.infer<typeof siteEnvSchema>

@@ -96,6 +96,7 @@ describe('parseServerEnv', () => {
     DEVICE_COOKIE_SECRET: 'Zm9ybWF0by1kZS1vcGVuc3NsLXJhbmQtYmFzZTY0LTMy',
     IP_HASH_SECRET: 'b3V0cm8tc2VncmVkby1nZXJhZG8tcGVsby1vcGVuc3Ns',
     SUPABASE_SERVICE_ROLE_KEY: 'chave-de-servico',
+    CPF_PEPPER: 'cGVwcGVyLWRvLWNwZi1nZXJhZG8tcGVsby1vcGVuc3Ns',
   }
 
   it('aceita o pooler e os segredos, sem exigir o GitHub', () => {
@@ -150,6 +151,22 @@ describe('parseServerEnv', () => {
         /IP_HASH_SECRET[\s\S]*openssl rand -base64 32/,
       )
     })
+
+    it('vale para o pepper do CPF, o segredo que nunca pode ser trocado', () => {
+      vi.stubEnv('VERCEL', '1')
+
+      expect(() =>
+        parseServerEnv({
+          ...SERVIDOR_VALIDO,
+          CPF_PEPPER: 'desenvolvimento-local-pepper-do-cpf-cf-eventos-nao-usar',
+        }),
+      ).toThrowError(/CPF_PEPPER[\s\S]*openssl rand -base64 32/)
+    })
+  })
+
+  it('recusa sem o pepper do CPF, dizendo qual variável falta', () => {
+    const { CPF_PEPPER: _, ...semPepper } = SERVIDOR_VALIDO
+    expect(() => parseServerEnv(semPepper)).toThrowError(/CPF_PEPPER/)
   })
 })
 
