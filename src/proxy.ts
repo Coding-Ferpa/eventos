@@ -8,6 +8,7 @@ import {
   criarCookieDeDispositivo,
   lerCookieDeDispositivo,
 } from '@/lib/cookies/device'
+import { cookieSeguro } from '@/lib/cookies/seguro'
 import { serverEnv, supabaseEnv } from '@/lib/env'
 import { buildContentSecurityPolicy } from '@/lib/security-headers'
 
@@ -121,11 +122,10 @@ function garantirDispositivo(request: NextRequest, response: NextResponse) {
   const atual = request.cookies.get(COOKIE_DE_DISPOSITIVO)?.value
   if (lerCookieDeDispositivo(atual, segredo)) return
 
-  response.cookies.set(
-    COOKIE_DE_DISPOSITIVO,
-    criarCookieDeDispositivo(segredo),
-    OPCOES_DO_COOKIE_DE_DISPOSITIVO,
-  )
+  response.cookies.set(COOKIE_DE_DISPOSITIVO, criarCookieDeDispositivo(segredo), {
+    ...OPCOES_DO_COOKIE_DE_DISPOSITIVO,
+    secure: cookieSeguro(request.url),
+  })
 }
 
 /** Leva junto os cookies renovados: perdê-los derrubaria a sessão recém-criada. */

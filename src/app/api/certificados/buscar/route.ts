@@ -16,6 +16,7 @@ import {
   OPCOES_DO_COOKIE_DE_RETIRADA,
   selarRetirada,
 } from '@/lib/cookies/retrieval'
+import { cookieSeguro } from '@/lib/cookies/seguro'
 import { serverEnv } from '@/lib/env'
 import { formatarEspera } from '@/lib/espera'
 import { hmacCpf } from '@/lib/hmac'
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
     const { maxAge, ...opcoes } = OPCOES_DO_COOKIE_DE_RETIRADA
     resposta.headers.append(
       'Set-Cookie',
-      `${COOKIE_DE_RETIRADA}=${cookie}; Max-Age=${maxAge}; Path=${opcoes.path}; HttpOnly; Secure; SameSite=Lax`,
+      `${COOKIE_DE_RETIRADA}=${cookie}; Max-Age=${maxAge}; Path=${opcoes.path}; HttpOnly${cookieSeguro(request.url) ? '; Secure' : ''}; SameSite=Lax`,
     )
     return resposta
   })

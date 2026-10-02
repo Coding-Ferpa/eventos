@@ -56,7 +56,7 @@ const dispositivo = () =>
 
 function buscar(
   corpo: Record<string, unknown>,
-  opcoes: { ip?: string; cookie?: string; origin?: string | null } = {},
+  opcoes: { ip?: string; cookie?: string; origin?: string | null; url?: string } = {},
 ) {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
@@ -65,7 +65,7 @@ function buscar(
   if (opcoes.origin !== null) headers.origin = opcoes.origin ?? 'http://localhost:3000'
   if (opcoes.cookie !== undefined) headers.cookie = opcoes.cookie
   return POST(
-    new NextRequest('http://localhost:3000/api/certificados/buscar', {
+    new NextRequest(opcoes.url ?? 'http://localhost:3000/api/certificados/buscar', {
       method: 'POST',
       headers,
       body: JSON.stringify({ event_slug: slug, ...corpo }),
@@ -99,6 +99,20 @@ afterAll(async () => {
 })
 
 describe('E11: busca por nome', () => {
+  it('em https, como em produção, o cookie de retirada leva Secure', async () => {
+    const resposta = await buscar(
+      { method: 'name', full_name: 'MARIA EDUARDA SANTOS' },
+      {
+        cookie: dispositivo(),
+        url: 'https://eventos.codingferpa.org/api/certificados/buscar',
+      },
+    )
+    expect(resposta.status).toBe(200)
+    expect(resposta.headers.get('set-cookie')).toMatch(
+      /; HttpOnly; Secure; SameSite=Lax$/,
+    )
+  })
+
   it('"maria" não encontra; "MARIA EDUARDA SANTOS" encontra "Maria Eduarda dos Santos"', async () => {
     const parcial = await buscar(
       { method: 'name', full_name: 'maria' },
@@ -116,8 +130,10 @@ describe('E11: busca por nome', () => {
     expect(JSON.stringify(corpo)).not.toMatch(/maria|[0-9a-f]{8}-[0-9a-f]{4}/i)
 
     const cookie = resposta.headers.get('set-cookie')!
+    // Em http://localhost vai sem Secure (o WebKit não o devolveria); o
+    // teste seguinte prova que em https ele vai.
     expect(cookie).toMatch(
-      /^cf-retirada=v1\.[^;]+; Max-Age=1800; Path=\/; HttpOnly; Secure; SameSite=Lax$/,
+      /^cf-retirada=v1\.[^;]+; Max-Age=1800; Path=\/; HttpOnly; SameSite=Lax$/,
     )
     const valor = cookie.split(';')[0]!.slice('cf-retirada='.length)
     expect(
