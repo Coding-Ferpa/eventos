@@ -93,6 +93,13 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 | `createCertificateManually` (editor) | `{ event_id, participation_type_id, participant: {...} \| participant_id, hours?, data }` | mesma validação da importação, uma pessoa |
 | `revokeCertificate` / `restoreCertificate` (editor) | `{ id, reason }` | `reason` de 10 a 500 caracteres |
 | `removeCertificates` (editor antes da liberação, **admin** depois) | `{ event_id, certificate_ids[] (até 500), confirm_count }` | apaga os nunca baixados de evento não liberado; qualquer outro devolve `must_revoke` com a lista. `confirm_count` tem de ser igual ao tamanho da lista. ([ADR-0007](adr/0007-upsert-only-e-remocao-manual.md)) |
+
+Notas do M7, onde estas actions nasceram (com `revokeCertificate` e `restoreCertificate` puxadas do M8, porque a tela de remoção precisa oferecer a revogação):
+
+- A edição e a criação manual usam a validação de identidade da importação (`validateIdentity` em `features/import/validate-row.ts`), e o nome passa pela `normalize_person_name` antes de gravar: nome só de partículas volta como erro de campo, e não como violação do `check` do banco.
+- O `diff` de `participant.update` e `certificate.update` lista **os campos** que mudaram, nunca os valores: é dado pessoal, e a auditoria vive 5 anos.
+- `must_revoke` recusa a operação inteira (nada é apagado) e devolve os ids que pedem revogação em `fieldErrors.certificateIds`, que a tela marca na lista.
+- CPF já usado por outra pessoa do evento volta como `conflict`, com o erro no campo `cpf`.
 | `eraseParticipant` (admin) | `{ participant_id, confirm_name }` | eliminação LGPD ([doc 08](08-seguranca-e-lgpd.md)) |
 
 ### Fase 2 e 3

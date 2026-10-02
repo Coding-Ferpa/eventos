@@ -119,20 +119,29 @@ function encontrarTipo(valor: string, tipos: ImportType[]): ImportType | undefin
   )
 }
 
-export function validateRow(
-  rowNumber: number,
-  cells: Mapping,
-  ctx: ValidateContext,
-): StagedRow {
+export type Identity = Pick<
+  StagedRow,
+  'fullName' | 'cpfHash' | 'cpfLast3' | 'birthDate' | 'email' | 'issues'
+>
+
+/**
+ * Os quatro campos de identidade. É a mesma validação na importação, na
+ * edição manual e na criação manual de uma pessoa (doc 07), e o CPF em claro
+ * também não sai daqui.
+ */
+export function validateIdentity(
+  cells: Pick<Mapping, 'full_name' | 'cpf' | 'birth_date' | 'email'>,
+  ctx: Pick<ValidateContext, 'hashCpf' | 'today'>,
+): Identity {
   const issues: RowIssue[] = []
-  const erro = (code: RowIssueCode, detail: string, field?: string) =>
-    issues.push({ code, severity: 'error', detail, ...(field ? { field } : {}) })
-  const celula = (alvo: keyof Mapping) => (cells[alvo] ?? '').trim()
+  const erro = (code: RowIssueCode, detail: string, field: string) =>
+    issues.push({ code, severity: 'error', detail, field })
+  const celula = (alvo: keyof typeof cells) => (cells[alvo] ?? '').trim()
 
   const fullName = celula('full_name').replace(/\s+/g, ' ') || null
-  if (fullName === null) erro('NAME_REQUIRED', 'Falta o nome.')
+  if (fullName === null) erro('NAME_REQUIRED', 'Falta o nome.', 'full_name')
   else if (fullName.length > 120)
-    erro('NAME_TOO_LONG', 'O nome pode ter até 120 caracteres.')
+    erro('NAME_TOO_LONG', 'O nome pode ter até 120 caracteres.', 'full_name')
 
   let cpfHash: string | null = null
   let cpfLast3: string | null = null
@@ -144,7 +153,7 @@ export function validateRow(
       CPF_SCIENTIFIC_NOTATION:
         'O CPF chegou como número científico. Formate a coluna de CPF como texto na planilha e exporte de novo.',
     }[cpf.code]
-    erro(cpf.code, detalhe)
+    erro(cpf.code, detalhe, 'cpf')
   } else if (cpf.cpf !== null) {
     cpfHash = ctx.hashCpf(cpf.cpf)
     cpfLast3 = cpf.cpf.slice(-3)
@@ -157,9 +166,14 @@ export function validateRow(
       erro(
         'DATE_UNRECOGNIZED',
         'Data de nascimento fora dos formatos aceitos, como 12/09/1990.',
+        'birth_date',
       )
     } else if (data < '1900-01-01' || data > limiteDeNascimento(ctx.today)) {
-      erro('DATE_IMPLAUSIBLE', 'Data de nascimento improvável: confira o ano.')
+      erro(
+        'DATE_IMPLAUSIBLE',
+        'Data de nascimento improvável: confira o ano.',
+        'birth_date',
+      )
     } else {
       birthDate = data
     }
@@ -169,11 +183,27 @@ export function validateRow(
   if (celula('email') !== '') {
     const valor = celula('email').toLowerCase()
     if (valor.length > EMAIL_MAXIMO || !emailSchema.safeParse(valor).success) {
-      erro('EMAIL_INVALID', 'E-mail inválido.')
+      erro('EMAIL_INVALID', 'E-mail inválido.', 'email')
     } else {
       email = valor
     }
   }
+
+  return { fullName, cpfHash, cpfLast3, birthDate, email, issues }
+}
+
+export function validateRow(
+  rowNumber: number,
+  cells: Mapping,
+  ctx: ValidateContext,
+): StagedRow {
+  const { fullName, cpfHash, cpfLast3, birthDate, email, issues } = validateIdentity(
+    cells,
+    ctx,
+  )
+  const erro = (code: RowIssueCode, detail: string, field?: string) =>
+    issues.push({ code, severity: 'error', detail, ...(field ? { field } : {}) })
+  const celula = (alvo: keyof Mapping) => (cells[alvo] ?? '').trim()
 
   let hours: number | null = null
   if (celula('hours') !== '') {
