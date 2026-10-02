@@ -174,6 +174,10 @@ create table public.certificates (
   -- escrita (doc 05).
   data jsonb not null default '{}' check (jsonb_typeof(data) = 'object'),
   version integer not null default 1 check (version >= 1),
+  -- Quando o que o papel afirma mudou pela última vez (nome, horas ou
+  -- conteúdo): é o "dados atualizados em" da validação (doc 03). O
+  -- `updated_at` não serve, porque o download também o mexe.
+  content_updated_at timestamptz,
 
   status public.certificate_status not null default 'active',
   issued_at timestamptz,
@@ -270,6 +274,7 @@ begin
 
   if new.hours is distinct from old.hours or new.data is distinct from old.data then
     new.version := old.version + 1;
+    new.content_updated_at := now();
   end if;
 
   return new;
@@ -294,7 +299,7 @@ set search_path = ''
 as $$
 begin
   update public.certificates
-     set version = version + 1
+     set version = version + 1, content_updated_at = now()
    where participant_id = new.id
      and status = 'active';
 

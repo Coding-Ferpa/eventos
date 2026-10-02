@@ -27,7 +27,14 @@ function mensagemDeErro(entrada: string): string | null {
   }
 }
 
-export function CodeInput({ classeDaFonte }: { classeDaFonte?: string }) {
+export function CodeInput({
+  classeDaFonte,
+  valorInicial,
+}: {
+  classeDaFonte?: string
+  /** O código da tentativa anterior, para corrigir sem digitar tudo de novo. */
+  valorInicial?: string
+}) {
   const router = useRouter()
   const [erro, setErro] = useState<string | null>(null)
   const idDoCampo = useId()
@@ -58,6 +65,9 @@ export function CodeInput({ classeDaFonte }: { classeDaFonte?: string }) {
           aria-describedby={erro ? `${idDaAjuda} ${idDoErro}` : idDaAjuda}
           aria-invalid={erro ? true : undefined}
           autoCapitalize="characters"
+          defaultValue={
+            valorInicial ? formatCode(canonicalizeCode(valorInicial)) : undefined
+          }
           autoComplete="off"
           // Junção simples, sem `cn`: o `tailwind-merge` custaria 9 KB no
           // navegador, e estas classes não conflitam entre si.

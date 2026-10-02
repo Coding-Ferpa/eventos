@@ -68,6 +68,7 @@ export const certificates = pgTable('certificates', {
 
   data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
   version: integer('version').notNull().default(1),
+  contentUpdatedAt: timestamp('content_updated_at', { withTimezone: true }),
 
   status: certificateStatus('status').notNull().default('active'),
   issuedAt: timestamp('issued_at', { withTimezone: true }),

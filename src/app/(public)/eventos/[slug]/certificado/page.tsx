@@ -1,17 +1,21 @@
-import { CircleAlert, Download } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { BaixarPdf } from '@/components/certificado/baixar-pdf'
 import { CodigoDeValidacao } from '@/components/certificado/codigo-de-validacao'
+import { CopiarCodigo } from '@/components/certificado/copiar-codigo'
+import { FocoNoTitulo } from '@/components/certificado/foco-no-titulo'
 import { PedidoDeCorrecao } from '@/components/certificado/pedido-de-correcao'
+import { PreviaComVerso } from '@/components/certificado/previa-com-verso'
 import {
   getRetrieval,
   type CertificadoNaRetirada,
   type EventoNaRetirada,
 } from '@/db/queries/public-lookup'
-import { formatCpfMasked, formatHours } from '@/features/certificate/format'
+import { formatHours } from '@/features/certificate/format'
 import { renderCertificateSvg } from '@/features/certificate/preview'
 import { semBanco } from '@/lib/ambiente'
 import { certificateAssets } from '@/lib/certificate-assets'
@@ -19,15 +23,15 @@ import { abrirRetirada, COOKIE_DE_RETIRADA } from '@/lib/cookies/retrieval'
 import { serverEnv, siteEnv, supabaseEnv } from '@/lib/env'
 
 /**
- * A tela de retirada (docs 07 e 09): dinâmica e fora de busca, porque mostra
- * dado de pessoa. Quem autoriza é o cookie cifrado da busca; sem ele, a pessoa
- * volta ao evento com o aviso de sessão expirada.
+ * A tela de retirada (docs 03, 6c, 07 e 09): dinâmica e fora de busca, porque
+ * mostra dado de pessoa. Quem autoriza é o cookie cifrado da busca; sem ele,
+ * a pessoa volta ao evento com o aviso de sessão expirada.
  */
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Seus certificados',
+  title: 'Seu certificado',
   robots: { index: false, follow: false },
 }
 
@@ -36,35 +40,39 @@ type Props = {
   searchParams: Promise<{ erro?: string }>
 }
 
-async function previa(
+async function previas(
   certificado: CertificadoNaRetirada,
-  nome: string,
-  cpfLast3: string | null,
+  pessoa: { fullName: string; cpfLast3: string | null },
   evento: EventoNaRetirada,
 ) {
-  if (!certificado.snapshot) return null
-  const { fonts } = await certificateAssets.fonts(certificado.snapshot)
-  const fundo = certificado.snapshot.pages[0]?.preview_path
+  const snapshot = certificado.snapshot
+  if (!snapshot) return []
+  const { fonts } = await certificateAssets.fonts(snapshot)
   const storage = `${supabaseEnv().NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/previews`
-  return renderCertificateSvg({
-    snapshot: certificado.snapshot,
-    context: {
-      siteUrl: siteEnv().NEXT_PUBLIC_SITE_URL,
-      participant: { fullName: nome, cpfLast3 },
-      event: evento,
-      participation: { label: certificado.typeLabel },
-      certificate: {
-        hours: certificado.hours,
-        code: certificado.code,
-        issuedAt: certificado.issuedAt,
-        sequence: certificado.sequence,
-        data: certificado.data,
-      },
+  const contexto = {
+    siteUrl: siteEnv().NEXT_PUBLIC_SITE_URL,
+    participant: pessoa,
+    event: evento,
+    participation: { label: certificado.typeLabel },
+    certificate: {
+      hours: certificado.hours,
+      code: certificado.code,
+      issuedAt: certificado.issuedAt,
+      sequence: certificado.sequence,
+      data: certificado.data,
     },
-    fonts,
-    page: 1,
-    backgroundUrl: fundo ? `${storage}/${fundo}` : null,
-  }).svg
+  }
+  return snapshot.pages.map(
+    (pagina, i) =>
+      renderCertificateSvg({
+        snapshot,
+        context: contexto,
+        fonts,
+        page: i + 1,
+        backgroundUrl: pagina.preview_path ? `${storage}/${pagina.preview_path}` : null,
+        label: `${i === 0 ? 'Prévia' : 'Verso'} do certificado de ${pessoa.fullName}, ${certificado.typeLabel}, no evento ${evento.title}`,
+      }).svg,
+  )
 }
 
 export default async function RetiradaPage({ params, searchParams }: Props) {
@@ -78,23 +86,41 @@ export default async function RetiradaPage({ params, searchParams }: Props) {
   )
   if (!retirada) redirect(voltar)
   const dados = await getRetrieval(slug, retirada.pids)
-  if (!dados || dados.people.length === 0) redirect(voltar)
+  const pessoa = dados?.people[0]
+  if (!dados || !pessoa) redirect(voltar)
 
-  const { event: evento, people } = dados
+  const { event: evento } = dados
   const falhouAGeracao = (await searchParams).erro === 'geracao'
   // Quem chegou pelo nome não ganha 3 dígitos do CPF de ninguém (doc 08).
   const mostraCpf = retirada.src === 'search_cpf' || retirada.src === 'mine'
   const contato = evento.contactEmail ?? evento.contactUrl ?? 'a organização do evento'
+  // Ativos primeiro, pela carga horária maior (doc 03, 6c); revogados no fim.
+  const cartoes = [...pessoa.certificates].sort(
+    (a, b) =>
+      Number(b.status === 'active') - Number(a.status === 'active') || b.hours - a.hours,
+  )
+  const primeiroAtivo = cartoes.find((c) => c.status === 'active')
+  const comPrevia = await Promise.all(
+    cartoes.map(async (c) => ({
+      ...c,
+      paginas: c.status === 'active' ? await previas(c, pessoa, evento) : [],
+    })),
+  )
 
   return (
-    <article className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10">
+    <article className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <Link
         className="text-caption text-muted-foreground hover:text-foreground inline-flex min-h-11 w-fit items-center"
         href={`/eventos/${slug}`}
       >
         {evento.title}
       </Link>
-      <h1 className="text-h2 font-bold">Seus certificados</h1>
+      <FocoNoTitulo>
+        {cartoes.length === 1
+          ? 'Encontramos seu certificado'
+          : `Encontramos ${cartoes.length} certificados seus neste evento`}
+      </FocoNoTitulo>
+      <p className="text-h3 sm:text-h2 font-semibold">{pessoa.fullName}</p>
 
       {falhouAGeracao ? (
         <p
@@ -107,81 +133,66 @@ export default async function RetiradaPage({ params, searchParams }: Props) {
         </p>
       ) : null}
 
-      {await Promise.all(
-        people.map(async (pessoa) => (
-          <section
-            aria-label={pessoa.fullName}
-            className="flex flex-col gap-6"
-            key={pessoa.fullName}
+      <ul className="flex flex-col gap-4">
+        {comPrevia.map((certificado) => (
+          <li
+            className="bg-card border-border grid gap-5 rounded-md border p-5 lg:grid-cols-12"
+            key={certificado.code}
           >
-            {mostraCpf && pessoa.cpfLast3 ? (
-              <p className="text-caption text-muted-foreground">
-                CPF {formatCpfMasked(pessoa.cpfLast3)}
-              </p>
+            {certificado.paginas.length > 0 ? (
+              <div className="lg:col-span-7">
+                <PreviaComVerso paginas={certificado.paginas} />
+              </div>
             ) : null}
-            {await Promise.all(
-              pessoa.certificates.map(async (certificado) => {
-                const svg =
-                  certificado.status === 'active'
-                    ? await previa(certificado, pessoa.fullName, pessoa.cpfLast3, evento)
-                    : null
-                return (
-                  <div
-                    className="bg-card border-border flex flex-col gap-4 rounded-md border p-5"
-                    key={certificado.code}
-                  >
-                    {svg ? (
-                      <div
-                        className="overflow-hidden rounded-sm border"
-                        // O SVG sai do nosso desenhista, com o texto em contornos de
-                        // glifo e os atributos escapados.
-                        dangerouslySetInnerHTML={{ __html: svg }}
-                      />
-                    ) : null}
-                    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                      <dt className="text-muted-foreground">Nome</dt>
-                      <dd className="font-medium">{pessoa.fullName}</dd>
-                      <dt className="text-muted-foreground">Participação</dt>
-                      <dd>{certificado.typeLabel}</dd>
-                      <dt className="text-muted-foreground">Carga horária</dt>
-                      <dd>{formatHours(certificado.hours, 'long')}</dd>
-                      <dt className="text-muted-foreground">Código</dt>
-                      <dd>
-                        <CodigoDeValidacao code={certificado.code} />
-                      </dd>
-                    </dl>
-                    {certificado.status === 'active' ? (
-                      <div className="flex flex-col gap-3">
-                        {/* Link comum, sem `download`: o Content-Disposition baixa no
-                            sucesso, e a falha navega para esta tela com o aviso. */}
-                        <a
-                          className="bg-primary-solid text-primary-foreground inline-flex min-h-12 w-fit items-center gap-2 rounded-full px-6 font-semibold"
-                          href={`/api/certificados/${certificado.code}/pdf`}
-                        >
-                          <Download aria-hidden="true" className="size-4" />
-                          Baixar o PDF
-                        </a>
-                        <PedidoDeCorrecao
-                          code={certificado.code}
-                          nomeAtual={pessoa.fullName}
-                        />
-                      </div>
-                    ) : (
-                      <p
-                        className="border-warning rounded-md border px-4 py-3"
-                        role="status"
-                      >
-                        Este certificado foi revogado pela organização e não pode mais ser
-                        baixado. Se achar que é engano, escreva para {contato}.
-                      </p>
-                    )}
-                  </div>
-                )
-              }),
-            )}
-          </section>
-        )),
-      )}
+            <div
+              className={
+                certificado.paginas.length > 0
+                  ? 'flex flex-col gap-4 lg:col-span-5'
+                  : 'flex flex-col gap-4 lg:col-span-12'
+              }
+            >
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+                <dt className="text-muted-foreground">Evento</dt>
+                <dd>{evento.title}</dd>
+                <dt className="text-muted-foreground">Participação</dt>
+                <dd>{certificado.typeLabel}</dd>
+                <dt className="text-muted-foreground">Carga horária</dt>
+                <dd>{formatHours(certificado.hours, 'long')}</dd>
+                <dt className="text-muted-foreground">Código de validação</dt>
+                <dd className="flex flex-col items-start">
+                  <CodigoDeValidacao code={certificado.code} />
+                  <CopiarCodigo code={certificado.code} />
+                </dd>
+                {mostraCpf && pessoa.cpfLast3 ? (
+                  <>
+                    <dt className="text-muted-foreground">CPF</dt>
+                    <dd>terminado em {pessoa.cpfLast3}</dd>
+                  </>
+                ) : null}
+              </dl>
+              {certificado.status === 'active' ? (
+                <BaixarPdf
+                  code={certificado.code}
+                  destaque={certificado.code === primeiroAtivo?.code}
+                />
+              ) : (
+                <p className="border-warning rounded-md border px-4 py-3" role="status">
+                  Este certificado foi revogado pela organização e não pode mais ser
+                  baixado. Se achar que é engano, escreva para {contato}.
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {primeiroAtivo ? (
+        <PedidoDeCorrecao
+          code={primeiroAtivo.code}
+          nomeAtual={pessoa.fullName}
+          pendente={pessoa.correctionPending}
+        />
+      ) : null}
     </article>
   )
 }

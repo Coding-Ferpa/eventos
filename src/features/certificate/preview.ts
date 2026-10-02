@@ -16,6 +16,8 @@ export type CertificateSvgInput = {
   /** 1 é a frente, 2 é o verso. */
   page: number
   backgroundUrl: string | null
+  /** O `aria-label` do SVG; sem ele, "Prévia do certificado de {nome}". */
+  label?: string
 }
 
 export function renderCertificateSvg(entrada: CertificateSvgInput): {
@@ -32,9 +34,10 @@ export function renderCertificateSvg(entrada: CertificateSvgInput): {
     svg: drawSvg(pagina, entrada.fonts, {
       backgroundUrl: entrada.backgroundUrl,
       label:
-        entrada.page === 1
+        entrada.label ??
+        (entrada.page === 1
           ? `Prévia do certificado de ${nome}`
-          : `Verso do certificado de ${nome}`,
+          : `Verso do certificado de ${nome}`),
     }),
     warnings: plano.warnings,
   }

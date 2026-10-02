@@ -12,6 +12,7 @@ import {
   participants,
   participationTypes,
   searchAttempts,
+  validationChecks,
 } from '@/db/schema'
 import type { DataValue } from '@/features/certificate/data-schema'
 import {
@@ -163,6 +164,8 @@ export type CertificadoNaRetirada = {
 export type PessoaNaRetirada = {
   fullName: string
   cpfLast3: string | null
+  /** Pedido de correção em análise para algum certificado da pessoa (doc 03, 6c). */
+  correctionPending: boolean
   certificates: CertificadoNaRetirada[]
 }
 
@@ -218,6 +221,9 @@ export async function getRetrieval(
       typeLabel: participationTypes.label,
       ordem: participationTypes.sortOrder,
       snapshot: certificateTemplates.publishedSnapshot,
+      pendente: sql<boolean>`exists (
+        select 1 from public.name_correction_requests r
+         where r.certificate_id = ${certificates.id} and r.status = 'pending')`,
     })
     .from(participants)
     .innerJoin(certificates, eq(certificates.participantId, participants.id))
@@ -243,8 +249,10 @@ export async function getRetrieval(
     const pessoa = porPessoa.get(linha.pid) ?? {
       fullName: linha.fullName,
       cpfLast3: linha.cpfLast3,
+      correctionPending: false,
       certificates: [],
     }
+    pessoa.correctionPending ||= linha.pendente
     pessoa.certificates.push({
       code: linha.code,
       status: linha.status as 'active' | 'revoked',
@@ -488,4 +496,94 @@ export async function recordPdfFailure(code: string): Promise<void> {
     insert into public.event_stats_daily (event_id, day, pdf_failures)
     values (${alvo.eventId}, (now() at time zone 'America/Sao_Paulo')::date, 1)
     on conflict (event_id, day) do update set pdf_failures = public.event_stats_daily.pdf_failures + 1`)
+}
+
+// --- Validação ----------------------------------------------------------------
+
+type DadosDaValidacao = {
+  fullName: string
+  eventTitle: string
+  eventSlug: string
+  typeLabel: string
+  hours: number
+  eventStartsAt: Date
+  eventEndsAt: Date | null
+  issuedAt: Date
+}
+
+export type ValidacaoPublica =
+  | ({ outcome: 'valid'; contentUpdatedAt: Date | null } & DadosDaValidacao)
+  | ({ outcome: 'revoked'; revokedAt: Date } & DadosDaValidacao)
+  | { outcome: 'erased' }
+  | { outcome: 'not_found' }
+
+/**
+ * `/validar/{codigo}` (doc 07): o estado do certificado e o que a página pode
+ * mostrar dele, e o registro da consulta em `validation_checks`. Certificado
+ * ainda não emitido (evento não liberado) responde como inexistente: o código
+ * não é público antes da liberação. Do apagado a pedido, nem o nome sai.
+ */
+export async function validateCertificate(
+  code: string,
+  ipHash: string,
+): Promise<ValidacaoPublica> {
+  const [linha] = await db()
+    .select({
+      certificateId: certificates.id,
+      status: certificates.status,
+      version: certificates.version,
+      contentUpdatedAt: certificates.contentUpdatedAt,
+      issuedAt: certificates.issuedAt,
+      revokedAt: certificates.revokedAt,
+      hours: certificates.hours,
+      fullName: participants.fullName,
+      typeLabel: participationTypes.label,
+      eventTitle: events.title,
+      eventSlug: events.slug,
+      eventStartsAt: events.startsAt,
+      eventEndsAt: events.endsAt,
+    })
+    .from(certificates)
+    .innerJoin(events, eq(events.id, certificates.eventId))
+    .innerJoin(
+      participationTypes,
+      eq(participationTypes.id, certificates.participationTypeId),
+    )
+    .leftJoin(participants, eq(participants.id, certificates.participantId))
+    .where(eq(certificates.code, code))
+
+  const resultado: ValidacaoPublica =
+    !linha || (linha.status !== 'erased' && linha.issuedAt === null)
+      ? { outcome: 'not_found' }
+      : linha.status === 'erased'
+        ? { outcome: 'erased' }
+        : (() => {
+            const dados: DadosDaValidacao = {
+              fullName: linha.fullName!,
+              eventTitle: linha.eventTitle,
+              eventSlug: linha.eventSlug,
+              typeLabel: linha.typeLabel,
+              hours: Number(linha.hours),
+              eventStartsAt: linha.eventStartsAt,
+              eventEndsAt: linha.eventEndsAt,
+              issuedAt: linha.issuedAt!,
+            }
+            return linha.status === 'revoked'
+              ? { outcome: 'revoked' as const, revokedAt: linha.revokedAt!, ...dados }
+              : {
+                  outcome: 'valid' as const,
+                  contentUpdatedAt: linha.version > 1 ? linha.contentUpdatedAt : null,
+                  ...dados,
+                }
+          })()
+
+  await db()
+    .insert(validationChecks)
+    .values({
+      certificateId:
+        resultado.outcome === 'not_found' ? null : (linha?.certificateId ?? null),
+      outcome: resultado.outcome,
+      ipHash,
+    })
+  return resultado
 }

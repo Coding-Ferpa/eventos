@@ -5,7 +5,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(40);
 
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
@@ -152,9 +152,16 @@ select is((select version from public.certificates where id = 'c0000000-0000-400
 update public.certificates set hours = 3 where id = 'c0000000-0000-4000-8000-000000000002';
 select is((select version from public.certificates where id = 'c0000000-0000-4000-8000-000000000002'),
   3, 'mudar a carga horária sobe a versão');
+select isnt((select content_updated_at from public.certificates where id = 'c0000000-0000-4000-8000-000000000002'),
+  null, 'subir a versão marca quando o conteúdo mudou ("dados atualizados em", doc 03)');
+-- Uma data antiga conhecida, para ver que o download não a troca.
+update public.certificates set content_updated_at = '2026-01-01T00:00:00Z'
+ where id = 'c0000000-0000-4000-8000-000000000002';
 update public.certificates set download_count = 5 where id = 'c0000000-0000-4000-8000-000000000002';
 select is((select version from public.certificates where id = 'c0000000-0000-4000-8000-000000000002'),
   3, 'registrar download não mexe na versão');
+select is((select content_updated_at from public.certificates where id = 'c0000000-0000-4000-8000-000000000002'),
+  '2026-01-01T00:00:00Z'::timestamptz, 'nem na data do conteúdo, que o updated_at não serviria para dizer');
 
 create temporary table codigo_antes on commit drop as
   select code from public.certificates where id = 'c0000000-0000-4000-8000-000000000001';
@@ -164,6 +171,8 @@ select is(
   (select array_agg(version order by sequence_number) from public.certificates
     where participant_id = '90000000-0000-4000-8000-000000000001'),
   array[2, 4], 'corrigir o nome sobe a versão de todos os certificados da pessoa');
+select isnt((select content_updated_at from public.certificates where id = 'c0000000-0000-4000-8000-000000000001'),
+  null, 'e marca a data do conteúdo deles');
 select is(
   (select code from public.certificates where id = 'c0000000-0000-4000-8000-000000000001'),
   (select code from codigo_antes), 'e o código continua o mesmo (armadilha 8)');
