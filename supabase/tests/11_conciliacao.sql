@@ -5,7 +5,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(38);
 
 insert into public.events (id, slug, title, starts_at) values
   ('e0000000-0000-4000-8000-0000000000c1', 'conciliacao', 'Conciliação', now());
@@ -236,6 +236,27 @@ select is((select row(action, matched_participant_id, match_rule)::text from pub
   'linha que só casa com outra linha herda o participante dela, e atualiza o e-mail');
 select is((:'resumo_3'::jsonb)->>'new_people', '1', 'uma pessoa nova, dois certificados');
 select is((:'resumo_3'::jsonb)->>'absent', '0', 'ausentes só contam no modo tipo único');
+
+-- ---------------------------------------------------------------------------
+-- Desempenho, medido no M7
+-- ---------------------------------------------------------------------------
+
+-- 5.000 linhas recém-inseridas, com a estatística de import_rows ainda da
+-- época em que a tabela tinha poucas linhas: sem o ANALYZE do começo da
+-- função, o plano ficou quadrático, passou de 36 s e esgotou a memória da VM.
+-- O limite de tempo derruba o teste antes disso.
+insert into public.import_batches (id, event_id, participation_type_id) values
+  ('b0000000-0000-4000-8000-0000000000c9', 'e0000000-0000-4000-8000-0000000000c1',
+   '70000000-0000-4000-8000-0000000000c1');
+insert into public.import_rows (batch_id, row_number, participation_type_id, full_name, cpf_hash, cpf_last3)
+select 'b0000000-0000-4000-8000-0000000000c9', n + 1, '70000000-0000-4000-8000-0000000000c1',
+       'Participante Numero ' || n || ' Teste', encode(sha256(n::text::bytea), 'hex'), '123'
+  from generate_series(1, 5000) n;
+set local statement_timeout = '20s';
+select lives_ok(
+  $$ select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c9') $$,
+  '5.000 linhas recém-inseridas: o diff termina dentro do limite');
+reset statement_timeout;
 
 select ok(
   not has_function_privilege('anon', 'public.compute_import_diff(uuid)', 'execute')

@@ -192,6 +192,12 @@ begin
     raise exception 'Lote % não encontrado.', p_batch using errcode = 'P0002';
   end if;
 
+  -- As linhas acabaram de entrar, na mesma transação, e o planejador não sabe
+  -- quantas são. Medido com 5.000 linhas: sem estatística, só a cascata do
+  -- passo 2 passou de 36 s, num plano quadrático; com ela, o diff inteiro
+  -- levou 0,6 s. O ANALYZE enxerga as linhas da própria transação.
+  analyze public.import_rows;
+
   update public.import_rows
      set action = null, matched_participant_id = null, matched_certificate_id = null,
          match_rule = null, person_row = row_number, computed_issues = '[]'
