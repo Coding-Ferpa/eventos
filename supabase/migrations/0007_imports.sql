@@ -480,6 +480,145 @@ revoke execute on function public.import_same_person(text, text, date, text, tex
   from anon, authenticated, public;
 revoke execute on function public.compute_import_diff(uuid) from anon, authenticated, public;
 
+-- Aplica o lote numa transação só (doc 06). Recalcula o diff com o estado
+-- atual e só escreve se o plano for o mesmo que o admin viu. Qualquer erro
+-- no meio desfaz tudo o que a aplicação escreveu, e o lote fica `failed`:
+-- "erro na linha 400 de 500 não deixa o banco pela metade" é propriedade do
+-- desenho, e não disciplina de código.
+create function public.apply_import(p_batch uuid, p_expected_digest text, p_actor uuid)
+returns jsonb
+language plpgsql
+set search_path = ''
+as $$
+declare
+  lote public.import_batches%rowtype;
+  liberado boolean;
+  resumo jsonb;
+  digest text;
+begin
+  select * into lote from public.import_batches where id = p_batch;
+  if not found then
+    raise exception 'Lote % não encontrado.', p_batch using errcode = 'P0002';
+  end if;
+
+  -- Duas importações do mesmo evento nunca correm juntas. A segunda espera
+  -- aqui e, quando entra, recalcula contra o que a primeira escreveu.
+  perform pg_advisory_xact_lock(hashtext('import:' || lote.event_id::text));
+
+  select * into lote from public.import_batches where id = p_batch for update;
+  if lote.status <> 'staged' then
+    return jsonb_build_object('status', 'not_staged', 'batch_status', lote.status);
+  end if;
+
+  resumo := public.compute_import_diff(p_batch);
+  select preview_digest into digest from public.import_batches where id = p_batch;
+  if digest is distinct from p_expected_digest then
+    return jsonb_build_object('status', 'preview_stale', 'summary', resumo, 'digest', digest);
+  end if;
+  if (resumo->>'needs_decision')::integer > 0 then
+    return jsonb_build_object('status', 'decisions_pending', 'summary', resumo, 'digest', digest);
+  end if;
+
+  select certificates_released_at is not null into liberado
+    from public.events where id = lote.event_id;
+
+  begin
+    -- 1. Pessoas novas: uma por grupo, com o primeiro valor de cada campo.
+    update public.import_rows r
+       set matched_participant_id = g.novo
+      from (
+        select person_row, gen_random_uuid() as novo
+          from public.import_rows
+         where batch_id = p_batch and action = 'create' and matched_participant_id is null
+         group by person_row
+      ) g
+     where r.batch_id = p_batch and r.action = 'create'
+       and r.matched_participant_id is null and r.person_row = g.person_row;
+
+    insert into public.participants
+      (id, event_id, full_name, cpf_hash, cpf_last3, birth_date, email, created_by_batch_id)
+    select r.matched_participant_id, lote.event_id,
+           (array_agg(r.full_name order by r.row_number))[1],
+           (array_agg(r.cpf_hash order by r.row_number) filter (where r.cpf_hash is not null))[1],
+           (array_agg(r.cpf_last3 order by r.row_number) filter (where r.cpf_hash is not null))[1],
+           (array_agg(r.birth_date order by r.row_number) filter (where r.birth_date is not null))[1],
+           (array_agg(r.email order by r.row_number) filter (where r.email is not null))[1],
+           p_batch
+      from public.import_rows r
+     where r.batch_id = p_batch and r.action = 'create'
+       and not exists (select 1 from public.participants p where p.id = r.matched_participant_id)
+     group by r.matched_participant_id;
+
+    -- 2. Quem já existia: muda só o que veio preenchido, e o CPF só entra
+    -- onde não havia (se os dois tivessem, e diferentes, nem teriam casado).
+    update public.participants p
+       set full_name = a.full_name,
+           cpf_hash = coalesce(p.cpf_hash, a.cpf_hash),
+           cpf_last3 = case when p.cpf_hash is null then a.cpf_last3 else p.cpf_last3 end,
+           birth_date = coalesce(a.birth_date, p.birth_date),
+           email = coalesce(a.email, p.email)
+      from (
+        select r.matched_participant_id as id,
+               (array_agg(r.full_name order by r.row_number))[1] as full_name,
+               (array_agg(r.cpf_hash order by r.row_number) filter (where r.cpf_hash is not null))[1] as cpf_hash,
+               (array_agg(r.cpf_last3 order by r.row_number) filter (where r.cpf_hash is not null))[1] as cpf_last3,
+               (array_agg(r.birth_date order by r.row_number) filter (where r.birth_date is not null))[1] as birth_date,
+               (array_agg(r.email order by r.row_number) filter (where r.email is not null))[1] as email
+          from public.import_rows r
+         where r.batch_id = p_batch and r.action in ('create', 'update')
+         group by r.matched_participant_id
+      ) a
+     where p.id = a.id
+       and p.created_by_batch_id is distinct from p_batch
+       and (p.full_name is distinct from a.full_name
+         or (p.cpf_hash is null and a.cpf_hash is not null)
+         or (a.birth_date is not null and a.birth_date is distinct from p.birth_date)
+         or (a.email is not null and a.email is distinct from p.email));
+
+    -- 3. Certificados novos, na ordem do arquivo: a numeração segue a
+    -- planilha. Sem horas, o trigger usa a do tipo; o padrão do modelo só
+    -- entra aqui.
+    insert into public.certificates
+      (event_id, participant_id, participation_type_id, hours, data, created_by_batch_id, issued_at)
+    select lote.event_id, r.matched_participant_id, r.participation_type_id, r.hours,
+           r.data_defaults || r.data, p_batch, case when liberado then now() end
+      from public.import_rows r
+     where r.batch_id = p_batch and r.action = 'create'
+     order by r.row_number;
+
+    -- 4. Certificados que já existiam: só o que veio preenchido. O trigger
+    -- sobe a versão quando horas ou conteúdo mudam.
+    update public.certificates c
+       set hours = coalesce(r.hours, c.hours),
+           data = c.data || r.data
+      from public.import_rows r
+     where r.batch_id = p_batch and r.action = 'update'
+       and c.id = r.matched_certificate_id
+       and ((r.hours is not null and r.hours is distinct from c.hours)
+         or exists (select 1 from jsonb_each(r.data) d where c.data -> d.key is distinct from d.value));
+
+    update public.import_batches
+       set status = 'applied', applied_at = now(), summary = resumo
+     where id = p_batch;
+
+    -- Contadores, sem linhas e sem nomes (doc 07).
+    insert into public.audit_logs (actor_id, action, entity, entity_id, diff)
+    values (p_actor, 'import.apply', 'import_batches', p_batch, resumo);
+  exception when others then
+    -- O bloco já foi desfeito inteiro. Fica só o registro da falha, sem o
+    -- detalhe do erro, que pode citar valores da linha.
+    update public.import_batches
+       set status = 'failed', error_message = left(sqlerrm, 500)
+     where id = p_batch;
+    return jsonb_build_object('status', 'failed', 'summary', resumo, 'error', sqlstate);
+  end;
+
+  return jsonb_build_object('status', 'applied', 'summary', resumo);
+end;
+$$;
+
+revoke execute on function public.apply_import(uuid, text, uuid) from anon, authenticated, public;
+
 -- ---------------------------------------------------------------------------
 -- Poda do staging (agendada em 0013)
 -- ---------------------------------------------------------------------------

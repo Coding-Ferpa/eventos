@@ -101,7 +101,9 @@ Entrada: `batch_id` e o `preview_digest` que a tela recebeu. Tudo dentro de `app
 5. Aplica: insere participantes novos; atualiza os existentes; insere certificados (`code` por `generate_certificate_code()`, `sequence_number` contínuo por evento, `issued_at = now()` se o evento já estiver liberado); atualiza certificados (o trigger incrementa `version`). Linhas `error` e `skipped` são ignoradas.
 6. Marca o lote `applied`, grava os contadores finais e o `audit_logs` (`import.apply`, com contadores, **sem linhas e sem nomes**).
 
-Qualquer exceção dentro da função desfaz tudo. É assim que "erro na linha 400 de 500 não deixa o banco pela metade" deixa de ser uma promessa e vira propriedade do desenho. Depois do commit: `updateTag('event:{slug}')`.
+A função devolve `{ status, summary }`, com `status` em `applied`, `preview_stale` (com o digest novo), `decisions_pending`, `not_staged` (o lote já foi aplicado, descartado ou expirou; é o que a segunda aplicação do **mesmo** lote recebe depois de esperar o lock) e `failed`.
+
+Qualquer exceção dentro da função desfaz tudo. Implementado com um bloco `begin ... exception` em volta da escrita: o que o bloco escreveu volta, e fica só o lote marcado `failed`, com a mensagem do erro (sem o detalhe, que pode citar valores da linha). Tabela de casos em `supabase/tests/12_aplicacao.sql`, inclusive a colisão de código no meio do lote. É assim que "erro na linha 400 de 500 não deixa o banco pela metade" deixa de ser uma promessa e vira propriedade do desenho. Depois do commit: `updateTag('event:{slug}')`.
 
 Regras de escrita:
 
