@@ -107,6 +107,7 @@ Regras de escrita:
 
 - **Célula vazia nunca apaga valor existente.** Vazio significa "sem informação". Para apagar um dado, edita-se o participante.
 - **Coluna não mapeada não é comparada nem tocada.**
+- O `default` de um `data_field` só preenche certificado **novo**. Na atualização, campo vazio ou sem coluna fica como está.
 - Mudança de `full_name` incrementa `version` de todos os certificados ativos da pessoa. O código não muda.
 - Certificado `revoked` ou `erased` nunca é atualizado nem recriado pela importação: a linha vira `skipped` com o aviso `CERTIFICATE_REVOKED`.
 
@@ -162,7 +163,11 @@ Normalizações de entrada:
 | `CERTIFICATE_REVOKED` | aviso | ver regras de escrita |
 | `LAYOUT_BELOW_MIN_SIZE` | aviso | o nome, no modelo do tipo, cai abaixo de `min_size_pt` (o `layout()` do doc 05 roda na prévia só para medir) |
 
-`DUPLICATE_IN_FILE`, `HOMONYM_IN_EVENT` e `POSSIBLE_DUPLICATE` são calculados em SQL, porque dependem do nome normalizado pelo banco.
+`DUPLICATE_IN_FILE`, `HOMONYM_IN_EVENT`, `POSSIBLE_DUPLICATE`, `NAME_TOO_SHORT` e `NAME_SINGLE_WORD` são calculados em SQL, porque dependem do nome normalizado pelo banco. Os dois últimos foram para lá na implementação: "de da do" tem 8 caracteres e normaliza para vazio, e uma aproximação em TypeScript deixaria passar uma linha que o `check` de `participants` recusa, derrubando a aplicação inteira por ela.
+
+`NO_SEARCHABLE_KEY` só é avaliado em linha sem erro (a linha com erro já fica de fora). Em `any`, basta uma chave habilitada presente; em `all`, todas. O nome só conta como chave quando `search_birth_date` está desligado ou a linha tem data de nascimento ([ADR-0009](adr/0009-data-de-nascimento-nunca-e-chave.md)). CPF inválido não conta como presente.
+
+O `default` de um `data_field` não entra no valor da linha: a validação devolve `data` (só o que veio preenchido) e `data_defaults` (o padrão dos campos vazios ou sem coluna), e o staging guarda os dois. Medido no M5: o motor imprime vazio para chave ausente, então o padrão precisa estar gravado no certificado novo. Mas, na atualização, gravá-lo violaria as duas primeiras regras de escrita (acima).
 
 ## Conciliação e idempotência (`compute_import_diff`)
 

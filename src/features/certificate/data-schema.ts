@@ -127,10 +127,18 @@ export function buildDataSchema(dataFields: DataField[]) {
       .unknown()
       .transform((bruto, ctx) => normalizar(campo, bruto, ctx))
   }
+  // Chave ausente vale como célula vazia. Sem isto, o Zod 4 não roda a
+  // transformação de chave ausente e devolve `nonoptional` no lugar do padrão.
+  const comTodasAsChaves = (entrada: unknown) => {
+    if (typeof entrada !== 'object' || entrada === null) return entrada
+    const completa: Record<string, unknown> = { ...entrada }
+    for (const campo of dataFields) completa[campo.key] ??= ''
+    return completa
+  }
   // Chave que o modelo não declara não entra: é assim que um CPF numa coluna
   // não mapeada fica fora de `certificates.data`.
   return z
-    .object(forma)
+    .preprocess(comTodasAsChaves, z.object(forma))
     .transform((dados) =>
       Object.fromEntries(
         Object.entries(dados).filter(([, valor]) => valor !== undefined),

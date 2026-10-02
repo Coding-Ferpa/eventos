@@ -67,6 +67,15 @@ describe('buildDataSchema', () => {
     expect(codigos([TITULO], {})).toEqual(['FIELD_REQUIRED'])
   })
 
+  it('chave ausente vale como célula vazia, inclusive para o padrão', () => {
+    // Medido no Zod 4: sem isto, a chave ausente de um campo com padrão
+    // falhava com `nonoptional`, um erro sem código do doc 06.
+    const obrigatorioComPadrao = { ...TURMA, required: true }
+    expect(buildDataSchema([obrigatorioComPadrao]).parse({})).toEqual({ turma: 'Geral' })
+    expect(buildDataSchema([TURMA, NOTA]).parse({})).toEqual({ turma: 'Geral' })
+    expect(codigos([TITULO, obrigatorioComPadrao], {})).toEqual(['FIELD_REQUIRED'])
+  })
+
   it('vazio usa o padrão do modelo; sem padrão e opcional, fica de fora', () => {
     expect(buildDataSchema([TURMA, NOTA]).parse({ turma: '', nota: '' })).toEqual({
       turma: 'Geral',
