@@ -459,7 +459,8 @@ begin
              select coalesce(jsonb_object_agg(codigo, n), '{}') from (
                select p->>'code' as codigo, count(*) as n
                  from public.import_rows, jsonb_array_elements(issues || computed_issues) p
-                where batch_id = p_batch and p->>'severity' = 'warning'
+                -- Aviso em linha com erro não conta: ela nem vai para o banco.
+                where batch_id = p_batch and p->>'severity' = 'warning' and action <> 'error'
                 group by 1) avisos))
     into resumo
     from public.import_rows

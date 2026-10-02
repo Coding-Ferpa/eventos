@@ -281,7 +281,9 @@ export function validateRow(
       search.mode === 'all'
         ? chaves.every(([, presente]) => presente)
         : chaves.some(([, presente]) => presente)
-    if (!encontravel) {
+    // Evento sem chave nenhuma ainda: avisar em toda linha seria ruído, e a
+    // liberação já recusa evento sem busca (doc 04).
+    if (chaves.length > 0 && !encontravel) {
       issues.push({
         code: 'NO_SEARCHABLE_KEY',
         severity: 'warning',

@@ -5,7 +5,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(39);
 
 insert into public.events (id, slug, title, starts_at) values
   ('e0000000-0000-4000-8000-0000000000c1', 'conciliacao', 'Conciliação', now());
@@ -89,7 +89,8 @@ from (values
   (12, 'Madonna', repeat('c', 64), null, null, null, '{}', '[]'),
   -- 13: erro que veio da validação em TypeScript
   (13, 'Erro Vindo do TS', null, null, null, null, '{}',
-   '[{"code": "EMAIL_INVALID", "severity": "error", "detail": "E-mail inválido."}]'),
+   '[{"code": "EMAIL_INVALID", "severity": "error", "detail": "E-mail inválido."},
+     {"code": "NO_SEARCHABLE_KEY", "severity": "warning", "detail": "Sem dado de busca."}]'),
   -- 14: homônimo da Ana da linha 4, com CPF: é outra pessoa
   (14, 'Ana Lima', repeat('e', 64), null, null, null, '{}', '[]'),
   -- 15: possível duplicata (b): mesmo nascimento e nome parecido
@@ -147,6 +148,9 @@ select is(:'resumo'::jsonb - 'warnings',
   '{"create": 4, "update": 2, "unchanged": 2, "error": 3, "needs_decision": 3, "skipped": 1,
     "new_people": 4, "absent": 1, "total": 15}'::jsonb,
   'resumo em certificados, com pessoas novas e ausentes do arquivo');
+select is((:'resumo'::jsonb)->'warnings',
+  '{"HOMONYM_IN_EVENT": 3, "NAME_SINGLE_WORD": 1, "CERTIFICATE_REVOKED": 1}'::jsonb,
+  'avisos contados só nas linhas que vão para o banco: o da linha 13, que tem erro, fica de fora');
 select ok((select preview_digest ~ '^[0-9a-f]{64}$' from public.import_batches
             where id = 'b0000000-0000-4000-8000-0000000000c1'), 'o digest do plano fica no lote');
 

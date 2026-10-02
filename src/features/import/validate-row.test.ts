@@ -349,6 +349,10 @@ describe('validateRow: NO_SEARCHABLE_KEY', () => {
     ).toEqual([])
   })
 
+  it('evento sem nenhuma chave de busca ainda: o problema é do evento, e a liberação já o barra', () => {
+    expect(codigos(validateRow(2, { full_name: 'Ana Lima' }, busca({})))).toEqual([])
+  })
+
   it('linha com erro não ganha o aviso: o erro já a deixa de fora', () => {
     expect(
       codigos(
