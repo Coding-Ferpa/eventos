@@ -121,6 +121,7 @@ O sucesso da busca emite `cf-retirada`: payload `{ v: 1, pids: string[], src, ex
 - Cookie em vez de token na URL: não entra em histórico, log de acesso nem `Referer`, e o download funciona com um link comum (o que importa no iOS).
 - `pids` é lista desde já para que "Meus certificados" (P1) não mude o formato. Máximo de 40.
 - `src` registra como a pessoa chegou: `search_cpf`, `search_email`, `search_name`, `search_all`, `token` ou `mine`. Serve à métrica de origem do download e a uma regra de exibição: "CPF terminado em 145" só aparece na tela quando `src` é `search_cpf` ou `mine`. Quem chegou pelo nome não ganha 3 dígitos do CPF de ninguém.
+- **`Secure` sempre, menos em http no próprio localhost** (`lib/cookies/seguro.ts`; vale também para o `cf-dispositivo`). Medido no M8: o WebKit guarda o cookie `Secure` recebido por `http://localhost` e nunca o devolve por http, e as E2E do iPhone rodam no `pnpm start`; a busca dava 200 e a tela de retirada voltava como sessão expirada. O Chromium trata localhost como contexto seguro, por isso só o WebKit quebrava. Produção nunca é localhost, e qualquer outro host, até em http, continua com `Secure`.
 
 Autorização do download: o certificado do `{codigo}` da URL precisa pertencer a um participante em `pids`. Código válido de outra pessoa responde 404, igual a código inexistente.
 

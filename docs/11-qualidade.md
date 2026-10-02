@@ -96,6 +96,16 @@ Numeradas: os milestones do [doc 14](14-prompt-de-execucao-opus-5.md) citam este
 
 E08, E09, E10 e E20 estão em `e2e/admin-importacao.spec.ts` (M7), com `esperarHidratacao` depois de cada navegação desde o primeiro dia, e rodam no build de produção (o `webServer` faz `pnpm build && pnpm start`). O mesmo spec sobe uma planilha de quase 2 MB, que só passa com o `serverActions.bodySizeLimit` de 3 MB: sem ele, medido, o Next recusa com "Body exceeded 1 MB limit". O axe do E23 já roda nos três passos da importação e na lista de participantes.
 
+Os do M8, todos no build de produção:
+
+- `e2e/publico/busca.spec.ts`: E11, E12, E13, E22 e o aviso de navegador embutido (contexto com o user agent do Instagram).
+- `e2e/publico/retirada.spec.ts`: E14, E15, o lado público do E16, E18 e o lado público do E19 (a revogação vem do banco; a da tela já é coberta pelo E20). O PDF baixado passa pelo pdf.js do `tests/support/certificado.ts`, que extrai o texto.
+- `e2e/admin-retirada.spec.ts`: o lado do admin do E16 e o E17, com a pessoa num contexto e a organização no outro.
+- `e2e/admin-liberacao.spec.ts`: E21. A página pública entra no cache (ISR) antes de liberar, e volta a ele depois de salvar a busca, que também derruba o cache: sem esse passo, medido, o teste passava com a liberação sem derrubar tag nenhuma.
+- E23: o axe roda também na página do evento com o formulário, na validação, na tela de retirada, no login e no editor de modelos (este também no Safari desktop).
+
+Cada spec público cria o próprio evento liberado por worker (`criarEventoComCertificados` em `e2e/support/banco.ts`, com modelo publicado de verdade e o base.pdf no Storage local), e cada teste usa um IP próprio por `x-forwarded-for`: os baldes do rate limit valem de verdade, e testes em paralelo ou execuções seguidas não podem gastar o balde um do outro. Os rádios do "Buscar por" são `sr-only` dentro da pílula, então o teste toca a pílula, como a pessoa; o `.check()` do Playwright no rádio esbarra no rótulo por cima. O WebKit não devolve cookie `Secure` por `http://localhost` (doc 08), o que derrubava a busca, a retirada e o E13 só no iPhone, até os cookies deixarem de ser `Secure` exatamente nesse caso.
+
 Os fluxos públicos (E11 a E19, E22) rodam em viewport de celular (390×844) no WebKit e no Chromium. O admin roda só no Chromium desktop, com uma exceção desde o M6: o spec do editor de modelos (E07) roda também no Safari desktop (WebKit). É a única tela do admin que depende de API que muda por motor (o worker do pdf.js, o WebP gerado no canvas, o `createImageBitmap`), e a falha seria silenciosa, com arte subindo no formato errado.
 
 ## Cobertura mínima

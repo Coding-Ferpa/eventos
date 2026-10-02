@@ -171,7 +171,7 @@ Os textos entre aspas são microcopy final. Os demais estão na seção 7.
 
 Só existe quando o evento está em `certificates_available` ("certificados disponíveis"). Campos habilitados por evento entre CPF, e-mail e nome completo. **Data de nascimento nunca é campo sozinho:** só aparece como segundo fator, logo abaixo do nome.
 
-- **Modo "qualquer um":** seletor "Buscar por" em `role="radiogroup"`, rádios estilizados como pills (não abas: é um formulário só e funciona sem JS). Padrão: CPF, depois e-mail, depois nome. Com um campo habilitado, o seletor some. **Modo "todos":** campos empilhados, todos obrigatórios.
+- **Modo "qualquer um":** seletor "Buscar por" em `role="radiogroup"`, rádios estilizados como pills (não abas: é um formulário só e funciona sem JS). Padrão: CPF, depois e-mail, depois nome. Com um campo habilitado, o seletor some. O campo visível segue o rádio marcado pelo CSS (`:has`), e não por estado do React, para valer antes da hidratação; a pílula marcada ganha ícone de check e peso, porque estado só por cor é proibido (seção 8). **Modo "todos":** campos empilhados, todos obrigatórios.
 - **Campos:** rótulo visível acima (`text-caption` 500), 3rem de altura, `bg-surface`, borda `subtle-foreground`, `rounded-sm`.
   - CPF: `type="text" inputmode="numeric" autocomplete="off" maxlength="14"`, `font-mono`, máscara `000.000.000-00`, aceita colar com ou sem pontuação. Dígito verificador no `blur`: "Esse CPF não parece válido. Confira os números."
   - E-mail: `type="email" autocomplete="email" autocapitalize="none" spellcheck="false"`.

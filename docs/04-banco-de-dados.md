@@ -148,6 +148,7 @@ Unique `(id, event_id)` (alvo da FK composta de `certificates`). Espaço reserva
 | `hours` | numeric(5,1) | not null, `>= 0`. Padrão: `default_hours` do tipo. |
 | `data` | jsonb | not null default `'{}'`. Conteúdo dinâmico, validado contra `data_fields` do modelo na escrita. |
 | `version` | int | not null default 1. Incrementa quando nome, `hours` ou `data` mudam. |
+| `content_updated_at` | timestamptz | null até a primeira mudança de conteúdo; marcado pelos mesmos gatilhos que sobem a `version` (o do certificado e o da troca de nome). É o "Dados atualizados em" da validação: o `updated_at` não serve, porque também muda com o download (M8). |
 | `status` | certificate_status | default `active` |
 | `issued_at` | timestamptz | null até a liberação do evento; criado depois da liberação nasce com `now()` |
 | `revoked_at` / `revoked_reason` / `revoked_by` | | check `(status = 'revoked') = (revoked_at is not null)`; `revoked_reason` 10 a 500 caracteres |
