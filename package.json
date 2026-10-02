@@ -21,6 +21,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:gate:pdf": "vitest run pdf-accents",
+    "test:gate:csv": "vitest run csv-encoding",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "prepare": "husky",

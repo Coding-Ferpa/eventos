@@ -179,6 +179,20 @@ export function checkMapping(
   return { blocking, warnings }
 }
 
+/** As células de uma linha do arquivo, por alvo, já pelo mapeamento conferido. */
+export function cellsForRow(
+  headers: string[],
+  cells: string[],
+  mapping: Mapping,
+): Mapping {
+  const porAlvo: Mapping = {}
+  for (const [alvo, cabecalho] of Object.entries(mapping)) {
+    const indice = cabecalho === undefined ? -1 : headers.indexOf(cabecalho)
+    if (indice >= 0) porAlvo[alvo as Target] = cells[indice] ?? ''
+  }
+  return porAlvo
+}
+
 export function presetFromMapping(mapping: Mapping): MappingPreset {
   return Object.fromEntries(
     Object.entries(mapping)

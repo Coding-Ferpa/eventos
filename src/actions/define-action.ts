@@ -72,6 +72,12 @@ type Config<TSchema extends z.ZodType, TData> = {
   executar: (contexto: Contexto<z.output<TSchema>>) => Promise<Efeito<TData>>
   /** Tags de cache a derrubar depois do commit. */
   revalidar?: string[]
+  /**
+   * `false` só nas exceções escritas no doc 07: a leitura que não deixa rastro
+   * (`inspectCsv`) e a operação que se audita dentro do banco, com o ator, para
+   * ter rastro também quando rodada à mão (`applyImport`).
+   */
+  auditar?: boolean
 }
 
 export function defineAction<TSchema extends z.ZodType, TData>(
@@ -104,13 +110,15 @@ export function defineAction<TSchema extends z.ZodType, TData>(
           tx,
         })
 
-        await tx.insert(auditLogs).values({
-          actorId: usuario.id,
-          action: config.nome,
-          entity: config.entidade,
-          entityId: resultado.entityId ?? null,
-          diff: resultado.diff ?? null,
-        })
+        if (config.auditar !== false) {
+          await tx.insert(auditLogs).values({
+            actorId: usuario.id,
+            action: config.nome,
+            entity: config.entidade,
+            entityId: resultado.entityId ?? null,
+            diff: resultado.diff ?? null,
+          })
+        }
 
         return resultado
       })

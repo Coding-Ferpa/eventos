@@ -100,6 +100,8 @@ jobs:
       # recusado.
       - name: 'Gate: acentos no PDF, em cada fonte curada'
         run: pnpm test:gate:pdf
+      - name: 'Gate: acentos na importação, nos quatro formatos de planilha'
+        run: pnpm test:gate:csv
       - run: pnpm test:coverage
 
   db:

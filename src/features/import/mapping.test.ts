@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { DataField } from '@/features/certificate/schema'
 
 import {
+  cellsForRow,
   checkMapping,
   mappingTargets,
   normalizeHeader,
@@ -252,6 +253,23 @@ describe('checkMapping', () => {
       ['UNKNOWN_TARGET', 'participation_type'],
       ['UNKNOWN_TARGET', 'data.inventado'],
     ])
+  })
+})
+
+describe('cellsForRow', () => {
+  it('cada alvo recebe a célula da coluna escolhida; alvo sem coluna não aparece', () => {
+    const headers = ['Nome', 'CPF', 'Observação']
+    expect(
+      cellsForRow(headers, ['Ana Lima', '529.982.247-25', 'qualquer'], {
+        full_name: 'Nome',
+        cpf: 'CPF',
+        'data.titulo_palestra': 'Nome',
+      }),
+    ).toEqual({
+      full_name: 'Ana Lima',
+      cpf: '529.982.247-25',
+      'data.titulo_palestra': 'Ana Lima',
+    })
   })
 })
 

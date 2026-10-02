@@ -26,6 +26,15 @@ export type ActionErrorCode =
   | 'art_unreadable'
   | 'font_variable'
   | 'font_missing_glyphs'
+  // Importação (doc 07).
+  | 'file_too_large'
+  | 'too_many_rows'
+  | 'single_column'
+  | 'empty_file'
+  | 'mapping_incomplete'
+  | 'batch_not_staged'
+  // Participantes e certificados (doc 07).
+  | 'must_revoke'
 
 export type ActionError = {
   code: ActionErrorCode

@@ -77,11 +77,11 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 
 | Action | Entrada | Saída |
 |---|---|---|
-| `inspectCsv` (editor) | `FormData { file, event_id, participation_type_id? }` | `{ encoding, delimiter, headers, sample_rows, row_count, file_sha256, suggested_mapping, warnings }`. Não grava nada e, por exceção documentada, **não gera `audit_logs`** (é leitura). |
-| `stageImport` (editor) | `FormData { file, event_id, participation_type_id?, mapping }` | `{ batch_id, summary, preview_digest }` |
-| `listImportRows` (editor) | `{ batch_id, filter, cursor }` | página de linhas com `issues` |
-| `resolveImportRow` (editor) | `{ batch_id, row_number, resolution }` | novo `summary` e `preview_digest` |
-| `applyImport` (editor) | `{ batch_id, preview_digest }` | `{ created, updated, unchanged, skipped }` ou erro `preview_stale` (com a nova prévia) ou `decisions_pending` |
+| `inspectCsv` (editor) | `FormData { file, event_id, participation_type_id? }` | `{ encoding, delimiter, headers, sample_rows, row_count, file_sha256, suggested_mapping, targets, warnings }`. Não grava nada e, por exceção documentada, **não gera `audit_logs`** (é leitura): `defineAction({ auditar: false })`. `targets` são os alvos do mapeamento com rótulo e obrigatoriedade, para a tela. |
+| `stageImport` (editor) | `FormData { file, event_id, participation_type_id?, mapping }` | `{ batch_id, summary, preview_digest }`. Grava o mapeamento confirmado como preset de cada modelo envolvido (só os alvos que o modelo declara). |
+| `listImportRows` (editor) | `{ batch_id, filter, cursor }` | página de linhas com `issues` e o `before` (participante e certificado casados), para o antes e depois |
+| `resolveImportRow` (editor) | `{ batch_id, row_number, resolution }` | novo `summary` e `preview_digest`. A decisão fica na primeira linha do grupo da pessoa (doc 06). |
+| `applyImport` (editor) | `{ batch_id, preview_digest }` | `{ status, summary, preview_digest }`, com `status` em `applied`, `preview_stale` (com a prévia nova), `decisions_pending` ou `failed`; `batch_not_staged` é erro. Prévia velha e falha **não** são erro da action: um erro desfaria a transação, e com ela a prévia nova e o lote `failed`. A auditoria é a do `apply_import`, no banco, com o ator (`auditar: false` no esqueleto), para ter rastro também quando a função é chamada à mão. |
 | `discardImport` (editor) | `{ batch_id }` | apaga as linhas do staging |
 
 ### Participantes e certificados (`actions/certificates.ts`)

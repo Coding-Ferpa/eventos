@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: Object.fromEntries(
     ROTAS_QUE_GERAM_PDF.map((rota) => [rota, FONTES_CURADAS_NO_PACOTE]),
   ),
+  // A planilha da importação sobe pela Server Action, em FormData, e pode ter
+  // 2 MB (doc 06); o padrão do Next é 1 MB. A folga cobre a codificação.
+  experimental: {
+    serverActions: { bodySizeLimit: '3mb' },
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   // O Next transmite a metadata em vez de segurar o shell, e quando a página
