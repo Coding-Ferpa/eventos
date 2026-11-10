@@ -19,8 +19,8 @@ insert into eventos.profiles (id, display_name, role) values
   ('33333333-3333-4333-8333-333333333333', 'Pessoa Editora', 'editor');
 
 insert into storage.objects (bucket_id, name) values
-  ('templates', 'arte-existente.pdf'),
-  ('fonts', 'fonte-existente.ttf');
+  ('eventos-templates', 'arte-existente.pdf'),
+  ('eventos-fonts', 'fonte-existente.ttf');
 
 -- ---------------------------------------------------------------------------
 -- Buckets
@@ -28,20 +28,20 @@ insert into storage.objects (bucket_id, name) values
 
 select is(
   (select array_agg(id || ':' || public::text order by id) from storage.buckets
-    where id in ('covers', 'previews', 'templates', 'fonts')),
-  array['covers:true', 'fonts:false', 'previews:true', 'templates:false'],
+    where id in ('eventos-covers', 'eventos-previews', 'eventos-templates', 'eventos-fonts')),
+  array['eventos-covers:true', 'eventos-fonts:false', 'eventos-previews:true', 'eventos-templates:false'],
   'capa e prévia são públicas; arte e fonte, privadas');
 select is(
   (select array_agg(id || ':' || file_size_limit order by id) from storage.buckets
-    where id in ('covers', 'previews', 'templates', 'fonts')),
-  array['covers:5242880', 'fonts:2097152', 'previews:1048576', 'templates:10485760'],
+    where id in ('eventos-covers', 'eventos-previews', 'eventos-templates', 'eventos-fonts')),
+  array['eventos-covers:5242880', 'eventos-fonts:2097152', 'eventos-previews:1048576', 'eventos-templates:10485760'],
   'os tetos de tamanho do doc 08 valem no próprio Storage');
 select is(
-  (select allowed_mime_types from storage.buckets where id = 'templates'),
+  (select allowed_mime_types from storage.buckets where id = 'eventos-templates'),
   array['application/pdf', 'image/png', 'image/jpeg'],
   'a arte aceita PDF, PNG e JPG');
 select is(
-  (select allowed_mime_types from storage.buckets where id = 'previews'),
+  (select allowed_mime_types from storage.buckets where id = 'eventos-previews'),
   array['image/webp'], 'a prévia é sempre WebP');
 
 -- ---------------------------------------------------------------------------
@@ -51,9 +51,9 @@ select is(
 set local role anon;
 set local request.jwt.claims = '{"role":"anon"}';
 select throws_ok(
-  $$ insert into storage.objects (bucket_id, name) values ('covers', 'anon.png') $$,
+  $$ insert into storage.objects (bucket_id, name) values ('eventos-covers', 'anon.png') $$,
   '42501', null, 'anon não escreve em bucket nenhum');
-select is((select count(*) from storage.objects where bucket_id in ('templates', 'fonts')),
+select is((select count(*) from storage.objects where bucket_id in ('eventos-templates', 'eventos-fonts')),
   0::bigint, 'anon não lista arte nem fonte');
 
 reset role;
@@ -61,7 +61,7 @@ set local role authenticated;
 set local request.jwt.claims =
   '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"admin"}';
 select throws_ok(
-  $$ insert into storage.objects (bucket_id, name) values ('covers', 'reader.png') $$,
+  $$ insert into storage.objects (bucket_id, name) values ('eventos-covers', 'reader.png') $$,
   '42501', null, 'reader não escreve');
 
 reset role;
@@ -69,11 +69,11 @@ set local role authenticated;
 set local request.jwt.claims =
   '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"admin"}';
 select lives_ok(
-  $$ insert into storage.objects (bucket_id, name) values ('covers', 'editor.png') $$,
+  $$ insert into storage.objects (bucket_id, name) values ('eventos-covers', 'editor.png') $$,
   'editor sobe capa');
-select is((select count(*) from storage.objects where bucket_id = 'fonts' and name = 'fonte-existente.ttf'), 1::bigint,
+select is((select count(*) from storage.objects where bucket_id = 'eventos-fonts' and name = 'fonte-existente.ttf'), 1::bigint,
   'editor lê fonte: o editor de modelo mede e desenha com ela no navegador');
-select is((select count(*) from storage.objects where bucket_id = 'templates'), 0::bigint,
+select is((select count(*) from storage.objects where bucket_id = 'eventos-templates'), 0::bigint,
   'editor não lê a arte pelo Storage: quem lê é o servidor, na publicação');
 select throws_ok(
   $$ insert into storage.objects (bucket_id, name) values ('outro-bucket', 'x.png') $$,

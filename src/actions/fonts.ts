@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 
 import { eq, inArray } from 'drizzle-orm'
 
+import { BUCKETS } from '@/lib/buckets'
 import { customFonts } from '@/db/schema'
 import { avaliarFonteEnviada } from '@/lib/fonte-enviada'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -31,7 +32,7 @@ export const createFontUploadUrl = defineAction({
   async executar({ entrada }) {
     const caminho = `${randomUUID()}.${entrada.extension}`
     const { data, error } = await supabaseAdmin()
-      .storage.from('fonts')
+      .storage.from(BUCKETS.fontes)
       .createSignedUploadUrl(caminho)
     if (error) throw error
     return { data: { caminho, urlAssinada: data.signedUrl }, diff: { caminho } }
@@ -53,7 +54,7 @@ export const uploadCustomFont = defineAction({
   }),
   async executar({ entrada, usuario, tx }) {
     const { data: arquivo, error } = await supabaseAdmin()
-      .storage.from('fonts')
+      .storage.from(BUCKETS.fontes)
       .download(entrada.storagePath)
     if (error || !arquivo) {
       throw new FalhaDaAction(
@@ -66,7 +67,7 @@ export const uploadCustomFont = defineAction({
       new Uint8Array(await arquivo.arrayBuffer()),
     )
     if (!avaliacao.ok) {
-      await supabaseAdmin().storage.from('fonts').remove([entrada.storagePath])
+      await supabaseAdmin().storage.from(BUCKETS.fontes).remove([entrada.storagePath])
       throw new FalhaDaAction(avaliacao.code, avaliacao.message, {
         fonte: [avaliacao.message],
       })
@@ -78,7 +79,7 @@ export const uploadCustomFont = defineAction({
       .from(customFonts)
       .where(eq(customFonts.sha256, avaliacao.sha256))
     if (existente) {
-      await supabaseAdmin().storage.from('fonts').remove([entrada.storagePath])
+      await supabaseAdmin().storage.from(BUCKETS.fontes).remove([entrada.storagePath])
       return {
         data: { id: existente.id, subsetOk: avaliacao.subsetOk, repetida: true },
         entityId: existente.id,
@@ -130,7 +131,7 @@ export const createFontReadUrls = defineAction({
     const urls: Record<string, string> = {}
     for (const linha of linhas) {
       const { data, error } = await supabaseAdmin()
-        .storage.from('fonts')
+        .storage.from(BUCKETS.fontes)
         .createSignedUrl(linha.storagePath, 60 * 60)
       if (error) throw error
       urls[linha.id] = data.signedUrl

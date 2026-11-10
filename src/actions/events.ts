@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 
 import { and, count, eq, isNull, ne, or, sql } from 'drizzle-orm'
 
+import { BUCKETS } from '@/lib/buckets'
 import type { Transaction } from '@/db/client'
 import {
   certificates,
@@ -142,10 +143,13 @@ function diffDe(antes: Record<string, unknown>, depois: Record<string, unknown>)
  */
 async function conferirCapa(caminho: string) {
   const base = supabaseEnv().NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
-  const resposta = await fetch(`${base}/storage/v1/object/public/covers/${caminho}`, {
-    headers: { range: 'bytes=0-15' },
-    cache: 'no-store',
-  })
+  const resposta = await fetch(
+    `${base}/storage/v1/object/public/${BUCKETS.capas}/${caminho}`,
+    {
+      headers: { range: 'bytes=0-15' },
+      cache: 'no-store',
+    },
+  )
   if (!resposta.ok) {
     throw new FalhaDaAction(
       'not_found',
@@ -156,7 +160,7 @@ async function conferirCapa(caminho: string) {
   const tipo = tipoDeImagemPelosBytes(new Uint8Array(await resposta.arrayBuffer()))
   const extensao = caminho.split('.').pop()
   if (!tipo || tipo !== extensao) {
-    await supabaseAdmin().storage.from('covers').remove([caminho])
+    await supabaseAdmin().storage.from(BUCKETS.capas).remove([caminho])
     campoInvalido('coverPath', 'A capa precisa ser uma imagem JPEG, PNG ou WebP.')
   }
 }
@@ -408,7 +412,7 @@ export const createCoverUploadUrl = defineAction({
 
     const caminho = `${entrada.eventId}/${randomUUID()}.${EXTENSAO[entrada.contentType]}`
     const { data, error } = await supabaseAdmin()
-      .storage.from('covers')
+      .storage.from(BUCKETS.capas)
       .createSignedUploadUrl(caminho)
     if (error) throw error
 

@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { BUCKETS } from '@/lib/buckets'
 import type * as Email from '@/lib/email'
 import type * as NextServer from 'next/server'
 
@@ -121,7 +122,7 @@ beforeAll(async () => {
   modeloId = randomUUID()
   const caminho = `${modeloId}/base.pdf`
   const { error } = await supabaseAdmin()
-    .storage.from('templates')
+    .storage.from(BUCKETS.modelos)
     .upload(caminho, base.bytes, {
       contentType: 'application/pdf',
     })
@@ -226,7 +227,7 @@ afterAll(async () => {
   await db().delete(participants).where(eq(participants.eventId, eventoId))
   await db().delete(events).where(eq(events.id, eventoId))
   await supabaseAdmin()
-    .storage.from('templates')
+    .storage.from(BUCKETS.modelos)
     .remove([`${modeloId}/base.pdf`])
 })
 

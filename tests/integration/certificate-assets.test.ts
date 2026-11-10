@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { BUCKETS } from '@/lib/buckets'
 import { buildBasePdf, type BasePdf } from '@/features/certificate/base-pdf'
 import { generateCertificatePdf } from '@/features/certificate/index'
 import type { TemplateSnapshot } from '@/features/certificate/schema'
@@ -22,13 +23,13 @@ beforeAll(async () => {
   base = await buildBasePdf([await artes.a4Paisagem()])
   caminho = `teste-integracao/${base.sha256}.pdf`
   const { error } = await supabaseAdmin()
-    .storage.from('templates')
+    .storage.from(BUCKETS.modelos)
     .upload(caminho, base.bytes, { contentType: 'application/pdf', upsert: true })
   if (error) throw error
 })
 
 afterAll(async () => {
-  await supabaseAdmin().storage.from('templates').remove([caminho])
+  await supabaseAdmin().storage.from(BUCKETS.modelos).remove([caminho])
 })
 
 describe('certificateAssets contra o Storage local', () => {

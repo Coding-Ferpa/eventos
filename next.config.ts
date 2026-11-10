@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
             protocol: supabase.protocol.replace(':', '') as 'http' | 'https',
             hostname: supabase.hostname,
             port: supabase.port,
-            pathname: '/storage/v1/object/public/covers/**',
+            pathname: '/storage/v1/object/public/eventos-covers/**',
           },
         ]
       : [],

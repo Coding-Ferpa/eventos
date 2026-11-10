@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import postgres from 'postgres'
 
+import { BUCKETS } from '@/lib/buckets'
 import { arteDeExemplo, modeloDeExemplo } from '@/app/api/dev/certificado-exemplo/exemplo'
 import { buildBasePdf } from '@/features/certificate/base-pdf'
 import { hmacCpf } from '@/lib/hmac'
@@ -58,7 +59,7 @@ async function apagarArquivosDosModelos(ids: string[]) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } },
   ).storage
-  for (const bucket of ['templates', 'previews']) {
+  for (const bucket of [BUCKETS.modelos, BUCKETS.previas]) {
     for (const id of ids) {
       // Cada envio é um lote numa pasta; o base.pdf fica na pasta do modelo.
       const { data: itens } = await storage.from(bucket).list(id)
@@ -91,7 +92,7 @@ export async function apagarFonteEnviada(sha256: string) {
         auth: { persistSession: false },
       },
     )
-      .storage.from('fonts')
+      .storage.from(BUCKETS.fontes)
       .remove(linhas.map((linha) => linha.storage_path))
   } finally {
     await sql.end()
@@ -217,7 +218,7 @@ export async function criarEventoComCertificados(
     const modeloId = randomUUID()
     const caminho = `${modeloId}/base.pdf`
     const { error } = await storageAdmin()
-      .from('templates')
+      .from(BUCKETS.modelos)
       .upload(caminho, base.bytes, { contentType: 'application/pdf' })
     if (error) throw error
     const snapshot = { ...modeloDeExemplo(base), base_pdf_path: caminho }
@@ -282,7 +283,7 @@ export async function apagarEventoComCertificados(id: string) {
     await sql`delete from eventos.events where id = ${id}`
     if (modelos.length > 0)
       await storageAdmin()
-        .from('templates')
+        .from(BUCKETS.modelos)
         .remove(modelos.map((modelo) => `${modelo.id}/base.pdf`))
   } finally {
     await sql.end()

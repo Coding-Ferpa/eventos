@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { BUCKETS } from '@/lib/buckets'
 import { BaixarPdf } from '@/components/certificado/baixar-pdf'
 import { CodigoDeValidacao } from '@/components/certificado/codigo-de-validacao'
 import { CopiarCodigo } from '@/components/certificado/copiar-codigo'
@@ -48,7 +49,7 @@ async function previas(
   const snapshot = certificado.snapshot
   if (!snapshot) return []
   const { fonts } = await certificateAssets.fonts(snapshot)
-  const storage = `${supabaseEnv().NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/previews`
+  const storage = `${supabaseEnv().NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${BUCKETS.previas}`
   const contexto = {
     siteUrl: siteEnv().NEXT_PUBLIC_SITE_URL,
     participant: pessoa,

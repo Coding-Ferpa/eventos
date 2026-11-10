@@ -6,6 +6,7 @@ import path from 'node:path'
 
 import { eq } from 'drizzle-orm'
 
+import { BUCKETS } from '@/lib/buckets'
 import { db } from '@/db/client'
 import { customFonts } from '@/db/schema'
 import type { FontBytesResolver } from '@/features/certificate/draw/pdf'
@@ -47,7 +48,7 @@ export async function lerFonteCuradaDoDisco(arquivo: string): Promise<Uint8Array
 
 async function baixarBasePdfDoStorage(caminho: string): Promise<Uint8Array> {
   const { data, error } = await supabaseAdmin()
-    .storage.from('templates')
+    .storage.from(BUCKETS.modelos)
     .download(caminho)
   if (error) throw new Error(`Download do base.pdf falhou: ${error.message}`)
   return new Uint8Array(await data.arrayBuffer())
@@ -65,7 +66,7 @@ async function lerFonteEnviadaDoStorage(id: string) {
     .where(eq(customFonts.id, id))
   if (!linha) throw new Error(`Fonte enviada não encontrada: ${id}`)
   const { data, error } = await supabaseAdmin()
-    .storage.from('fonts')
+    .storage.from(BUCKETS.fontes)
     .download(linha.storagePath)
   if (error) throw new Error(`Download da fonte enviada falhou: ${error.message}`)
   return {

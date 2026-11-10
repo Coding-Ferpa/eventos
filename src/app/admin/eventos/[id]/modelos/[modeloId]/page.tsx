@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { BUCKETS } from '@/lib/buckets'
 import { EditorDeModelo } from '@/components/admin/modelos/editor-de-modelo'
 import { Badge } from '@/components/ui/badge'
 import { buscarModeloParaEditor } from '@/db/queries/admin-templates'
@@ -33,7 +34,7 @@ export default async function EditorDeModeloPage({ params }: Props) {
   if (!dados) notFound()
   const { modelo, evento, tipos, fontesEnviadas } = dados
 
-  const storage = `${supabaseEnv().NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/previews`
+  const storage = `${supabaseEnv().NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${BUCKETS.previas}`
   const tipo = tipos[0] ?? null
 
   return (

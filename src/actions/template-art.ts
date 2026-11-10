@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 
 import { eq } from 'drizzle-orm'
 
+import { BUCKETS } from '@/lib/buckets'
 import type { Transaction } from '@/db/client'
 import { certificateTemplates } from '@/db/schema'
 import {
@@ -70,7 +71,10 @@ export const createArtUploadUrls = defineAction({
       (_, i) => `${entrada.templateId}/${lote}/pagina-${i + 1}.webp`,
     )
 
-    const assinar = async (bucket: 'templates' | 'previews', caminho: string) => {
+    const assinar = async (
+      bucket: typeof BUCKETS.modelos | typeof BUCKETS.previas,
+      caminho: string,
+    ) => {
       const { data, error } = await supabaseAdmin()
         .storage.from(bucket)
         .createSignedUploadUrl(caminho)
@@ -80,9 +84,9 @@ export const createArtUploadUrls = defineAction({
 
     return {
       data: {
-        arte: await assinar('templates', original),
+        arte: await assinar(BUCKETS.modelos, original),
         previas: await Promise.all(
-          previas.map((caminho) => assinar('previews', caminho)),
+          previas.map((caminho) => assinar(BUCKETS.previas, caminho)),
         ),
       },
       entityId: entrada.templateId,
@@ -103,7 +107,9 @@ const CODIGO_DA_ACAO: Record<ArtErrorCode, ActionErrorCode> = {
 
 /** O fundo da prévia tem de ser WebP de verdade, pelos bytes (migration 0012). */
 async function conferirPrevia(caminho: string) {
-  const { data, error } = await supabaseAdmin().storage.from('previews').download(caminho)
+  const { data, error } = await supabaseAdmin()
+    .storage.from(BUCKETS.previas)
+    .download(caminho)
   if (error || !data) {
     throw new FalhaDaAction(
       'not_found',
@@ -135,7 +141,7 @@ export const attachArt = defineAction({
     }
 
     const { data: arquivo, error } = await supabaseAdmin()
-      .storage.from('templates')
+      .storage.from(BUCKETS.modelos)
       .download(entrada.artPath)
     if (error || !arquivo) {
       throw new FalhaDaAction(
@@ -169,7 +175,7 @@ export const attachArt = defineAction({
     // sobrescrito pela arte nova do rascunho.
     const caminhoDaBase = `${modelo.id}/base-${base.sha256}.pdf`
     const { error: erroDoEnvio } = await supabaseAdmin()
-      .storage.from('templates')
+      .storage.from(BUCKETS.modelos)
       .upload(caminhoDaBase, base.bytes, { contentType: 'application/pdf', upsert: true })
     if (erroDoEnvio) throw erroDoEnvio
 

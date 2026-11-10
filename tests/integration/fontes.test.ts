@@ -1,6 +1,8 @@
 import { eq, inArray } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 
+import { BUCKETS } from '@/lib/buckets'
+
 import { artes } from '../support/artes'
 import { bytesDaFonte, extrairTexto } from '../support/certificado'
 import { abrirSessao, type CookiesFalsos, type Papel } from './sessao'
@@ -35,7 +37,8 @@ const arquivos: string[] = []
 afterAll(async () => {
   if (fontes.length > 0)
     await db().delete(customFonts).where(inArray(customFonts.id, fontes))
-  if (arquivos.length > 0) await supabaseAdmin().storage.from('fonts').remove(arquivos)
+  if (arquivos.length > 0)
+    await supabaseAdmin().storage.from(BUCKETS.fontes).remove(arquivos)
 })
 
 async function enviar(bytes: Uint8Array, extension: 'ttf' | 'otf' = 'ttf') {
@@ -54,7 +57,7 @@ async function enviar(bytes: Uint8Array, extension: 'ttf' | 'otf' = 'ttf') {
 
 async function existe(caminho: string) {
   const { data } = await supabaseAdmin()
-    .storage.from('fonts')
+    .storage.from(BUCKETS.fontes)
     .list('', { search: caminho })
   return (data ?? []).some((objeto) => objeto.name === caminho)
 }

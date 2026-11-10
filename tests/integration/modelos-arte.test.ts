@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { BUCKETS } from '@/lib/buckets'
+
 import { artes } from '../support/artes'
 import { fontesCuradas } from '../support/certificado'
 import { abrirSessao, type CookiesFalsos, type Papel } from './sessao'
@@ -60,7 +62,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  for (const bucket of ['templates', 'previews'] as const) {
+  for (const bucket of [BUCKETS.modelos, BUCKETS.previas]) {
     for (const modelo of modelos) {
       const { data: lotes } = await supabaseAdmin().storage.from(bucket).list(modelo)
       const caminhos: string[] = []
@@ -153,7 +155,7 @@ describe('attachArt', () => {
     ])
     expect(modelo.basePdfPath).toBe(`${id}/base-${modelo.basePdfSha256}.pdf`)
     const { data } = await supabaseAdmin()
-      .storage.from('templates')
+      .storage.from(BUCKETS.modelos)
       .download(modelo.basePdfPath!)
     expect(data!.size).toBe(modelo.basePdfSizeBytes)
   })
@@ -281,7 +283,7 @@ describe('attachArt', () => {
     await subirArte(id, await artes.pdf16x9(), 'application/pdf')
 
     const { data } = await supabaseAdmin()
-      .storage.from('templates')
+      .storage.from(BUCKETS.modelos)
       .download(snapshot.base_pdf_path)
     const bytes = new Uint8Array(await data!.arrayBuffer())
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(

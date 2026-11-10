@@ -31,7 +31,7 @@ describe('srcDaCapa', () => {
     const { srcDaCapa } = await capaNova()
 
     expect(srcDaCapa({ slug: 'x', coverPath: 'e001/capa.webp' })).toBe(
-      'https://abc.supabase.co/storage/v1/object/public/covers/e001/capa.webp',
+      'https://abc.supabase.co/storage/v1/object/public/eventos-covers/e001/capa.webp',
     )
   })
 })
