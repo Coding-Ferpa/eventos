@@ -24,6 +24,7 @@ import path from 'node:path'
 
 import {
   embrulhar,
+  historicoAusente,
   lerNome,
   planejar,
   sha256,
@@ -108,9 +109,7 @@ function lerAplicadas(): { aplicadas: Aplicada[]; alvo: string } {
   if (!r.ok) {
     // Banco sem o Eventos ainda: nem o schema nem o histórico existem.
     const mensagem = mensagemDeErro(r)
-    if (
-      /schema_migrations" does not exist|schema "eventos" does not exist/.test(mensagem)
-    ) {
+    if (historicoAusente(mensagem)) {
       return { aplicadas: [], alvo: r.alvo }
     }
     falhar(`Não deu para ler o histórico: ${mensagem}`)

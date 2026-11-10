@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { embrulhar, lerNome, planejar, sha256 } from './migracoes'
+import { embrulhar, historicoAusente, lerNome, planejar, sha256 } from './migracoes'
 
 describe('lerNome', () => {
   it('separa versão e nome', () => {
@@ -123,5 +123,34 @@ describe('embrulhar', () => {
     expect(() =>
       embrulhar(sql, { versao: '0001', nome: "x'); drop", sha256: 'abc' }),
     ).toThrow()
+  })
+})
+
+describe('historicoAusente', () => {
+  it('reconhece o banco sem o Eventos nos dois formatos da CLI', () => {
+    // Banco local: a CLI fala direto com o Postgres.
+    expect(
+      historicoAusente(
+        'failed to execute query: error: relation "eventos.schema_migrations" does not exist',
+      ),
+    ).toBe(true)
+    // Projeto hospedado: passa pela API de gerenciamento, com aspas escapadas.
+    expect(
+      historicoAusente(
+        'unexpected status 400: {"message":"Failed to run sql query: ERROR:  42P01: relation \\"eventos.schema_migrations\\" does not exist\nLINE 1: select version"}',
+      ),
+    ).toBe(true)
+    expect(historicoAusente('ERROR:  3F000: schema "eventos" does not exist')).toBe(true)
+    expect(
+      historicoAusente(
+        'unexpected status 400: {"message":"Failed to run sql query: ERROR:  3F000: schema \\"eventos\\" does not exist"}',
+      ),
+    ).toBe(true)
+  })
+
+  it('não confunde outro erro com banco vazio', () => {
+    expect(historicoAusente('permission denied for schema eventos')).toBe(false)
+    expect(historicoAusente('relation "eventos.events" does not exist')).toBe(false)
+    expect(historicoAusente('connection refused')).toBe(false)
   })
 })

@@ -108,3 +108,17 @@ export function embrulhar(sql: string, registro?: Migracao): string {
     '',
   ].join('\n')
 }
+
+/**
+ * O erro de ler o histórico quer dizer "este banco ainda não tem o Eventos"?
+ * No banco local a CLI fala direto com o Postgres; no hospedado, pela API de
+ * gerenciamento, que devolve a mensagem dentro de um JSON, com aspas
+ * escapadas. Só a ausência do histórico ou do schema conta: qualquer outro
+ * erro, inclusive outra tabela faltando, para o executor.
+ */
+export function historicoAusente(mensagem: string): boolean {
+  return (
+    /relation \\?"eventos\.schema_migrations\\?" does not exist/.test(mensagem) ||
+    /schema \\?"eventos\\?" does not exist/.test(mensagem)
+  )
+}
