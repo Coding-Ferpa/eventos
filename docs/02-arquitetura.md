@@ -256,7 +256,7 @@ Convenção de nomes: arquivos em `kebab-case`; inglês para conceito técnico (
 | Tema | Decisão |
 |---|---|
 | Região | Funções Vercel em `gru1`, Supabase em `sa-east-1`. Fixado no `vercel.json` e no runbook. |
-| Runtime | Node em tudo que toca banco, PDF ou criptografia. Node 24.x fixado no projeto da Vercel. |
+| Runtime | Node em tudo que toca banco, PDF ou criptografia. Node 26.x, lido pela Vercel do `engines` do `package.json`. |
 | Timezone | UTC no banco, exibição em `America/Sao_Paulo`. A data impressa no certificado é calculada nesse fuso. |
 | Slug de evento | `kebab-case` do título, editável só em `draft`. Depois de publicado é imutável: está em QR de cartaz e em link de grupo. |
 | Mensagens de validação | `z.config(ptBR())` em `lib/zod.ts`, com o locale importado de `zod/v4/locales/pt-BR.js`, e `lib/zod.ts` reexporta o `z` (ADR-0016 do CF Jobs). Todo import de Zod vem de `@/lib/zod`. É o `pt-BR`, e não o `pt`: até a 4.4.3 só existia o `pt`, com redação brasileira ("Muito grande"); na 4.5.0 ele foi reescrito em português de Portugal ("Demasiado grande", "ficheiro", "registo", "tuplo") e nasceu o `pt-BR` (`z.locales.ptBR()`), com "arquivo". Subir o Zod de 4.4 para 4.5 sem trocar o locale no mesmo commit muda a língua das mensagens sem quebrar nada. |

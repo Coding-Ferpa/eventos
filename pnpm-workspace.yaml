@@ -10,6 +10,11 @@
 # bloqueante, no lockfile commitado e na revisão de PR.
 minimumReleaseAge: 0
 
+# O teto do `engines` vira erro, e não aviso, no `pnpm install` (doc 01). O
+# pnpm 11 não lê mais o `engine-strict` do `.npmrc`: com ele só lá, medido em
+# 2026-11-10, o Node 24 instalava com um WARN.
+engineStrict: true
+
 # Script de instalação só roda com autorização explícita: é a defesa contra o
 # pacote que executa código na máquina de quem instala. O pnpm 11 exige decisão
 # por pacote, e a lista cresce conforme as dependências chegam.
@@ -22,3 +27,10 @@ allowBuilds:
   sharp: true
   # Resolvedor nativo usado pelo ESLint.
   unrs-resolver: true
+
+# Transitivas presas numa versão com alerta de segurança, até a dependência
+# direta subir o piso sozinha. Cada linha diz quem puxa e quando sai.
+overrides:
+  # `ajv` (peer do `@hookform/resolvers`) aceita qualquer 3.x; a 3.1.9 corrige
+  # quatro alertas de 2026-11 (dois moderados). Sai quando o `ajv` exigir >=3.1.9.
+  fast-uri: ^3.1.9

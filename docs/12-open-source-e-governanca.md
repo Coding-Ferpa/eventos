@@ -111,7 +111,7 @@ Escopo opcional, sem `scope-enum`. Sugeridos: `events`, `templates`, `pdf`, `imp
 
 ## 10. Guia de contribuição
 
-`CONTRIBUTING.md` segue o do CF Jobs. Pré-requisitos: Node 24 LTS, pnpm 11, Git, Docker.
+`CONTRIBUTING.md` segue o do CF Jobs. Pré-requisitos: Node 26 LTS, pnpm 11, Git, Docker.
 
 ```bash
 git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos

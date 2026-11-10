@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '24'
+  NODE_VERSION: '26'
 
 # O doc 12 descreve o CI completo. Os jobs chegam junto com o que eles
 # verificam: job que roda contra diretório vazio passa por vacuidade e dá

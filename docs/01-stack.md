@@ -23,23 +23,33 @@ O CF Eventos é o segundo projeto da casa. A stack é a do CF Jobs, versão por 
 | Analytics de tráfego | `@vercel/analytics` |
 | Testes | Vitest + Testing Library + Playwright + `@axe-core/playwright` + pgTAP |
 | Lint e formato | ESLint 9 flat + Prettier (com `prettier-plugin-tailwindcss`) |
-| Pacotes e runtime | pnpm 11 · Node 24 LTS (≥ 24.15) |
+| Pacotes e runtime | pnpm 11 · Node 26 LTS (≥ 26.13) |
 | Releases | Conventional Commits + commitlint + husky + Release Please |
 | Licença | MIT |
 | Deploy | Vercel (funções em `gru1`), Supabase em `sa-east-1` |
 
-**Uma divergência deliberada de arquivo herdado:** o `engines` deste projeto é `>=24.15 <25`, e não o `>=24.15` do CF Jobs. O intervalo aberto aceita o Node 26 e não expressa a decisão da tabela acima, que é a série 24 LTS; com o teto, quem desenvolve em outra série descobre no `pnpm install` e não no PR. O `.npmrc` mantém `engine-strict=true`, sem o qual o teto viraria aviso, e um `.nvmrc` com a série 24 fixa a versão de quem clona.
+**Uma divergência deliberada de arquivo herdado:** o `engines` deste projeto é `>=26.13 <27`, e não um intervalo aberto como o do CF Jobs. O intervalo aberto aceitaria a próxima série e não expressa a decisão da tabela acima, que é a série 26 LTS; com o teto, quem desenvolve em outra série descobre no `pnpm install` e não no PR. O `engineStrict: true` do `pnpm-workspace.yaml` faz do teto um erro, e não um aviso (até 2026-11-10 a regra morava no `.npmrc`, que o pnpm 11 não lê para isso: medido, o Node 24 instalava com um WARN), e um `.nvmrc` com a série 26 fixa a versão de quem clona. A Vercel lê o `engines` e usa a última 26.x.
+
+**Node 26 desde 2026-11-10, a pedido do mantenedor.** O 26 virou LTS ("Lithium") no 26.13.0, de 28/10/2026, e é o padrão da Vercel desde 29/10. O piso é o primeiro LTS da série. O que muda para nós: o `fetch` embutido negocia HTTP/2 (Undici 8), e numa resposta HTTP/2 o `statusText` vem vazio. Nenhum código daqui lê `statusText`, e o banco não passa pelo `fetch` (é TCP, pelo postgres.js). Sem a variável `VERCEL_FETCH_DISABLE_H2`. **Esta casa subiu antes do CF Jobs**, contra a regra da tabela abaixo, porque o pedido foi para este projeto; o CF Jobs segue no 24 até subir também.
 
 ### Majors seguradas de propósito
 
-Conferido em 2026-09-25, contra os peers publicados naquele dia. Cada linha tem um motivo concreto e um gatilho de revisão. Não é "nunca", é "ainda não": revisitar quando o gatilho acontecer, e não antes. A mesma tabela vale para o CF Jobs, e uma casa não sobe sem a outra, para os mesmos contribuidores não conviverem com dois padrões.
+Conferido em 2026-11-10, contra os peers publicados naquele dia (a primeira conferência foi em 2026-09-25). Cada linha tem um motivo concreto e um gatilho de revisão. Não é "nunca", é "ainda não": revisitar quando o gatilho acontecer, e não antes. A mesma tabela vale para o CF Jobs, e uma casa não sobe sem a outra, para os mesmos contribuidores não conviverem com dois padrões.
 
 | Segurado em | Major disponível | O que trava | Revisitar quando |
 |---|---|---|---|
-| ESLint 9 (`eslint`, `@eslint/js`) | 10 | `eslint-plugin-react` declara peer `^9.7` e `eslint-plugin-jsx-a11y` declara `^9` | os dois plugins declararem suporte ao 10 |
-| TypeScript 6.0 | 7 | `typescript-eslint` 8.70.1 declara `typescript <6.1.0`; na 7 o lint inteiro para | o `typescript-eslint` declarar suporte |
-| `@types/node` 24 | 26 | não é bloqueio: os tipos acompanham a série do runtime (24), e tipar API que o runtime não tem troca erro de compilação por erro de produção | o runtime mudar de série |
-| Vitest 4 (`vitest`, `@vitest/coverage-v8`) | 5 | a major saiu em 03/09/2026 e está na 5.0.2, publicada em 25/09; o ecossistema em volta ainda se acomoda. Decisão do mantenedor, para as duas casas | sair a 5.1, ou no fechamento do M7, o que vier antes |
+| ESLint 9 (`eslint`, `@eslint/js`) | 10 | `eslint-plugin-react` 7.37.5 declara peer `^9.7` e `eslint-plugin-jsx-a11y` 6.10.2 declara `^9`, ainda em 2026-11-10 | os dois plugins declararem suporte ao 10 |
+| TypeScript 6.0 | 7 | `typescript-eslint` 8.72.2 declara `typescript <6.1.0`; na 7 o lint inteiro para | o `typescript-eslint` declarar suporte |
+| `postgres` (postgres.js) 3 | 4 | a 4 muda o que vai ao banco sem mudar uma linha nossa: parâmetro passa a ser tipado pelo servidor (`infer: false`), `Date` em coluna sem fuso vira UTC, transação aberta fora do `sql.begin` é recusada, e o pool passa a enfileirar consultas em conexão ocupada (pipelining). Os testes locais falam direto com o Postgres, e a produção passa pelo pooler do Supavisor em modo transaction: o caminho que a 4 mais mexe é justo o que não se testa aqui, às vésperas do primeiro deploy | depois do primeiro evento em produção, com um ensaio da integração apontada para o pooler local em modo transaction |
+| pnpm 11 | 12 | sem incompatibilidade conhecida, mas a Vercel escolhe a versão do pnpm pelo lockfile e troca para a do `packageManager`; mudar o gerenciador junto com o primeiro deploy acrescenta uma variável sem ganho para nós | depois do primeiro deploy em produção |
+
+Saíram da tabela em 2026-11-10: `@types/node` (subiu para a 26 junto com o runtime, que era o gatilho) e Vitest (subiu para a 5.1, que era o gatilho).
+
+**Avisos conhecidos depois da atualização de 2026-11-10:**
+
+- O Vite avisa que o `vitest.config.ts` usa sintaxe ESM num arquivo lido como CommonJS, o que o carregador nativo, previsto para virar padrão numa major futura, não aceita. O conserto seria a extensão `.mts`, mas o doc 12 fixa os nomes das configs iguais aos do CF Jobs: as duas casas mudam juntas, quando o carregador nativo virar padrão.
+- `pnpm peers check` acusa o `@puppeteer/browsers` (de dentro do `@lhci/cli` 0.16) pedindo `proxy-agent >=8` e recebendo o 6.5 que o próprio `@lhci/cli` fixa. Só afeta download de navegador atrás de proxy, que o Lighthouse daqui não faz. Some quando o `@lhci/cli` alinhar as duas.
+- `pnpm audit` (com dependências de desenvolvimento) acusa o `basic-ftp` (high, na cadeia de proxy do Lighthouse) e o `minimatch` (moderado, no `typescript-eslint`). Os dois só se corrigem numa major acima da que o pacote de cima pede, e nenhum vai para produção; o `pnpm audit --prod`, que é o bloqueante, está limpo. O `fast-uri` de produção, que chegou com alerta pelo `ajv`, foi resolvido por override no `pnpm-workspace.yaml`, com a condição de saída escrita ao lado.
 
 ADRs do CF Jobs que valem aqui sem reescrita estão listados no [ADR-0001](adr/0001-heranca-do-cf-jobs.md).
 
@@ -118,4 +128,4 @@ Validadas por Zod em `src/lib/env.ts`. `pnpm check:env` (herdado) falha o CI se 
 
 O `.env.example` traz valores **de desenvolvimento** para os cinco segredos criptográficos, marcados como tal, para que `supabase db reset` e o seed local funcionem sem cerimônia. Em produção, cada um é gerado com `openssl rand -base64 32`. Os valores de desenvolvimento começam com `desenvolvimento-local-`, e o schema de `lib/env.ts` os recusa dentro da Vercel: estão no repositório, então são públicos.
 
-Pré-requisitos operacionais que não são código (runbook do M9): SPF e DKIM de `codingferpa.org` no Resend antes do primeiro envio; página de empresa da Coding Ferpa no LinkedIn antes do M12; Data API desligada; Node 24.x e região `gru1` fixados no projeto da Vercel.
+Pré-requisitos operacionais que não são código (runbook do M9): SPF e DKIM de `codingferpa.org` no Resend antes do primeiro envio; página de empresa da Coding Ferpa no LinkedIn antes do M12; Data API desligada; Node 26.x (pelo `engines`) e região `gru1` (pelo `vercel.json`). O passo a passo está em [runbooks.md](runbooks.md).

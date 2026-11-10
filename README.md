@@ -26,13 +26,13 @@ O documento de produto é o [PRD](docs/spec-produto.md).
 
 Next.js 16 (App Router, RSC) · TypeScript strict · Tailwind CSS v4 ·
 shadcn/ui · Drizzle ORM · Supabase (Postgres, Auth, Storage) · Zod 4 ·
-pnpm 11 · Node 24 LTS · Vitest, Testing Library, Playwright e pgTAP · deploy
+pnpm 11 · Node 26 LTS · Vitest, Testing Library, Playwright e pgTAP · deploy
 na Vercel. O porquê de cada escolha, e de cada dependência nova, está no
 [doc 01](docs/01-stack.md).
 
 ## Rodando localmente
 
-Pré-requisitos: Node 24 LTS (há um `.nvmrc`), pnpm 11, Git e Docker.
+Pré-requisitos: Node 26 LTS (há um `.nvmrc`), pnpm 11, Git e Docker.
 
 ```bash
 git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos

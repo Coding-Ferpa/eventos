@@ -27,7 +27,7 @@ ADR.
 
 ## Ambiente
 
-Pré-requisitos: Node 24 LTS, pnpm 11, Git e Docker. O `.nvmrc` fixa a série
+Pré-requisitos: Node 26 LTS, pnpm 11, Git e Docker. O `.nvmrc` fixa a série
 do Node; o `engines` recusa outra.
 
 ```bash
