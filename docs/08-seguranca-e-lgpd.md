@@ -4,7 +4,7 @@ Modelo mental herdado do CF Jobs: **o Postgres é a última linha de defesa.** O
 
 ## Autenticação e papéis
 
-Supabase Auth com e-mail e senha e GitHub OAuth, sessão em cookies via `@supabase/ssr`, Custom Access Token Hook injetando `user_role` no JWT, `proxy.ts` apenas redirecionando não autenticados de `/admin` para `/login`, logout com `scope: 'local'`. Tudo igual ao CF Jobs.
+Supabase Auth com e-mail e senha e GitHub OAuth, sessão em cookies via `@supabase/ssr`, papel lido de `eventos.profiles` e nunca do claim `user_role` do token, que no projeto dividido com o CF Jobs traz o papel de lá ([ADR-0018](adr/0018-schema-proprio-no-projeto-do-cf-jobs.md)), `proxy.ts` apenas redirecionando não autenticados de `/admin` para `/login`, logout com `scope: 'local'`. O resto igual ao CF Jobs.
 
 O cadastro é aberto (consequência do OAuth), então todo usuário novo nasce `reader`, que **não acessa nada**. O PRD define dois papéis de trabalho:
 
@@ -33,7 +33,7 @@ Mudança de papel exige novo login (sessão de 1 h), trade-off herdado e aceito.
 
 Regra de lint (`no-restricted-imports`): `public-lookup.ts` só pode ser importado por `src/app/api/certificados/**`, `src/app/(public)/validar/**`, `src/app/(public)/eventos/[slug]/certificado/**` e `src/app/(public)/certificado/**`. Cada função desse arquivo tem o tipo de retorno escrito à mão (nunca `typeof tabela.$inferSelect`), e um teste afirma que nenhum retorno tem as chaves `id`, `participant_id`, `cpf_hash`, `email` ou `birth_date`.
 
-**Data API desligada.** O app não usa PostgREST: fala com o Postgres por Drizzle, e o supabase-js faz só Auth e Storage. Em produção a Data API do projeto Supabase é desativada (item do runbook do M9). Motivo: a `anon key` é pública por natureza, e com a Data API ligada qualquer função executável por `anon` vira endpoint sem o nosso rate limit. A RLS segue em todas as tabelas e testada por pgTAP, porque é o que segura se alguém religar a API.
+**Fora da Data API.** O app não usa PostgREST: fala com o Postgres por Drizzle, e o supabase-js faz só Auth e Storage. O schema `eventos` fica fora dos schemas expostos da Data API, que no projeto dividido é decisão do CF Jobs (ADR-0018; conferido no runbook). Motivo: a `anon key` é pública por natureza, e com a Data API ligada qualquer função executável por `anon` vira endpoint sem o nosso rate limit. A RLS segue em todas as tabelas e testada por pgTAP, porque é o que segura se alguém expuser o schema.
 
 A matriz completa de RLS por tabela e por papel está no [doc 04](04-banco-de-dados.md#rls-matriz-completa).
 

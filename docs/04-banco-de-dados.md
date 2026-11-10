@@ -1,5 +1,7 @@
 # 04 · Banco de dados (Supabase Postgres)
 
+Tudo o que este documento descreve mora no schema `eventos`, no projeto Supabase que o Eventos divide com o CF Jobs ([ADR-0018](adr/0018-schema-proprio-no-projeto-do-cf-jobs.md)); os nomes abaixo omitem o prefixo. O `public` é do CF Jobs e não recebe nada daqui.
+
 ## Princípios de modelagem
 
 1. **Pessoa e documento são coisas diferentes.** `participants` guarda quem a pessoa é (identidade). `certificates` guarda o que aquele documento afirma (tipo de participação, carga horária, conteúdo dinâmico, código, versão). Uma pessoa pode ser palestrante e organizadora no mesmo evento, com carga horária e título de palestra distintos: são dois certificados de um participante ([ADR-0004](adr/0004-payload-dinamico-no-certificado.md)).
@@ -43,7 +45,7 @@ erDiagram
 
 | Enum | Valores | Rótulo pt-BR (PRD) |
 |---|---|---|
-| `user_role` | `admin`, `editor`, `reader` | `reader` é o papel de quem acabou de se cadastrar: não acessa nada. Existe porque o GitHub OAuth é aberto. |
+| `user_role` | `admin`, `editor`, `reader` | `reader` tem perfil e não acessa nada. Quem não tem linha em `profiles` também não: o Auth é dividido com o CF Jobs, e ter conta lá não dá acesso aqui (ADR-0018). |
 | `event_status` | `draft`, `registration_open`, `registration_closed`, `in_progress`, `completed`, `certificates_available`, `archived` | `rascunho`, `inscricoes_abertas`, `inscricoes_encerradas`, `em_andamento`, `realizado`, `certificados_disponiveis`, `arquivado` |
 | `search_mode` | `any`, `all` | "qualquer um", "todos" |
 | `template_status` | `draft`, `published` | |
@@ -64,7 +66,7 @@ Convenções comuns: `id uuid primary key default gen_random_uuid()` salvo indic
 
 ### `profiles` (espelho de `auth.users`)
 
-Idêntica ao CF Jobs: `id` (FK `auth.users`, cascade), `display_name text not null`, `avatar_url text`, `role user_role not null default 'reader'`. Criada pelo trigger `on_auth_user_created`; o papel entra no JWT pelo Custom Access Token Hook `custom_access_token`.
+`id` (FK `auth.users`, cascade), `display_name text not null`, `avatar_url text`, `role user_role not null default 'reader'`. **É de onde vem o papel** (ADR-0018): o token só diz quem é a pessoa, e o claim `user_role` que o hook do CF Jobs põe nele é ignorado. Não há trigger em `auth.users` nem hook do Eventos; a linha é criada por um admin do Eventos (SQL do [runbook](runbooks.md), até a tela de papéis do M11). Cada pessoa lê só a própria linha pela RLS, e ninguém troca o próprio papel.
 
 ### `events`
 
@@ -73,7 +75,7 @@ Idêntica ao CF Jobs: `id` (FK `auth.users`, cascade), `display_name text not nu
 | `slug` | text | unique, not null, `^[a-z0-9]+(-[a-z0-9]+)*$`, 3 a 80 caracteres. Editável só enquanto `draft`. |
 | `title` | text | not null, 3 a 160 |
 | `description_md` | text | not null default `''`, Markdown sanitizado na renderização |
-| `cover_path` | text | null. Caminho no bucket `covers`. Null cai na capa gerada ([doc 09](09-frontend-e-seo.md)). |
+| `cover_path` | text | null. Caminho no bucket `eventos-covers`. Null cai na capa gerada ([doc 09](09-frontend-e-seo.md)). |
 | `starts_at` / `ends_at` | timestamptz | `starts_at` not null; check `ends_at >= starts_at` |
 | `location_name` / `city` / `state` | text | `state` char(2) |
 | `external_url` | text | null, https |
@@ -97,7 +99,7 @@ Os quatro tipos padrão são criados pela action `createEvent`, na mesma transa�
 
 ### `custom_fonts`
 
-`family text not null` · `weight smallint not null` (100 a 900) · `storage_path text not null` (bucket `fonts`) · `sha256 text not null unique` · `subset_ok boolean not null` (resultado do teste de ida e volta no upload, [doc 05](05-motor-de-certificados.md)) · `glyph_coverage_ok boolean not null` · `uploaded_by` FK profiles. Fontes curadas não ficam no banco: vivem em `public/fonts/cert/` e no catálogo em código.
+`family text not null` · `weight smallint not null` (100 a 900) · `storage_path text not null` (bucket `eventos-fonts`) · `sha256 text not null unique` · `subset_ok boolean not null` (resultado do teste de ida e volta no upload, [doc 05](05-motor-de-certificados.md)) · `glyph_coverage_ok boolean not null` · `uploaded_by` FK profiles. Fontes curadas não ficam no banco: vivem em `public/fonts/cert/` e no catálogo em código.
 
 ### `certificate_templates`
 
@@ -108,7 +110,7 @@ Os quatro tipos padrão são criados pela action `createEvent`, na mesma transa�
 | `status` | template_status | default `draft` |
 | `version` | int | not null default 0. Incrementa a cada publicação. Entra no ETag. |
 | `art_kind` | art_kind | null até subir a arte |
-| `art_original_path` | text | bucket `templates`, arquivo como o admin subiu |
+| `art_original_path` | text | bucket `eventos-templates`, arquivo como o admin subiu |
 | `base_pdf_path` / `base_pdf_sha256` / `base_pdf_size_bytes` | text / text / int | o `base.pdf` canônico ([doc 05](05-motor-de-certificados.md)). Check `base_pdf_size_bytes <= 3145728`. |
 | `pages` | jsonb | `[{ "width_pt", "height_pt", "preview_path" }]`, 1 ou 2 itens |
 | `schema_version` | smallint | not null default 1 |
@@ -207,8 +209,7 @@ Unique `(participant_id, participation_type_id)`. Check `(status = 'erased') = (
 | Objeto | Tipo | Responsabilidade |
 |---|---|---|
 | `set_updated_at()` | trigger | carimbo |
-| `handle_new_user()` / `custom_access_token(jsonb)` | trigger / Auth Hook | como no CF Jobs |
-| `authorize(min_role user_role)` | function stable | hierarquia `admin > editor > reader`, lê o claim `user_role` do JWT |
+| `authorize(min_role user_role)` | function stable | hierarquia `admin > editor > reader`, pelo papel em `profiles` da pessoa da sessão (`auth.uid()`); sem linha, `false`. Ignora o claim `user_role` (ADR-0018) |
 | `normalize_person_name(text)` | function **immutable** | fonte única da normalização de nome (abaixo) |
 | `generate_certificate_code()` | function volatile | 10 símbolos Crockford a partir de `gen_random_bytes(7)` (50 bits usados) |
 | `certificates_protect_code()` | trigger BEFORE UPDATE | rejeita mudança de `code` e de `sequence_number` |
@@ -281,10 +282,10 @@ Três pontos que diferem do CF Jobs e por quê:
 
 | Bucket | Público | Conteúdo | Escrita |
 |---|---|---|---|
-| `covers` | sim | capas de evento | editor, por URL de upload assinada |
-| `previews` | sim | fundo da prévia em WebP (a arte sem nenhum nome) | editor |
-| `templates` | não | arte original e `base.pdf` | editor; leitura só pelo servidor (service role) |
-| `fonts` | não | TTF/OTF enviados pelo admin | editor; leitura só pelo servidor e pelo editor autenticado |
+| `eventos-covers` | sim | capas de evento | editor, por URL de upload assinada |
+| `eventos-previews` | sim | fundo da prévia em WebP (a arte sem nenhum nome) | editor |
+| `eventos-templates` | não | arte original e `base.pdf` | editor; leitura só pelo servidor (service role) |
+| `eventos-fonts` | não | TTF/OTF enviados pelo admin | editor; leitura só pelo servidor e pelo editor autenticado |
 
 Upload sempre direto do navegador para o Storage com URL assinada emitida por Server Action (contorna o limite de 4,5 MB de corpo da Vercel). Policies em `storage.objects` seguem `authorize('editor')`.
 
@@ -309,7 +310,7 @@ O Vercel Cron não é usado: o `pg_cron` já é o padrão da casa e roda mesmo c
 
 ## Migrations e seeds
 
-Migrations em `supabase/migrations/`, SQL puro, na ordem abaixo. **A RLS de cada tabela está na mesma migration que cria a tabela**, nunca em uma migration "de RLS" no fim.
+Migrations em `supabase/migrations-eventos/`, SQL puro, na ordem abaixo, aplicadas pelo `pnpm db:migrar` com histórico em `eventos.schema_migrations`, e nunca pela CLI, cujo histórico é do projeto (ADR-0018). A `0000_schema` cria o schema e as permissões padrão dele. **A RLS de cada tabela está na mesma migration que cria a tabela**, nunca em uma migration "de RLS" no fim.
 
 `0001_extensions` · `0002_enums` · `0003_profiles_auth` (profiles, trigger, hook, `authorize`) · `0004_events` (events, participation_types) · `0005_templates` (custom_fonts, certificate_templates, FK de participation_types para o modelo) · `0006_participants_certificates` (`normalize_person_name`, `generate_certificate_code`, tabelas, triggers de versão e de código imutável) · `0007_imports` (batches, rows, `compute_import_diff`, `apply_import`) · `0008_corrections` · `0009_observability` (logs, stats, audit_logs, views) · `0010_rate_limit` · `0011_lgpd` (`erase_participant`, `minimize_old_participants`) · `0012_storage` (buckets e policies) · `0013_cron` · `0014_access_tokens` (M11) · `0015_email` (M11).
 

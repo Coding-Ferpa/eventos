@@ -49,7 +49,7 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 | `releaseCertificates` (editor) | `{ id }` | pré-condições: ≥ 1 certificado ativo; todo tipo com certificado **ativo** tem modelo **publicado** (rascunho conta como nenhum); a busca passa na regra do ADR-0009 com o status de destino (a mesma função do `updateEvent`). Falta algo: `release_preconditions_failed`, com tudo o que falta de uma vez, em frases prontas, em `fieldErrors.liberar`. Evento já liberado: `conflict` (liberar de novo mudaria a data da liberação). Efeito: `status = certificates_available`, `certificates_released_at = now()`, `issued_at = now()` onde for null; o `diff` da auditoria leva o status e quantos foram emitidos | `events`, `event:{slug}` |
 | `cloneEvent` (editor, M11) | `{ source_id, title, slug, starts_at }` | copia evento (em `draft`, `cpf_salt` **novo**), tipos, modelos (arte, `base.pdf`, prévias copiados no Storage; snapshot preservado; `column_mapping` junto) e configuração de busca. Não copia participantes nem certificados. | `events` |
 | `deleteEvent` (admin) | `{ id }` | só `draft` sem certificados | `events` |
-| `createCoverUploadUrl` (editor) | `{ event_id, content_type, size }` | URL assinada de upload no bucket `covers`, no caminho `{event_id}/{uuid}.{extensão}`; até 5 MB, o teto do bucket. O navegador sobe direto ao Storage, e a origem do Supabase entra no `connect-src` da CSP só nas rotas dinâmicas | nenhuma |
+| `createCoverUploadUrl` (editor) | `{ event_id, content_type, size }` | URL assinada de upload no bucket `eventos-covers`, no caminho `{event_id}/{uuid}.{extensão}`; até 5 MB, o teto do bucket. O navegador sobe direto ao Storage, e a origem do Supabase entra no `connect-src` da CSP só nas rotas dinâmicas | nenhuma |
 
 ### Tipos de participação (`actions/participation-types.ts`)
 
@@ -60,14 +60,14 @@ Papel mínimo entre parênteses. Todas validam a entrada com Zod de `src/lib/sch
 | Action | Entrada | Efeito |
 |---|---|---|
 | `createTemplate` (editor) | `{ event_id, name }` | cria em `draft`, `schema_version = 1`, listas vazias |
-| `createArtUploadUrls` (editor) | `{ template_id, art: { content_type, size }, previews: [{ page }] }` | URLs assinadas: arte original em `templates`, prévias WebP em `previews` |
+| `createArtUploadUrls` (editor) | `{ template_id, art: { content_type, size }, previews: [{ page }] }` | URLs assinadas: arte original em `eventos-templates`, prévias WebP em `eventos-previews` |
 | `attachArt` (editor) | `{ template_id, art_path, preview_paths[] }` | baixa a arte, confere assinatura de bytes, roda `buildBasePdf` ([doc 05](05-motor-de-certificados.md)), grava `base.pdf`, `pages`, sha256 e tamanho. Erros: `art_encrypted`, `art_rotated`, `art_too_many_pages`, `art_too_small`, `art_too_heavy`, `art_unsupported_type`, `art_unreadable`. `maxDuration = 60`. |
 | `saveTemplateDraft` (editor) | `{ id, data_fields, layout_fields }` | valida com o Zod de `schema.ts`: chaves reservadas, placeholders conhecidos, caixas dentro da página. Grava só a cópia de trabalho. **Não afeta downloads.** |
 | `publishTemplate` (editor) | `{ id }` | roda as 7 regras de publicação do doc 05; grava `published_snapshot`, `version + 1`, `status = published` |
 | `getLongestNameSample` (editor) | `{ template_id, font, transform }` | devolve o nome mais largo do evento para o botão de teste (leitura, mas é action para carregar sessão e papel). Recebe a fonte e a transformação que estão na tela, e não o `field_id`, porque o botão mede o que o admin está vendo, salvo ou não (M6). O nome não vai para a auditoria. |
 | `cloneTemplate` (editor) | `{ id, target_event_id }` | copia modelo e arquivos |
 | `deleteTemplate` (admin) | `{ id }` | só `draft` sem tipos apontando |
-| `createFontUploadUrl` (editor) | `{ extension, size }` | URL assinada no bucket privado `fonts`, até 2 MB |
+| `createFontUploadUrl` (editor) | `{ extension, size }` | URL assinada no bucket privado `eventos-fonts`, até 2 MB |
 | `uploadCustomFont` (editor) | `{ storage_path, family?, weight? }` (sem família e peso, valem os do arquivo) | valida assinatura, recusa variável, testa cobertura e subset, grava `custom_fonts`. Arquivo recusado ou repetido (mesmo sha256) sai do bucket; o repetido devolve a fonte que já existe. |
 | `createFontReadUrls` (editor) | `{ ids }` | URLs de leitura de uma hora das fontes enviadas, para a prévia do editor rodar o motor no navegador |
 

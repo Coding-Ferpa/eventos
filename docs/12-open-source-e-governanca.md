@@ -95,7 +95,7 @@ Issue forms com os campos do CF Jobs:
 - [ ] `docs/`, `.env.example` e ADR atualizados quando a mudança pede
 - [ ] Sem dado pessoal real nem segredo no diff, nas fixtures e nos screenshots
 
-`CODEOWNERS`: `* @eduardovpessoa`, com entradas explícitas para `/docs/`, `/supabase/migrations/`, `/.github/workflows/`, `/public/fonts/cert/`, os dois testes de gate e `tests/fixtures/csv/`.
+`CODEOWNERS`: `* @eduardovpessoa`, com entradas explícitas para `/docs/`, `/supabase/migrations-eventos/`, `/.github/workflows/`, `/public/fonts/cert/`, os dois testes de gate e `tests/fixtures/csv/`.
 
 `dependabot.yml`: npm semanal às segundas, até 5 PRs, grupo `dependencias-menores` (minor e patch), prefixo `chore`; `github-actions` mensal, prefixo `ci`.
 

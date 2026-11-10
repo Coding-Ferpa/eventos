@@ -26,7 +26,7 @@ O CF Eventos é o segundo projeto da casa. A stack é a do CF Jobs, versão por 
 | Pacotes e runtime | pnpm 11 · Node 26 LTS (≥ 26.13) |
 | Releases | Conventional Commits + commitlint + husky + Release Please |
 | Licença | MIT |
-| Deploy | Vercel (funções em `gru1`), Supabase em `sa-east-1` |
+| Deploy | Vercel (funções em `gru1`), Supabase em `sa-east-1`, no projeto do CF Jobs, schema `eventos` ([ADR-0018](adr/0018-schema-proprio-no-projeto-do-cf-jobs.md)) |
 
 **Uma divergência deliberada de arquivo herdado:** o `engines` deste projeto é `>=26.13 <27`, e não um intervalo aberto como o do CF Jobs. O intervalo aberto aceitaria a próxima série e não expressa a decisão da tabela acima, que é a série 26 LTS; com o teto, quem desenvolve em outra série descobre no `pnpm install` e não no PR. O `engineStrict: true` do `pnpm-workspace.yaml` faz do teto um erro, e não um aviso (até 2026-11-10 a regra morava no `.npmrc`, que o pnpm 11 não lê para isso: medido, o Node 24 instalava com um WARN), e um `.nvmrc` com a série 26 fixa a versão de quem clona. A Vercel lê o `engines` e usa a última 26.x.
 
@@ -83,9 +83,9 @@ Qualquer dependência fora destas tabelas exige ADR antes do `pnpm add`.
 | Recurso | Uso |
 |---|---|
 | Postgres | todo o dado, inclusive staging de importação, rate limit, logs de observabilidade e a fila de e-mail |
-| Auth | login do admin (e-mail e senha, GitHub OAuth), claim `user_role` por Auth Hook |
+| Auth | login do admin (e-mail e senha, GitHub OAuth); o papel vem de `eventos.profiles`, e não do token, porque o Auth é dividido com o CF Jobs (ADR-0018) |
 | RLS | em todas as tabelas; `anon` só lê `events` ([doc 04](04-banco-de-dados.md)) |
-| Storage | `covers` e `previews` públicos; `templates` e `fonts` privados; upload por URL assinada |
+| Storage | `eventos-covers` e `eventos-previews` públicos; `eventos-templates` e `eventos-fonts` privados (o prefixo é do projeto dividido, ADR-0018); upload por URL assinada |
 | pg_cron + pg_net | rollup, podas, minimização LGPD, despacho da fila de e-mail (P1) |
 | **Data API (PostgREST)** | **desligada em produção** ([doc 08](08-seguranca-e-lgpd.md)) |
 | Edge Functions, Realtime | não usados |

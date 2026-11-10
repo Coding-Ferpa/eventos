@@ -1,6 +1,6 @@
 # ADR-0012 · Consulta pública de pessoa pelo servidor, sem policy para `anon`, e Data API desligada
 
-- **Status:** aceita
+- **Status:** aceita; a parte da Data API foi atualizada pelo [ADR-0018](0018-schema-proprio-no-projeto-do-cf-jobs.md): no projeto dividido com o CF Jobs, a Data API é dele, e o Eventos cumpre o mesmo objetivo ficando fora dos schemas expostos
 - **Data:** 2026-09-20
 - **Autores:** mantenedor e sessão de arquitetura
 

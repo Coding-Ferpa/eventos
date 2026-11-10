@@ -38,8 +38,8 @@ Pré-requisitos: Node 26 LTS (há um `.nvmrc`), pnpm 11, Git e Docker.
 git clone git@github.com:Coding-Ferpa/eventos.git && cd eventos
 pnpm install
 cp .env.example .env
-pnpm db:start   # Supabase local; a primeira vez baixa as imagens
-pnpm db:reset   # migrations do zero e os dois seeds
+pnpm db:start   # Supabase local, com as migrations e os seeds pelo db:migrar
+pnpm db:reset   # o banco local do zero: migrations e os dois seeds
 pnpm dev
 ```
 
@@ -57,20 +57,21 @@ painel, como todo cadastro novo.
 
 ## Scripts
 
-| Comando                                             | O que faz                                                  |
-| --------------------------------------------------- | ---------------------------------------------------------- |
-| `pnpm dev`                                          | servidor de desenvolvimento                                |
-| `pnpm build`                                        | build de produção                                          |
-| `pnpm lint` · `pnpm typecheck`                      | ESLint e TypeScript                                        |
-| `pnpm format` · `pnpm format:check`                 | Prettier                                                   |
-| `pnpm test` · `pnpm test:coverage`                  | Vitest                                                     |
-| `pnpm test:e2e`                                     | Playwright                                                 |
-| `pnpm check:env`                                    | confere `.env.example` contra o schema de env              |
-| `pnpm db:start` · `pnpm db:stop` · `pnpm db:status` | Supabase local                                             |
-| `pnpm db:reset`                                     | aplica as migrations do zero e os seeds                    |
-| `pnpm db:test`                                      | pgTAP: matriz de RLS, funções e guardas                    |
-| `pnpm check:schema`                                 | confere o schema Drizzle contra o banco, nas duas direções |
-| `pnpm check:migrations`                             | gate de expand/contract nas migrations                     |
+| Comando                                             | O que faz                                                   |
+| --------------------------------------------------- | ----------------------------------------------------------- |
+| `pnpm dev`                                          | servidor de desenvolvimento                                 |
+| `pnpm build`                                        | build de produção                                           |
+| `pnpm lint` · `pnpm typecheck`                      | ESLint e TypeScript                                         |
+| `pnpm format` · `pnpm format:check`                 | Prettier                                                    |
+| `pnpm test` · `pnpm test:coverage`                  | Vitest                                                      |
+| `pnpm test:e2e`                                     | Playwright                                                  |
+| `pnpm check:env`                                    | confere `.env.example` contra o schema de env               |
+| `pnpm db:start` · `pnpm db:stop` · `pnpm db:status` | Supabase local                                              |
+| `pnpm db:reset`                                     | aplica as migrations do zero e os seeds                     |
+| `pnpm db:migrar`                                    | migrations pendentes; `--remote` mostra o plano de produção |
+| `pnpm db:test`                                      | pgTAP: matriz de RLS, funções e guardas                     |
+| `pnpm check:schema`                                 | confere o schema Drizzle contra o banco, nas duas direções  |
+| `pnpm check:migrations`                             | gate de expand/contract nas migrations                      |
 
 ## Contribuindo
 
