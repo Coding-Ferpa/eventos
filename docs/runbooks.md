@@ -114,20 +114,22 @@ O projeto já está ligado ao repositório. Em Settings, Git, a Production Branc
 
 Em Settings, Environment Variables, cada uma marcando **só Production**:
 
-| Variável | Valor |
-|---|---|
-| `DATABASE_URL` | a string do Transaction pooler (1.5) |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://dculmejrmmgrqfmybijp.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | a Publishable key (ou a `anon` legada) |
-| `SUPABASE_SERVICE_ROLE_KEY` | a Secret key (ou a `service_role` legada) |
-| `CPF_PEPPER` | o da etapa 2 |
-| `RETRIEVAL_COOKIE_KEY` | o da etapa 2 |
-| `DEVICE_COOKIE_SECRET` | o da etapa 2 |
-| `IP_HASH_SECRET` | o da etapa 2 |
+| Variável | Valor | Sensitive? |
+|---|---|---|
+| `DATABASE_URL` | a string do Transaction pooler (1.5) | **sim**: leva a senha do banco, que é também a do CF Jobs |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://dculmejrmmgrqfmybijp.supabase.co` | não: vai para o navegador |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | a Publishable key (ou a `anon` legada) | não: é pública por definição, quem protege é a RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | a Secret key (ou a `service_role` legada) | **sim**: passa por cima da RLS |
+| `CPF_PEPPER` | o da etapa 2 | **sim** |
+| `RETRIEVAL_COOKIE_KEY` | o da etapa 2 | **sim** |
+| `DEVICE_COOKIE_SECRET` | o da etapa 2 | **sim** |
+| `IP_HASH_SECRET` | o da etapa 2 | **sim** |
+
+**Sensitive** é a opção da Vercel que esconde o valor depois de salvo: nem você o lê de novo pelo painel. Por isso o `CPF_PEPPER` vai para o gerenciador de senhas antes (etapa 2). As `NEXT_PUBLIC_*` não podem ser sensíveis de verdade, porque entram no JavaScript do navegador no build; marcá-las não esconde nada.
 
 E `NEXT_PUBLIC_SITE_URL` = `https://eventos.codingferpa.org` em **Production e Preview** (a Preview precisa dela para o build, e de mais nada).
 
-Para entrar com o GitHub (etapa 6), também em Production: `SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID`, com o Client ID que aparece em Authentication, Sign In / Providers, GitHub. É só ele que faz o botão aparecer no login; a troca com o GitHub é toda do Supabase.
+Para entrar com o GitHub (etapa 6), também em Production e sem Sensitive (o Client ID aparece na URL de login de qualquer um): `SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID`, com o Client ID que aparece em Authentication, Sign In / Providers, GitHub. O Client Secret do GitHub não vai para a Vercel: ele fica no Supabase. É só ele que faz o botão aparecer no login; a troca com o GitHub é toda do Supabase.
 
 Opcionais, podem vir depois: `RESEND_API_KEY`, `EMAIL_FROM` e `ADMIN_NOTIFICATION_EMAIL` (seção 8). Sem elas o pedido de correção de nome é gravado e só o aviso por e-mail não sai.
 
@@ -211,7 +213,7 @@ O link para divulgar é o da página do evento.
 
 1. No Resend, Domains, acrescente `codingferpa.org` e crie no DNS os registros que ele mostrar (SPF e DKIM). Espere **Verified**: e-mail sem SPF e DKIM cai no spam.
 2. API Keys, uma chave com permissão só de envio.
-3. Na Vercel, só Production: `RESEND_API_KEY`, `EMAIL_FROM` (`Coding Ferpa <certificados@codingferpa.org>`) e `ADMIN_NOTIFICATION_EMAIL` (para onde vai o aviso quando o evento não tem e-mail de contato). Redeploy.
+3. Na Vercel, só Production: `RESEND_API_KEY` (Sensitive), `EMAIL_FROM` (`Coding Ferpa <certificados@codingferpa.org>`) e `ADMIN_NOTIFICATION_EMAIL` (para onde vai o aviso quando o evento não tem e-mail de contato). Redeploy.
 
 ## 9. Se o Supabase pausar
 
