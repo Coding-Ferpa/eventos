@@ -19,3 +19,15 @@ alter default privileges for role postgres in schema eventos
   grant all on sequences to anon, authenticated, service_role;
 alter default privileges for role postgres in schema eventos
   grant all on functions to anon, authenticated, service_role;
+
+-- O histórico das migrations do Eventos, que o `pnpm db:migrar` lê e grava.
+-- O da CLI do Supabase (`supabase_migrations`) é do projeto, e o CF Jobs o usa.
+create table eventos.schema_migrations (
+  version text primary key check (version ~ '^\d{4}$'),
+  name text not null,
+  sha256 text not null check (sha256 ~ '^[0-9a-f]{64}$'),
+  applied_at timestamptz not null default now()
+);
+
+alter table eventos.schema_migrations enable row level security;
+revoke all on eventos.schema_migrations from anon, authenticated;

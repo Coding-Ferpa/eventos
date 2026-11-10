@@ -21,7 +21,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
-const PASTA = resolve(process.cwd(), 'supabase/migrations')
+const PASTA = resolve(process.cwd(), 'supabase/migrations-eventos')
 
 const MARCADOR = /--\s*expand\/contract:\s*(expand|contract)\b/i
 
@@ -69,7 +69,7 @@ function main(): void {
       ? process.argv.slice(2)
       : readdirSync(PASTA)
           .filter((nome) => nome.endsWith('.sql'))
-          .map((nome) => join('supabase/migrations', nome))
+          .map((nome) => join('supabase/migrations-eventos', nome))
 
   const problemas = alvos.flatMap(conferir)
 

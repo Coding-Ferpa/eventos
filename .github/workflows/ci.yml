@@ -207,7 +207,8 @@ jobs:
       - name: Instala o Chromium e o WebKit do Playwright
         run: pnpm exec playwright install --with-deps chromium webkit
       # Login, papéis e o guarda do admin precisam de banco e de auth de
-      # verdade. O `start` de um banco novo já aplica migrations e seeds.
+      # verdade. O `db:start` sobe a pilha e aplica migrations e seeds pelo
+      # `db:migrar` (ADR-0018), o mesmo caminho de produção.
       - name: Sobe o Supabase local
         run: pnpm db:start
       - name: Aponta o app para o Supabase local

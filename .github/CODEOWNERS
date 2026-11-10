@@ -4,7 +4,7 @@
 
 # Arquitetura, segurança e o que protege dado pessoal exigem atenção redobrada.
 /docs/                          @eduardovpessoa
-/supabase/migrations/           @eduardovpessoa
+/supabase/migrations-eventos/           @eduardovpessoa
 /src/features/certificate/      @eduardovpessoa
 /src/features/import/           @eduardovpessoa
 /src/db/queries/public-lookup.ts @eduardovpessoa

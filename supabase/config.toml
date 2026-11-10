@@ -63,18 +63,20 @@ max_client_conn = 100
 # secret_key = "env(SECRET_VALUE)"
 
 [db.migrations]
-# If disabled, migrations will be skipped during a db push or reset.
-enabled = true
+# Desligado de propósito (ADR-0018): as migrations do Eventos moram em
+# supabase/migrations-eventos e vão pelo `pnpm db:migrar`, local e remoto. O
+# histórico da CLI é do projeto Supabase, que o Eventos divide com o CF Jobs.
+enabled = false
 # Specifies an ordered list of schema files, directories, or glob patterns that describe your database.
 # Supports paths relative to supabase directory: "./schemas/*.sql", "./database".
 schema_paths = []
 
 [db.seed]
-# If enabled, seeds the database after migrations during a db reset.
-enabled = true
-# Specifies an ordered list of seed files to load during db reset.
-# Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seeds/01-producao.sql", "./seeds/02-dev.sql"]
+# Desligado: os seeds vêm depois das migrations, pelo `pnpm db:reset`
+# (`pnpm db:migrar --seeds-locais`). O 02-dev.sql tem contas de senha
+# pública e nunca vai ao projeto remoto.
+enabled = false
+sql_paths = []
 
 [db.network_restrictions]
 # Enable management of network restrictions.

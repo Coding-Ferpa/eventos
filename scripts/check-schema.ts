@@ -58,6 +58,8 @@ async function main(): Promise<void> {
         on t.table_schema = c.table_schema and t.table_name = c.table_name
      where c.table_schema = 'eventos'
        and t.table_type in ('BASE TABLE', 'VIEW')
+       -- O histórico do pnpm db:migrar (ADR-0018) é do executor, e não do app.
+       and c.table_name <> 'schema_migrations'
   `
   await sql.end()
 

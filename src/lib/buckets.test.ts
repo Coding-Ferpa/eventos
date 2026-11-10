@@ -14,7 +14,7 @@ describe('BUCKETS (ADR-0018)', () => {
   })
 
   it('a migration cria exatamente estes buckets, e as policies citam só eles', () => {
-    const migration = ler('supabase/migrations/0012_storage.sql')
+    const migration = ler('supabase/migrations-eventos/0012_storage.sql')
     const criados = [...migration.matchAll(/^\s+\('([a-z-]+)', '\1',/gm)].map((m) => m[1])
     expect(criados.sort()).toEqual(Object.values(BUCKETS).sort())
     const citados = [
