@@ -26,6 +26,7 @@ Os documentos estão numerados na ordem recomendada de leitura. Cada um é autoc
 | [12 · Open source e governança](12-open-source-e-governanca.md) | repositório, CI, smoke diário, templates, releases, licença, contribuição |
 | [13 · Roadmap](13-roadmap.md) | fases, milestones, critérios de pronto, ordem de corte, riscos |
 | [14 · Prompt de execução](14-prompt-de-execucao-opus-5.md) | **o entregável final**: o prompt que o mantenedor cola na sessão do Claude Opus 5 |
+| [Runbooks](runbooks.md) | operação em produção: ida ao ar (Supabase, segredos, Vercel, domínio), primeiro admin, primeiro evento, pausa do Supabase |
 | [adr/](adr/) | template, os 13 ADRs da sessão de arquitetura e os da execução, a partir do 0014 |
 
 ## Resumo executivo das decisões
