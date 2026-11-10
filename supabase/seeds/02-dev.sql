@@ -51,9 +51,39 @@ select u.id::text, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email)
                 'ad000000-0000-4000-8000-000000000003')
 on conflict do nothing;
 
--- O trigger criou os perfis como `reader`; promover é ação manual.
-update eventos.profiles set role = 'admin' where id = 'ad000000-0000-4000-8000-000000000001';
-update eventos.profiles set role = 'editor' where id = 'ad000000-0000-4000-8000-000000000002';
+-- Perfis do Eventos: em produção, quem cria a linha é um admin (runbook). A
+-- conta reader tem linha para aparecer na lista de usuários sem acesso.
+insert into eventos.profiles (id, display_name, role) values
+  ('ad000000-0000-4000-8000-000000000001', 'Admin Local', 'admin'),
+  ('ad000000-0000-4000-8000-000000000002', 'Editora Local', 'editor'),
+  ('ad000000-0000-4000-8000-000000000003', 'Pessoa Sem Acesso', 'reader')
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- O hook do CF Jobs, no pior caso (ADR-0018)
+-- ---------------------------------------------------------------------------
+
+-- Em produção o Auth é do CF Jobs, e o hook de lá põe no token o claim
+-- `user_role` com o papel do CF Jobs. Aqui ele é imitado no pior caso: todo
+-- token sai com `user_role = 'admin'`. Os testes de autorização passam com
+-- ele ligado, e é isso que prova que o Eventos ignora o claim. Mora no
+-- `public`, como o de lá, e só existe no banco local.
+create or replace function public.custom_access_token(event jsonb)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select jsonb_set(
+    event,
+    '{claims}',
+    coalesce(event -> 'claims', '{}'::jsonb) || '{"user_role": "admin"}'::jsonb
+  );
+$$;
+
+grant usage on schema public to supabase_auth_admin;
+grant execute on function public.custom_access_token(jsonb) to supabase_auth_admin;
+revoke execute on function public.custom_access_token(jsonb) from anon, authenticated, public;
 
 -- ---------------------------------------------------------------------------
 -- Seis eventos, um em cada estado. Com o arquivado do seed de produção, os

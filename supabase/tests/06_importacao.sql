@@ -1,6 +1,8 @@
 -- Staging da importação (docs 04 e 06). O arquivo CSV nunca é gravado; o
 -- staging guarda linhas já normalizadas, com o CPF já em HMAC, e expira.
 
+-- Os tokens simulados levam `user_role: "admin"`, como o hook do CF Jobs pode
+-- pôr no projeto dividido (ADR-0018): o papel que vale é o de eventos.profiles.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(20);
@@ -12,7 +14,10 @@ values
    'authenticated', 'authenticated', 'reader@teste.local', 'x', now(), now(), now(), '{}', '{}'),
   ('00000000-0000-0000-0000-000000000000', '33333333-3333-4333-8333-333333333333',
    'authenticated', 'authenticated', 'editor@teste.local', 'x', now(), now(), now(), '{}', '{}');
-update eventos.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
+-- Sem trigger em auth.users (ADR-0018): o perfil do Eventos é criado à parte.
+insert into eventos.profiles (id, display_name, role) values
+  ('11111111-1111-4111-8111-111111111111', 'Pessoa Leitora', 'reader'),
+  ('33333333-3333-4333-8333-333333333333', 'Pessoa Editora', 'editor');
 
 insert into eventos.events (id, slug, title, starts_at) values
   ('e0000000-0000-4000-8000-000000000001', 'evento-a', 'Evento A', now()),
@@ -120,14 +125,14 @@ select is((select count(*) from eventos.import_batches) + (select count(*) from 
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"reader"}';
+  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"admin"}';
 select is((select count(*) from eventos.import_batches) + (select count(*) from eventos.import_rows),
   0::bigint, 'reader não vê staging');
 
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"editor"}';
+  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"admin"}';
 select lives_ok(
   $$ insert into eventos.import_rows (batch_id, row_number, full_name)
      values ('b0000000-0000-4000-8000-000000000001', 3, 'Nova Linha') $$,

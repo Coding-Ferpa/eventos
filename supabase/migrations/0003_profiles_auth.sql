@@ -1,8 +1,14 @@
--- 0003 · Perfis, papéis e o claim que a RLS lê (docs 04 e 08)
+-- 0003 · Perfis e papéis (docs 04 e 08, ADR-0018)
 --
--- Herdado do CF Jobs com uma diferença: aqui os papéis são três, e não
--- quatro. O PRD define `admin` e `editor`; `reader` existe só porque o login
--- com GitHub é aberto, e quem acabou de se cadastrar não acessa nada.
+-- Os papéis são três: o PRD define `admin` e `editor`, e `reader` é quem tem
+-- conta e nenhum acesso.
+--
+-- O Eventos divide o Auth com o CF Jobs (ADR-0018), e o token traz o claim
+-- `user_role` que o hook do CF Jobs preenche com o papel de lá. Por isso o
+-- papel daqui vem da tabela `eventos.profiles`, e o claim é ignorado: um admin
+-- do CF Jobs não é admin do Eventos. Também não há trigger em `auth.users` nem
+-- hook do Eventos: quem não tem linha em `eventos.profiles` não tem acesso, e
+-- a linha é criada por um admin do Eventos.
 
 -- ---------------------------------------------------------------------------
 -- Funções de apoio
@@ -32,28 +38,8 @@ as $$
   end;
 $$;
 
--- O papel vem do claim do JWT, e não de um join com `profiles`: a policy fica
--- barata e a aplicação lê o papel da sessão sem consulta. O preço, aceito no
--- CF Jobs e aqui, é que mudar de papel exige novo login.
---
--- Papel desconhecido no claim é erro de conversão de enum, e não `false`: a
--- falha fica visível em vez de virar negação silenciosa difícil de depurar.
-create function eventos.authorize(min_role eventos.user_role)
-returns boolean
-language sql
-stable
-set search_path = ''
-as $$
-  select coalesce(
-    eventos.role_rank(
-      nullif(auth.jwt() ->> 'user_role', '')::eventos.user_role
-    ) >= eventos.role_rank(min_role),
-    false
-  );
-$$;
-
 -- ---------------------------------------------------------------------------
--- profiles (espelho de auth.users)
+-- profiles
 -- ---------------------------------------------------------------------------
 
 create table eventos.profiles (
@@ -71,90 +57,41 @@ create trigger profiles_set_updated_at
 
 alter table eventos.profiles enable row level security;
 
-create policy profiles_select_own_or_admin on eventos.profiles
+-- Cada pessoa vê só a própria linha, sem chamar função nenhuma: é por ela que
+-- a `authorize` lê o papel, e uma policy que chamasse a `authorize` aqui
+-- entraria em recursão. A lista de contas do admin usa a conexão do servidor.
+create policy profiles_select_own on eventos.profiles
   for select to authenticated
-  using (id = auth.uid() or eventos.authorize('admin'));
+  using (id = auth.uid());
 
--- A pessoa edita o próprio nome e avatar, nunca o próprio papel. A comparação
--- é com o claim do JWT porque uma subconsulta na própria tabela causaria
--- recursão de policy.
+-- A pessoa edita o próprio nome e avatar, nunca o próprio papel: a subconsulta
+-- vê a linha de antes do update.
 create policy profiles_update_own on eventos.profiles
   for update to authenticated
   using (id = auth.uid())
-  with check (role::text = coalesce(auth.jwt() ->> 'user_role', 'reader'));
-
-create policy profiles_update_admin on eventos.profiles
-  for update to authenticated
-  using (eventos.authorize('admin'))
-  with check (eventos.authorize('admin'));
-
--- ---------------------------------------------------------------------------
--- Novo usuário ganha perfil `reader`
--- ---------------------------------------------------------------------------
-
-create function eventos.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  insert into eventos.profiles (id, display_name, avatar_url)
-  values (
-    new.id,
-    coalesce(
-      nullif(new.raw_user_meta_data ->> 'full_name', ''),
-      nullif(new.raw_user_meta_data ->> 'name', ''),
-      nullif(new.raw_user_meta_data ->> 'user_name', ''),
-      nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
-      'Pessoa organizadora'
-    ),
-    nullif(new.raw_user_meta_data ->> 'avatar_url', '')
+  with check (
+    role = (select p.role from eventos.profiles p where p.id = auth.uid())
   );
 
-  return new;
-end;
-$$;
-
--- Função `security definer` vira endpoint pelo PostgREST se ninguém revogar,
--- porque o Postgres concede `execute` a `public` em toda função nova (doc 08).
-revoke execute on function eventos.handle_new_user() from anon, authenticated, public;
-
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function eventos.handle_new_user();
-
 -- ---------------------------------------------------------------------------
--- Custom Access Token Hook: injeta `user_role` nos claims
+-- authorize: o papel pela tabela, nunca pelo token
 -- ---------------------------------------------------------------------------
 
-create function eventos.custom_access_token(event jsonb)
-returns jsonb
-language plpgsql
+-- Invoker de propósito: lê o papel pela policy da própria linha. Sem sessão
+-- (`anon`) ou sem linha em `profiles`, é `false`.
+create function eventos.authorize(min_role eventos.user_role)
+returns boolean
+language sql
 stable
-security definer
 set search_path = ''
 as $$
-declare
-  claims jsonb;
-  profile_role eventos.user_role;
-begin
-  select role into profile_role
-    from eventos.profiles
-   where id = (event ->> 'user_id')::uuid;
-
-  claims := coalesce(event -> 'claims', '{}'::jsonb);
-  claims := jsonb_set(
-    claims,
-    '{user_role}',
-    to_jsonb(coalesce(profile_role, 'reader'::eventos.user_role))
+  select coalesce(
+    (select eventos.role_rank(p.role) from eventos.profiles p where p.id = auth.uid())
+      >= eventos.role_rank(min_role),
+    false
   );
-
-  return jsonb_set(event, '{claims}', claims);
-end;
 $$;
 
--- O hook é chamado pelo serviço de auth, e por mais ninguém.
-grant usage on schema eventos to supabase_auth_admin;
-grant execute on function eventos.custom_access_token(jsonb) to supabase_auth_admin;
-revoke execute on function eventos.custom_access_token(jsonb) from anon, authenticated, public;
+-- Não há policy de admin sobre `profiles`: com a leitura limitada à própria
+-- linha, ela não alcançaria ninguém. Troca de papel é pela conexão do servidor
+-- (o SQL do runbook, até a tela de papéis do M11).

@@ -3,6 +3,8 @@
 -- imutáveis, versão que sobe quando o que o papel afirma muda, e nenhum
 -- acesso público a pessoa (ADR-0012).
 
+-- Os tokens simulados levam `user_role: "admin"`, como o hook do CF Jobs pode
+-- pôr no projeto dividido (ADR-0018): o papel que vale é o de eventos.profiles.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(40);
@@ -16,8 +18,11 @@ values
    'authenticated', 'authenticated', 'editor@teste.local', 'x', now(), now(), now(), '{}', '{}'),
   ('00000000-0000-0000-0000-000000000000', '44444444-4444-4444-8444-444444444444',
    'authenticated', 'authenticated', 'admin@teste.local', 'x', now(), now(), now(), '{}', '{}');
-update eventos.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
-update eventos.profiles set role = 'admin' where id = '44444444-4444-4444-8444-444444444444';
+-- Sem trigger em auth.users (ADR-0018): o perfil do Eventos é criado à parte.
+insert into eventos.profiles (id, display_name, role) values
+  ('11111111-1111-4111-8111-111111111111', 'Pessoa Leitora', 'reader'),
+  ('33333333-3333-4333-8333-333333333333', 'Pessoa Editora', 'editor'),
+  ('44444444-4444-4444-8444-444444444444', 'Pessoa Admin', 'admin');
 
 insert into eventos.events (id, slug, title, starts_at, status, search_by_name) values
   ('e0000000-0000-4000-8000-000000000001', 'evento-a', 'Evento A', now(), 'completed', true),
@@ -212,14 +217,14 @@ select is((select count(*) from eventos.participants) + (select count(*) from ev
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"reader"}';
+  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"admin"}';
 select is((select count(*) from eventos.participants) + (select count(*) from eventos.certificates),
   0::bigint, 'reader não enxerga pessoa nem certificado');
 
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"editor"}';
+  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"admin"}';
 select lives_ok(
   $$ insert into eventos.participants (event_id, full_name)
      values ('e0000000-0000-4000-8000-000000000002', 'Pessoa do Editor') $$,

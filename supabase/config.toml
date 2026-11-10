@@ -289,11 +289,12 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# Injeta `user_role` no JWT (migration 0003): é o claim que a RLS e o
-# `getCurrentUser` leem, sem consulta a `profiles` por requisição.
+# Imita o hook do CF Jobs no pior caso: todo token sai com `user_role = 'admin'`
+# (seed 02-dev, ADR-0018). O Eventos lê o papel de `eventos.profiles` e ignora
+# o claim; os testes de autorização passarem com isto ligado é a prova.
 [auth.hook.custom_access_token]
 enabled = true
-uri = "pg-functions://postgres/eventos/custom_access_token"
+uri = "pg-functions://postgres/public/custom_access_token"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]

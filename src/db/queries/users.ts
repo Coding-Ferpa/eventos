@@ -1,8 +1,9 @@
 import 'server-only'
 
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { profiles } from '@/db/schema'
 import { parseUserRole, type UserRole } from '@/lib/roles'
 
 export type ContaDoAdmin = {
@@ -36,4 +37,16 @@ export async function listarContas(): Promise<ContaDoAdmin[]> {
     email: linha.email,
     papel: parseUserRole(linha.role),
   }))
+}
+
+/**
+ * O papel no Eventos (ADR-0018): pela tabela, e nunca pelo claim do token, que
+ * no projeto dividido traz o papel do CF Jobs. Sem linha, `reader`.
+ */
+export async function papelNoEventos(userId: string): Promise<UserRole> {
+  const [perfil] = await db()
+    .select({ role: profiles.role })
+    .from(profiles)
+    .where(eq(profiles.id, userId))
+  return parseUserRole(perfil?.role)
 }

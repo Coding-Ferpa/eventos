@@ -1,6 +1,8 @@
 -- Fontes enviadas e modelos de certificado (docs 04 e 05). O modelo é todo
 -- de admin: `anon` e `reader` não enxergam nada.
 
+-- Os tokens simulados levam `user_role: "admin"`, como o hook do CF Jobs pode
+-- pôr no projeto dividido (ADR-0018): o papel que vale é o de eventos.profiles.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(25);
@@ -14,8 +16,11 @@ values
    'authenticated', 'authenticated', 'editor@teste.local', 'x', now(), now(), now(), '{}', '{}'),
   ('00000000-0000-0000-0000-000000000000', '44444444-4444-4444-8444-444444444444',
    'authenticated', 'authenticated', 'admin@teste.local', 'x', now(), now(), now(), '{}', '{}');
-update eventos.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
-update eventos.profiles set role = 'admin' where id = '44444444-4444-4444-8444-444444444444';
+-- Sem trigger em auth.users (ADR-0018): o perfil do Eventos é criado à parte.
+insert into eventos.profiles (id, display_name, role) values
+  ('11111111-1111-4111-8111-111111111111', 'Pessoa Leitora', 'reader'),
+  ('33333333-3333-4333-8333-333333333333', 'Pessoa Editora', 'editor'),
+  ('44444444-4444-4444-8444-444444444444', 'Pessoa Admin', 'admin');
 
 insert into eventos.events (id, slug, title, starts_at) values
   ('e0000000-0000-4000-8000-000000000001', 'evento-a', 'Evento A', now()),
@@ -117,7 +122,7 @@ select is((select count(*) from eventos.custom_fonts), 0::bigint, 'anon não vê
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"reader"}';
+  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"admin"}';
 select is((select count(*) from eventos.certificate_templates), 0::bigint, 'reader não vê modelo');
 select is((select count(*) from eventos.custom_fonts), 0::bigint, 'reader não vê fonte');
 
@@ -128,7 +133,7 @@ select is((select count(*) from eventos.custom_fonts), 0::bigint, 'reader não v
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"editor"}';
+  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"admin"}';
 
 select is((select count(*) from eventos.certificate_templates
             where event_id in ('e0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000002')),

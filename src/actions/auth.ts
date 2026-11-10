@@ -57,8 +57,8 @@ export async function autenticar(
       )
     }
 
-    // Toda conta nova nasce `reader` (trigger `handle_new_user`) e não tem
-    // acesso ao admin: a promoção é ação manual de um admin.
+    // Conta nova não tem perfil no Eventos e não acessa o admin: quem cria o
+    // perfil, com o papel, é um admin do Eventos (ADR-0018).
     redirect('/')
   }
 

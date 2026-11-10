@@ -2,6 +2,8 @@
 -- dashboard (docs 04, 08 e 10). Nenhum log guarda o que foi buscado, e a
 -- auditoria só cresce.
 
+-- Os tokens simulados levam `user_role: "admin"`, como o hook do CF Jobs pode
+-- pôr no projeto dividido (ADR-0018): o papel que vale é o de eventos.profiles.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(27);
@@ -15,8 +17,11 @@ values
    'authenticated', 'authenticated', 'editor@teste.local', 'x', now(), now(), now(), '{}', '{}'),
   ('00000000-0000-0000-0000-000000000000', '44444444-4444-4444-8444-444444444444',
    'authenticated', 'authenticated', 'admin@teste.local', 'x', now(), now(), now(), '{}', '{}');
-update eventos.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
-update eventos.profiles set role = 'admin' where id = '44444444-4444-4444-8444-444444444444';
+-- Sem trigger em auth.users (ADR-0018): o perfil do Eventos é criado à parte.
+insert into eventos.profiles (id, display_name, role) values
+  ('11111111-1111-4111-8111-111111111111', 'Pessoa Leitora', 'reader'),
+  ('33333333-3333-4333-8333-333333333333', 'Pessoa Editora', 'editor'),
+  ('44444444-4444-4444-8444-444444444444', 'Pessoa Admin', 'admin');
 
 insert into eventos.events (id, slug, title, starts_at, status, search_by_name) values
   ('e0000000-0000-4000-8000-000000000001', 'evento-a', 'Evento A', now(), 'certificates_available', true);
@@ -172,7 +177,7 @@ select ok(
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"reader"}';
+  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"admin"}';
 select is(
   (select count(*) from eventos.name_correction_requests) + (select count(*) from eventos.audit_logs)
   + (select count(*) from eventos.v_pending_downloads)
@@ -182,7 +187,7 @@ select is(
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"editor"}';
+  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"admin"}';
 select cmp_ok((select count(*) from eventos.audit_logs), '>=', 1::bigint, 'editor lê a auditoria');
 select cmp_ok((select count(*) from eventos.v_event_summary), '>=', 1::bigint,
   'editor lê o resumo do evento');

@@ -1,5 +1,7 @@
 -- Buckets de Storage, suas policies e os agendamentos do pg_cron (doc 04).
 
+-- Os tokens simulados levam `user_role: "admin"`, como o hook do CF Jobs pode
+-- pôr no projeto dividido (ADR-0018): o papel que vale é o de eventos.profiles.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(14);
@@ -11,7 +13,10 @@ values
    'authenticated', 'authenticated', 'reader@teste.local', 'x', now(), now(), now(), '{}', '{}'),
   ('00000000-0000-0000-0000-000000000000', '33333333-3333-4333-8333-333333333333',
    'authenticated', 'authenticated', 'editor@teste.local', 'x', now(), now(), now(), '{}', '{}');
-update eventos.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
+-- Sem trigger em auth.users (ADR-0018): o perfil do Eventos é criado à parte.
+insert into eventos.profiles (id, display_name, role) values
+  ('11111111-1111-4111-8111-111111111111', 'Pessoa Leitora', 'reader'),
+  ('33333333-3333-4333-8333-333333333333', 'Pessoa Editora', 'editor');
 
 insert into storage.objects (bucket_id, name) values
   ('templates', 'arte-existente.pdf'),
@@ -54,7 +59,7 @@ select is((select count(*) from storage.objects where bucket_id in ('templates',
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"reader"}';
+  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"admin"}';
 select throws_ok(
   $$ insert into storage.objects (bucket_id, name) values ('covers', 'reader.png') $$,
   '42501', null, 'reader não escreve');
@@ -62,7 +67,7 @@ select throws_ok(
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
-  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"editor"}';
+  '{"sub":"33333333-3333-4333-8333-333333333333","role":"authenticated","user_role":"admin"}';
 select lives_ok(
   $$ insert into storage.objects (bucket_id, name) values ('covers', 'editor.png') $$,
   'editor sobe capa');
