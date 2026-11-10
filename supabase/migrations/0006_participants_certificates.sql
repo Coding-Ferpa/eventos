@@ -17,7 +17,7 @@
 -- "Maria Eduarda Santos" para quem está na planilha como "Maria Eduarda dos
 -- Santos", e isso não afrouxa o casamento por inteiro: "maria" continua não
 -- encontrando ninguém (doc 08).
-create function public.normalize_person_name(raw text)
+create function eventos.normalize_person_name(raw text)
 returns text
 language sql
 immutable
@@ -54,7 +54,7 @@ $$;
 -- a colisão em erro, que desfaz a transação inteira e é refeito por quem
 -- chamou. Um laço aqui esconderia justamente o que o teste CSV-I4 precisa
 -- provocar.
-create function public.generate_certificate_code()
+create function eventos.generate_certificate_code()
 returns text
 language plpgsql
 volatile
@@ -86,16 +86,16 @@ $$;
 -- Os únicos campos de identidade do sistema (ADR-0004): são os que a busca e
 -- a conciliação usam, e o admin não cria outros. CPF nunca existe em claro,
 -- só o HMAC e os três últimos dígitos (ADR-0005).
-create table public.participants (
+create table eventos.participants (
   id uuid primary key default gen_random_uuid(),
-  event_id uuid not null references public.events (id) on delete cascade,
+  event_id uuid not null references eventos.events (id) on delete cascade,
 
   -- A aplicação grava o nome já sem espaço nas pontas e sem espaço duplo.
   full_name text not null check (
     full_name = btrim(regexp_replace(full_name, '\s+', ' ', 'g'))
     and char_length(full_name) between 3 and 120
   ),
-  full_name_normalized text generated always as (public.normalize_person_name(full_name))
+  full_name_normalized text generated always as (eventos.normalize_person_name(full_name))
     stored check (char_length(full_name_normalized) >= 3),
 
   cpf_hash text check (cpf_hash ~ '^[0-9a-f]{64}$'),
@@ -118,51 +118,51 @@ create table public.participants (
 
 -- Um CPF por evento, e o caminho da busca e da conciliação por CPF.
 create unique index participants_event_cpf_hash_key
-  on public.participants (event_id, cpf_hash) where cpf_hash is not null;
+  on eventos.participants (event_id, cpf_hash) where cpf_hash is not null;
 create index participants_event_name_idx
-  on public.participants (event_id, full_name_normalized);
+  on eventos.participants (event_id, full_name_normalized);
 create index participants_event_email_idx
-  on public.participants (event_id, email) where email is not null;
+  on eventos.participants (event_id, email) where email is not null;
 -- Só para a "possível duplicata" da importação e a busca do admin (doc 06).
 -- A busca pública nunca usa trigrama (doc 08).
 create index participants_name_trgm_idx
-  on public.participants using gin (full_name_normalized extensions.gin_trgm_ops);
+  on eventos.participants using gin (full_name_normalized extensions.gin_trgm_ops);
 
 create trigger participants_set_updated_at
-  before update on public.participants
-  for each row execute function public.set_updated_at();
+  before update on eventos.participants
+  for each row execute function eventos.set_updated_at();
 
-alter table public.participants enable row level security;
+alter table eventos.participants enable row level security;
 
-create policy participants_select_editor on public.participants
-  for select to authenticated using (public.authorize('editor'));
-create policy participants_insert_editor on public.participants
-  for insert to authenticated with check (public.authorize('editor'));
-create policy participants_update_editor on public.participants
+create policy participants_select_editor on eventos.participants
+  for select to authenticated using (eventos.authorize('editor'));
+create policy participants_insert_editor on eventos.participants
+  for insert to authenticated with check (eventos.authorize('editor'));
+create policy participants_update_editor on eventos.participants
   for update to authenticated
-  using (public.authorize('editor')) with check (public.authorize('editor'));
-create policy participants_delete_admin on public.participants
-  for delete to authenticated using (public.authorize('admin'));
+  using (eventos.authorize('editor')) with check (eventos.authorize('editor'));
+create policy participants_delete_admin on eventos.participants
+  for delete to authenticated using (eventos.authorize('admin'));
 
 -- ---------------------------------------------------------------------------
 -- certificates: o que o documento afirma
 -- ---------------------------------------------------------------------------
 
 -- Alvo da FK composta abaixo: o certificado usa tipo do próprio evento.
-alter table public.participation_types
+alter table eventos.participation_types
   add constraint participation_types_id_event_key unique (id, event_id);
 
-create table public.certificates (
+create table eventos.certificates (
   id uuid primary key default gen_random_uuid(),
   -- `restrict` garante o "só apaga evento sem certificados" (doc 04).
-  event_id uuid not null references public.events (id) on delete restrict,
+  event_id uuid not null references eventos.events (id) on delete restrict,
   -- Nulo só na lápide da eliminação LGPD (check abaixo).
   participant_id uuid,
   participation_type_id uuid not null,
 
   -- Imutável (trigger abaixo): o papel já impresso continua validando depois
   -- de qualquer correção (armadilha 8).
-  code text not null unique default public.generate_certificate_code()
+  code text not null unique default eventos.generate_certificate_code()
     check (code ~ '^[0-9A-HJKMNP-TV-Z]{10}$'),
   -- Preenchida pelo trigger de inserção; imutável depois.
   sequence_number integer not null check (sequence_number > 0),
@@ -179,11 +179,11 @@ create table public.certificates (
   -- `updated_at` não serve, porque o download também o mexe.
   content_updated_at timestamptz,
 
-  status public.certificate_status not null default 'active',
+  status eventos.certificate_status not null default 'active',
   issued_at timestamptz,
   revoked_at timestamptz,
   revoked_reason text check (char_length(btrim(revoked_reason)) between 10 and 500),
-  revoked_by uuid references public.profiles (id) on delete set null,
+  revoked_by uuid references eventos.profiles (id) on delete set null,
 
   first_downloaded_at timestamptz,
   last_downloaded_at timestamptz,
@@ -201,10 +201,10 @@ create table public.certificates (
   -- nulo na lápide, apagar a pessoa de um certificado ativo falha: o único
   -- caminho até a lápide é `erase_participant` (0011).
   foreign key (participant_id, event_id)
-    references public.participants (id, event_id)
+    references eventos.participants (id, event_id)
     on delete set null (participant_id),
   foreign key (participation_type_id, event_id)
-    references public.participation_types (id, event_id)
+    references eventos.participation_types (id, event_id)
     on delete restrict,
 
   check ((status = 'erased') = (participant_id is null)),
@@ -212,12 +212,12 @@ create table public.certificates (
   check (status <> 'revoked' or revoked_reason is not null)
 );
 
-create index certificates_event_status_idx on public.certificates (event_id, status);
-create index certificates_participant_idx on public.certificates (participant_id);
-create index certificates_batch_idx on public.certificates (created_by_batch_id);
+create index certificates_event_status_idx on eventos.certificates (event_id, status);
+create index certificates_participant_idx on eventos.certificates (participant_id);
+create index certificates_batch_idx on eventos.certificates (created_by_batch_id);
 -- "Quem ainda não baixou" (doc 10).
 create index certificates_pending_download_idx
-  on public.certificates (event_id)
+  on eventos.certificates (event_id)
   where first_downloaded_at is null and status = 'active';
 
 -- Sequência contínua por evento e carga horária padrão do tipo.
@@ -227,7 +227,7 @@ create index certificates_pending_download_idx
 -- `(event_id, sequence_number)` fica como rede de segurança. Numa importação
 -- de 500 linhas a mesma transação toma este lock 500 vezes e não espera por
 -- si mesma: advisory lock é reentrante dentro da sessão.
-create function public.certificates_before_insert()
+create function eventos.certificates_before_insert()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -237,12 +237,12 @@ begin
 
   select coalesce(max(sequence_number), 0) + 1
     into new.sequence_number
-    from public.certificates
+    from eventos.certificates
    where event_id = new.event_id;
 
   if new.hours is null then
     select default_hours into new.hours
-      from public.participation_types
+      from eventos.participation_types
      where id = new.participation_type_id;
   end if;
 
@@ -251,13 +251,13 @@ end;
 $$;
 
 create trigger certificates_before_insert
-  before insert on public.certificates
-  for each row execute function public.certificates_before_insert();
+  before insert on eventos.certificates
+  for each row execute function eventos.certificates_before_insert();
 
 -- Código e sequência não mudam, e a versão sobe quando o que o papel afirma
 -- muda (carga horária ou conteúdo). Download e revogação não são "o que o
 -- papel afirma" e não mexem na versão.
-create function public.certificates_before_update()
+create function eventos.certificates_before_update()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -282,23 +282,23 @@ end;
 $$;
 
 create trigger certificates_before_update
-  before update on public.certificates
-  for each row execute function public.certificates_before_update();
+  before update on eventos.certificates
+  for each row execute function eventos.certificates_before_update();
 
 create trigger certificates_set_updated_at
-  before update on public.certificates
-  for each row execute function public.set_updated_at();
+  before update on eventos.certificates
+  for each row execute function eventos.set_updated_at();
 
 -- Corrigir o nome muda o que todos os certificados ativos da pessoa afirmam.
 -- O código fica; a versão sobe, e a página de validação mostra sempre o dado
 -- atual (doc 05).
-create function public.participants_bump_certificates()
+create function eventos.participants_bump_certificates()
 returns trigger
 language plpgsql
 set search_path = ''
 as $$
 begin
-  update public.certificates
+  update eventos.certificates
      set version = version + 1, content_updated_at = now()
    where participant_id = new.id
      and status = 'active';
@@ -308,19 +308,19 @@ end;
 $$;
 
 create trigger participants_bump_certificates
-  after update of full_name on public.participants
+  after update of full_name on eventos.participants
   for each row
   when (new.full_name is distinct from old.full_name)
-  execute function public.participants_bump_certificates();
+  execute function eventos.participants_bump_certificates();
 
-alter table public.certificates enable row level security;
+alter table eventos.certificates enable row level security;
 
-create policy certificates_select_editor on public.certificates
-  for select to authenticated using (public.authorize('editor'));
-create policy certificates_insert_editor on public.certificates
-  for insert to authenticated with check (public.authorize('editor'));
-create policy certificates_update_editor on public.certificates
+create policy certificates_select_editor on eventos.certificates
+  for select to authenticated using (eventos.authorize('editor'));
+create policy certificates_insert_editor on eventos.certificates
+  for insert to authenticated with check (eventos.authorize('editor'));
+create policy certificates_update_editor on eventos.certificates
   for update to authenticated
-  using (public.authorize('editor')) with check (public.authorize('editor'));
-create policy certificates_delete_admin on public.certificates
-  for delete to authenticated using (public.authorize('admin'));
+  using (eventos.authorize('editor')) with check (eventos.authorize('editor'));
+create policy certificates_delete_admin on eventos.certificates
+  for delete to authenticated using (eventos.authorize('admin'));

@@ -56,7 +56,7 @@ async function main(): Promise<void> {
       from information_schema.columns c
       join information_schema.tables t
         on t.table_schema = c.table_schema and t.table_name = c.table_name
-     where c.table_schema = 'public'
+     where c.table_schema = 'eventos'
        and t.table_type in ('BASE TABLE', 'VIEW')
   `
   await sql.end()

@@ -41,11 +41,11 @@ export async function apagarEventosComPrefixo(prefixo: string) {
   const sql = conectar()
   try {
     const modelos = await sql<{ id: string }[]>`
-      select t.id from public.certificate_templates t
-      join public.events e on e.id = t.event_id
+      select t.id from eventos.certificate_templates t
+      join eventos.events e on e.id = t.event_id
       where e.title like ${`${prefixo}%`}`
     await apagarArquivosDosModelos(modelos.map((modelo) => modelo.id))
-    await sql`delete from public.events where title like ${`${prefixo}%`}`
+    await sql`delete from eventos.events where title like ${`${prefixo}%`}`
   } finally {
     await sql.end()
   }
@@ -82,7 +82,7 @@ export async function apagarFonteEnviada(sha256: string) {
   const sql = conectar()
   try {
     const linhas = await sql<{ storage_path: string }[]>`
-      delete from public.custom_fonts where sha256 = ${sha256} returning storage_path`
+      delete from eventos.custom_fonts where sha256 = ${sha256} returning storage_path`
     if (linhas.length === 0) return
     await createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,13 +108,13 @@ export async function criarEventoParaImportacao(titulo: string) {
   try {
     const slug = `e2e-importacao-${Date.now()}`
     const [evento] = await sql<{ id: string }[]>`
-      insert into public.events (slug, title, starts_at, search_by_cpf)
+      insert into eventos.events (slug, title, starts_at, search_by_cpf)
       values (${slug}, ${titulo}, now() + interval '30 days', true) returning id`
     const [modelo] = await sql<{ id: string }[]>`
-      insert into public.certificate_templates (event_id, name)
+      insert into eventos.certificate_templates (event_id, name)
       values (${evento!.id}, 'Participantes') returning id`
     await sql`
-      insert into public.participation_types
+      insert into eventos.participation_types
         (event_id, slug, label, aliases, default_hours, certificate_template_id, sort_order)
       values
         (${evento!.id}, 'participante', 'Participante', '{ouvinte}', 8, ${modelo!.id}, 1),
@@ -129,10 +129,10 @@ export async function criarEventoParaImportacao(titulo: string) {
 export async function liberarComDownload(eventoId: string, nome: string) {
   const sql = conectar()
   try {
-    await sql`update public.events set certificates_released_at = now() where id = ${eventoId}`
+    await sql`update eventos.events set certificates_released_at = now() where id = ${eventoId}`
     await sql`
-      update public.certificates c set first_downloaded_at = now()
-        from public.participants p
+      update eventos.certificates c set first_downloaded_at = now()
+        from eventos.participants p
        where p.id = c.participant_id and p.event_id = ${eventoId} and p.full_name = ${nome}`
   } finally {
     await sql.end()
@@ -143,10 +143,10 @@ export async function liberarComDownload(eventoId: string, nome: string) {
 export async function apagarEventosComCertificados(prefixo: string) {
   const sql = conectar()
   try {
-    const eventos = sql`select id from public.events where title like ${`${prefixo}%`}`
-    await sql`delete from public.certificates where event_id in (${eventos})`
-    await sql`delete from public.participants where event_id in (${eventos})`
-    await sql`delete from public.events where title like ${`${prefixo}%`}`
+    const eventos = sql`select id from eventos.events where title like ${`${prefixo}%`}`
+    await sql`delete from eventos.certificates where event_id in (${eventos})`
+    await sql`delete from eventos.participants where event_id in (${eventos})`
+    await sql`delete from eventos.events where title like ${`${prefixo}%`}`
   } finally {
     await sql.end()
   }
@@ -203,7 +203,7 @@ export async function criarEventoComCertificados(
   try {
     const slug = `e2e-busca-${randomUUID().slice(0, 8)}`
     const [evento] = await sql<{ id: string; salt: string }[]>`
-      insert into public.events (
+      insert into eventos.events (
         slug, title, starts_at, ends_at, city, state, status, certificates_released_at,
         search_by_cpf, search_by_email, search_by_name, contact_email
       ) values (
@@ -222,13 +222,13 @@ export async function criarEventoComCertificados(
     if (error) throw error
     const snapshot = { ...modeloDeExemplo(base), base_pdf_path: caminho }
     await sql`
-      insert into public.certificate_templates
+      insert into eventos.certificate_templates
         (id, event_id, name, status, version, published_snapshot, published_at)
       values (${modeloId}, ${evento!.id}, 'Modelo E2E', 'published', 1,
         ${sql.json(snapshot as never)}, now())`
 
     const tipos = await sql<{ id: string; slug: string }[]>`
-      insert into public.participation_types
+      insert into eventos.participation_types
         (event_id, slug, label, default_hours, certificate_template_id, sort_order)
       values
         (${evento!.id}, 'participante', 'Participante', 8, ${modeloId}, 1),
@@ -245,13 +245,13 @@ export async function criarEventoComCertificados(
       const pessoa = PESSOAS[chave]
       const cpf = pessoa.cpf.replace(/\D/g, '')
       const [participante] = await sql<{ id: string }[]>`
-        insert into public.participants (event_id, full_name, email, cpf_hash, cpf_last3)
+        insert into eventos.participants (event_id, full_name, email, cpf_hash, cpf_last3)
         values (${evento!.id}, ${pessoa.nome}, ${pessoa.email},
           ${hmacCpf(process.env.CPF_PEPPER!, evento!.salt, cpf)}, ${cpf.slice(-3)})
         returning id`
       for (const [slugDoTipo, horas] of certificados) {
         const [certificado] = await sql<{ code: string }[]>`
-          insert into public.certificates
+          insert into eventos.certificates
             (event_id, participant_id, participation_type_id, hours, issued_at)
           values (${evento!.id}, ${participante!.id}, ${tipo(slugDoTipo)}, ${horas},
             ${liberado ? new Date() : null})
@@ -277,9 +277,9 @@ export async function apagarEventoComCertificados(id: string) {
   const sql = conectar()
   try {
     const modelos = await sql<{ id: string }[]>`
-      select id from public.certificate_templates where event_id = ${id}`
-    await sql`delete from public.certificates where event_id = ${id}`
-    await sql`delete from public.events where id = ${id}`
+      select id from eventos.certificate_templates where event_id = ${id}`
+    await sql`delete from eventos.certificates where event_id = ${id}`
+    await sql`delete from eventos.events where id = ${id}`
     if (modelos.length > 0)
       await storageAdmin()
         .from('templates')
@@ -294,7 +294,7 @@ export async function revogarCertificado(codigo: string, motivo: string) {
   const sql = conectar()
   try {
     await sql`
-      update public.certificates
+      update eventos.certificates
          set status = 'revoked', revoked_at = now(), revoked_reason = ${motivo}
        where code = ${codigo}`
   } finally {

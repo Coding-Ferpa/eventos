@@ -15,9 +15,9 @@ import { db } from '@/db/client'
  */
 export async function registrarVisita(slug: string, deviceHash: string): Promise<void> {
   await db().execute(sql`
-    insert into public.event_visits (event_id, device_hash, day)
+    insert into eventos.event_visits (event_id, device_hash, day)
     select id, ${deviceHash}, (now() at time zone 'utc')::date
-    from public.events
+    from eventos.events
     where slug = ${slug} and status <> 'draft'
     on conflict do nothing
   `)

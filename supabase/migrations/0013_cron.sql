@@ -13,13 +13,13 @@
 select cron.schedule(
   'cf-eventos:rollup-estatisticas',
   '30 3 * * *',
-  $$select public.rollup_event_stats(((now() at time zone 'America/Sao_Paulo')::date - 1))$$
+  $$select eventos.rollup_event_stats(((now() at time zone 'America/Sao_Paulo')::date - 1))$$
 );
 
 select cron.schedule(
   'cf-eventos:podar-staging',
   '0 4 * * *',
-  $$select public.prune_import_staging()$$
+  $$select eventos.prune_import_staging()$$
 );
 
 -- Não está na lista do doc 04: a poda global de rate limit é acréscimo do
@@ -27,19 +27,19 @@ select cron.schedule(
 select cron.schedule(
   'cf-eventos:podar-rate-limit',
   '45 4 * * *',
-  $$select public.prune_rate_limits()$$
+  $$select eventos.prune_rate_limits()$$
 );
 
 -- Semanal, aos domingos: o prazo é de 90 dias e não há pressa.
 select cron.schedule(
   'cf-eventos:podar-observabilidade',
   '15 4 * * 0',
-  $$select public.prune_observability()$$
+  $$select eventos.prune_observability()$$
 );
 
 -- Mensal: o prazo é de cinco anos.
 select cron.schedule(
   'cf-eventos:minimizar-participantes',
   '0 5 1 * *',
-  $$select public.minimize_old_participants()$$
+  $$select eventos.minimize_old_participants()$$
 );

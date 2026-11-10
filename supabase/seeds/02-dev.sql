@@ -52,15 +52,15 @@ select u.id::text, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email)
 on conflict do nothing;
 
 -- O trigger criou os perfis como `reader`; promover é ação manual.
-update public.profiles set role = 'admin' where id = 'ad000000-0000-4000-8000-000000000001';
-update public.profiles set role = 'editor' where id = 'ad000000-0000-4000-8000-000000000002';
+update eventos.profiles set role = 'admin' where id = 'ad000000-0000-4000-8000-000000000001';
+update eventos.profiles set role = 'editor' where id = 'ad000000-0000-4000-8000-000000000002';
 
 -- ---------------------------------------------------------------------------
 -- Seis eventos, um em cada estado. Com o arquivado do seed de produção, os
 -- sete estados do bloco de ação (doc 09) aparecem na tela e nas E2E.
 -- ---------------------------------------------------------------------------
 
-insert into public.events (
+insert into eventos.events (
   id, slug, title, description_md, starts_at, ends_at, location_name, city, state,
   external_url, status, search_by_name, search_by_email, search_birth_date,
   contact_email, certificates_released_at, created_by
@@ -105,12 +105,12 @@ Dúvidas? Veja o [site da comunidade](https://codingferpa.org/).',
    'contato@example.com', null, 'ad000000-0000-4000-8000-000000000002')
 on conflict (id) do nothing;
 
-insert into public.certificate_templates (id, event_id, name) values
+insert into eventos.certificate_templates (id, event_id, name) values
   ('de000000-0000-4000-8000-00000000a001', 'de000000-0000-4000-8000-00000000e001', 'Participação'),
   ('de000000-0000-4000-8000-00000000a002', 'de000000-0000-4000-8000-00000000e001', 'Palestrante')
 on conflict (id) do nothing;
 
-insert into public.participation_types (id, event_id, slug, label, aliases, default_hours, certificate_template_id, sort_order) values
+insert into eventos.participation_types (id, event_id, slug, label, aliases, default_hours, certificate_template_id, sort_order) values
   ('de000000-0000-4000-8000-00000000b001', 'de000000-0000-4000-8000-00000000e001', 'participante', 'Participante',
    '{ouvinte}', 8, 'de000000-0000-4000-8000-00000000a001', 1),
   ('de000000-0000-4000-8000-00000000b002', 'de000000-0000-4000-8000-00000000e001', 'palestrante', 'Palestrante',
@@ -125,7 +125,7 @@ on conflict (id) do nothing;
 -- 40 participantes do Ferpa Tech Day
 -- ---------------------------------------------------------------------------
 
-insert into public.participants (id, event_id, full_name, birth_date, email)
+insert into eventos.participants (id, event_id, full_name, birth_date, email)
 select v.id::uuid, 'de000000-0000-4000-8000-00000000e001', v.nome, v.nascimento::date, v.email
 from (values
   ('de000000-0000-4000-8000-000000000001', 'José Gonçalves de Assunção', '2001-04-19', 'jose.assuncao.1@example.com'),
@@ -173,16 +173,16 @@ on conflict (id) do nothing;
 
 -- Todo mundo participou. O trigger preenche a numeração e, sem carga horária
 -- informada, a padrão do tipo.
-insert into public.certificates (event_id, participant_id, participation_type_id, issued_at)
+insert into eventos.certificates (event_id, participant_id, participation_type_id, issued_at)
 select p.event_id, p.id, 'de000000-0000-4000-8000-00000000b001', '2026-09-14 15:00:00+00'
-  from public.participants p
+  from eventos.participants p
  where p.event_id = 'de000000-0000-4000-8000-00000000e001'
  order by p.id
 on conflict (participant_id, participation_type_id) do nothing;
 
 -- A mesma pessoa com dois certificados, de tipos e conteúdos diferentes
 -- (ADR-0004): José e Bruno palestraram, Ana Lima organizou.
-insert into public.certificates (event_id, participant_id, participation_type_id, data, issued_at) values
+insert into eventos.certificates (event_id, participant_id, participation_type_id, data, issued_at) values
   ('de000000-0000-4000-8000-00000000e001', 'de000000-0000-4000-8000-000000000001',
    'de000000-0000-4000-8000-00000000b002', '{"titulo_palestra": "Testes que valem a pena"}',
    '2026-09-14 15:00:00+00'),
@@ -195,7 +195,7 @@ on conflict (participant_id, participation_type_id) do nothing;
 
 -- Um terço já baixou, para o resumo do evento e o "quem ainda não baixou"
 -- terem o que mostrar.
-update public.certificates
+update eventos.certificates
    set first_downloaded_at = '2026-09-14 16:30:00+00',
        last_downloaded_at = '2026-09-14 16:30:00+00',
        download_count = 1
@@ -204,10 +204,10 @@ update public.certificates
    and first_downloaded_at is null;
 
 -- Um pedido de correção aberto, para a fila não nascer vazia.
-insert into public.name_correction_requests (certificate_id, current_name, requested_name, contact, message)
+insert into eventos.name_correction_requests (certificate_id, current_name, requested_name, contact, message)
 select c.id, p.full_name, 'Ana Lima Figueiredo', 'ana.lima.3@example.com', 'Faltou o meu segundo sobrenome.'
-  from public.certificates c
-  join public.participants p on p.id = c.participant_id
+  from eventos.certificates c
+  join eventos.participants p on p.id = c.participant_id
  where p.id = 'de000000-0000-4000-8000-000000000003'
    and c.participation_type_id = 'de000000-0000-4000-8000-00000000b001'
 on conflict do nothing;

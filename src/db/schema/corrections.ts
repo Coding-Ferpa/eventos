@@ -1,11 +1,12 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
+import { eventos } from './eventos'
 import { correctionStatus } from './enums'
 import { certificates } from './participants'
 import { profiles } from './profiles'
 
 /** Espelha `name_correction_requests`, da migration 0008. */
-export const nameCorrectionRequests = pgTable('name_correction_requests', {
+export const nameCorrectionRequests = eventos.table('name_correction_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
   certificateId: uuid('certificate_id')
     .notNull()

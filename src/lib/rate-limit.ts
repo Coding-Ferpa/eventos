@@ -53,7 +53,7 @@ async function perguntar(
   for (const janela of janelas) {
     const [linha] = await executor.execute<{ allowed: boolean; esperar: number }>(sql`
       select allowed, ceil(extract(epoch from reset_at - clock_timestamp()))::int as esperar
-        from public.check_rate_limit(
+        from eventos.check_rate_limit(
           ${`${chave}:${janela.segundos}`}, ${janela.maximo},
           make_interval(secs => ${janela.segundos}), ${incremento})`)
     // A maior janela estourada manda no Retry-After (doc 08).

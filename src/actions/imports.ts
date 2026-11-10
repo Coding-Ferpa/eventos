@@ -177,7 +177,7 @@ function paraStaging(batchId: string, linha: StagedRow) {
 
 async function calcularDiff(tx: Transaction, batchId: string) {
   const [linha] = await tx.execute<{ resumo: ImportSummary }>(
-    sql`select public.compute_import_diff(${batchId}) as resumo`,
+    sql`select eventos.compute_import_diff(${batchId}) as resumo`,
   )
   const [lote] = await tx
     .select({ previewDigest: importBatches.previewDigest })
@@ -541,7 +541,7 @@ export const applyImport = defineAction({
     if (!lote) throw new FalhaDaAction('not_found', 'Não encontramos essa importação.')
 
     const [linha] = await tx.execute<{ resultado: ResultadoDaAplicacao }>(
-      sql`select public.apply_import(${entrada.batchId}, ${entrada.previewDigest}, ${usuario.id}) as resultado`,
+      sql`select eventos.apply_import(${entrada.batchId}, ${entrada.previewDigest}, ${usuario.id}) as resultado`,
     )
     const { status, summary, digest } = linha!.resultado
     if (status === 'not_staged') {

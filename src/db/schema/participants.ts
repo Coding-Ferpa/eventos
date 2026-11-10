@@ -1,15 +1,7 @@
 import { sql } from 'drizzle-orm'
-import {
-  date,
-  integer,
-  jsonb,
-  numeric,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { date, integer, jsonb, numeric, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
+import { eventos } from './eventos'
 import { certificateStatus } from './enums'
 import { events, participationTypes } from './events'
 import { profiles } from './profiles'
@@ -20,7 +12,7 @@ import { profiles } from './profiles'
  * certificado afirma.
  */
 
-export const participants = pgTable('participants', {
+export const participants = eventos.table('participants', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id')
     .notNull()
@@ -29,7 +21,7 @@ export const participants = pgTable('participants', {
   // Gerada pelo banco, pela mesma função da busca: a aplicação nunca escreve.
   fullNameNormalized: text('full_name_normalized')
     .notNull()
-    .generatedAlwaysAs(sql`public.normalize_person_name(full_name)`),
+    .generatedAlwaysAs(sql`eventos.normalize_person_name(full_name)`),
   // Só o HMAC e os três últimos dígitos: o CPF em claro não existe (ADR-0005).
   cpfHash: text('cpf_hash'),
   cpfLast3: text('cpf_last3'),
@@ -40,7 +32,7 @@ export const participants = pgTable('participants', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const certificates = pgTable('certificates', {
+export const certificates = eventos.table('certificates', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id')
     .notNull()
@@ -54,7 +46,7 @@ export const certificates = pgTable('certificates', {
   code: text('code')
     .notNull()
     .unique()
-    .default(sql`public.generate_certificate_code()`),
+    .default(sql`eventos.generate_certificate_code()`),
   // O banco não tem default para estas duas colunas: quem as preenche é o
   // trigger de inserção. O `.default` daqui existe só para o TypeScript
   // aceitar a omissão no insert, e nunca chega ao SQL: o Drizzle manda a

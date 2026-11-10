@@ -293,7 +293,7 @@ max_frequency = "5s"
 # `getCurrentUser` leem, sem consulta a `profiles` por requisição.
 [auth.hook.custom_access_token]
 enabled = true
-uri = "pg-functions://postgres/public/custom_access_token"
+uri = "pg-functions://postgres/eventos/custom_access_token"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]

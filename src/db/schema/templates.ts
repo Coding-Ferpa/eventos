@@ -2,7 +2,6 @@ import {
   boolean,
   integer,
   jsonb,
-  pgTable,
   smallint,
   text,
   timestamp,
@@ -10,6 +9,7 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
+import { eventos } from './eventos'
 import { artKind, templateStatus } from './enums'
 import { events } from './events'
 import { profiles } from './profiles'
@@ -20,7 +20,7 @@ import { profiles } from './profiles'
  * no motor de certificado (doc 05), que chega no M5; aqui eles são JSON.
  */
 
-export const customFonts = pgTable('custom_fonts', {
+export const customFonts = eventos.table('custom_fonts', {
   id: uuid('id').primaryKey().defaultRandom(),
   family: text('family').notNull(),
   weight: smallint('weight').notNull(),
@@ -32,7 +32,7 @@ export const customFonts = pgTable('custom_fonts', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const certificateTemplates = pgTable('certificate_templates', {
+export const certificateTemplates = eventos.table('certificate_templates', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id')
     .notNull()

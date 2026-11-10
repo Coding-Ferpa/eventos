@@ -12,13 +12,13 @@ select plan(23);
 -- Estrutura
 -- ---------------------------------------------------------------------------
 
-select has_table('public', 'profiles', 'a tabela profiles existe');
+select has_table('eventos', 'profiles', 'a tabela profiles existe');
 select enum_has_labels(
-  'public', 'user_role', array['admin', 'editor', 'reader'],
+  'eventos', 'user_role', array['admin', 'editor', 'reader'],
   'os papéis são exatamente admin, editor e reader'
 );
 select ok(
-  (select relrowsecurity from pg_class where oid = 'public.profiles'::regclass),
+  (select relrowsecurity from pg_class where oid = 'eventos.profiles'::regclass),
   'profiles tem RLS habilitada'
 );
 
@@ -27,23 +27,23 @@ select ok(
 -- ---------------------------------------------------------------------------
 
 set local request.jwt.claims = '{}';
-select is(public.authorize('reader'), false, 'sem claim, nem reader passa');
+select is(eventos.authorize('reader'), false, 'sem claim, nem reader passa');
 
 set local request.jwt.claims = '{"user_role":"reader"}';
-select is(public.authorize('reader'), true, 'reader passa por reader');
-select is(public.authorize('editor'), false, 'reader não passa por editor');
+select is(eventos.authorize('reader'), true, 'reader passa por reader');
+select is(eventos.authorize('editor'), false, 'reader não passa por editor');
 
 set local request.jwt.claims = '{"user_role":"editor"}';
-select is(public.authorize('reader'), true, 'editor passa por reader');
-select is(public.authorize('editor'), true, 'editor passa por editor');
-select is(public.authorize('admin'), false, 'editor não passa por admin');
+select is(eventos.authorize('reader'), true, 'editor passa por reader');
+select is(eventos.authorize('editor'), true, 'editor passa por editor');
+select is(eventos.authorize('admin'), false, 'editor não passa por admin');
 
 set local request.jwt.claims = '{"user_role":"admin"}';
-select is(public.authorize('admin'), true, 'admin passa por admin');
+select is(eventos.authorize('admin'), true, 'admin passa por admin');
 
 set local request.jwt.claims = '{"user_role":"moderator"}';
 select throws_ok(
-  $$ select public.authorize('reader') $$,
+  $$ select eventos.authorize('reader') $$,
   '22P02', null,
   'papel desconhecido no claim é erro, e não permissão silenciosa'
 );
@@ -64,55 +64,55 @@ insert into auth.users (
    '{}', '{}');
 
 select is(
-  (select role from public.profiles where id = '11111111-1111-4111-8111-111111111111'),
-  'reader'::public.user_role,
+  (select role from eventos.profiles where id = '11111111-1111-4111-8111-111111111111'),
+  'reader'::eventos.user_role,
   'cadastro novo nasce reader'
 );
 select is(
-  (select display_name from public.profiles where id = '11111111-1111-4111-8111-111111111111'),
+  (select display_name from eventos.profiles where id = '11111111-1111-4111-8111-111111111111'),
   'Pessoa Leitora',
   'o nome vem do metadado do provedor'
 );
 select is(
-  (select display_name from public.profiles where id = '44444444-4444-4444-8444-444444444444'),
+  (select display_name from eventos.profiles where id = '44444444-4444-4444-8444-444444444444'),
   'admin',
   'sem nome no metadado, cai na parte local do e-mail'
 );
 
-update public.profiles set role = 'admin' where id = '44444444-4444-4444-8444-444444444444';
+update eventos.profiles set role = 'admin' where id = '44444444-4444-4444-8444-444444444444';
 
 -- ---------------------------------------------------------------------------
 -- Hook de claim
 -- ---------------------------------------------------------------------------
 
 select is(
-  public.custom_access_token(jsonb_build_object(
+  eventos.custom_access_token(jsonb_build_object(
     'user_id', '11111111-1111-4111-8111-111111111111', 'claims', '{}'::jsonb
   )) -> 'claims' ->> 'user_role',
   'reader',
   'o hook injeta o papel do perfil'
 );
 select is(
-  public.custom_access_token(jsonb_build_object(
+  eventos.custom_access_token(jsonb_build_object(
     'user_id', '44444444-4444-4444-8444-444444444444', 'claims', '{}'::jsonb
   )) -> 'claims' ->> 'user_role',
   'admin',
   'o hook reflete a promoção'
 );
 select is(
-  public.custom_access_token(jsonb_build_object(
+  eventos.custom_access_token(jsonb_build_object(
     'user_id', '99999999-9999-4999-8999-999999999999', 'claims', '{}'::jsonb
   )) -> 'claims' ->> 'user_role',
   'reader',
   'usuário sem perfil recebe reader, nunca nada'
 );
 select ok(
-  not has_function_privilege('anon', 'public.custom_access_token(jsonb)', 'execute')
-  and not has_function_privilege('authenticated', 'public.custom_access_token(jsonb)', 'execute'),
+  not has_function_privilege('anon', 'eventos.custom_access_token(jsonb)', 'execute')
+  and not has_function_privilege('authenticated', 'eventos.custom_access_token(jsonb)', 'execute'),
   'o hook não é endpoint público'
 );
 select ok(
-  has_function_privilege('supabase_auth_admin', 'public.custom_access_token(jsonb)', 'execute'),
+  has_function_privilege('supabase_auth_admin', 'eventos.custom_access_token(jsonb)', 'execute'),
   'o serviço de auth executa o hook'
 );
 
@@ -125,19 +125,19 @@ set local request.jwt.claims =
   '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","user_role":"reader"}';
 
 select is(
-  (select count(*) from public.profiles), 1::bigint,
+  (select count(*) from eventos.profiles), 1::bigint,
   'reader enxerga só o próprio perfil'
 );
 
-update public.profiles set display_name = 'Nome Novo'
+update eventos.profiles set display_name = 'Nome Novo'
  where id = '11111111-1111-4111-8111-111111111111';
 select is(
-  (select display_name from public.profiles where id = '11111111-1111-4111-8111-111111111111'),
+  (select display_name from eventos.profiles where id = '11111111-1111-4111-8111-111111111111'),
   'Nome Novo',
   'reader edita o próprio nome'
 );
 select throws_ok(
-  $$ update public.profiles set role = 'admin'
+  $$ update eventos.profiles set role = 'admin'
       where id = '11111111-1111-4111-8111-111111111111' $$,
   '42501', null,
   'reader não promove a si mesmo'
@@ -149,7 +149,7 @@ set local request.jwt.claims =
   '{"sub":"44444444-4444-4444-8444-444444444444","role":"authenticated","user_role":"admin"}';
 
 select cmp_ok(
-  (select count(*) from public.profiles), '>=', 2::bigint,
+  (select count(*) from eventos.profiles), '>=', 2::bigint,
   'admin enxerga todos os perfis'
 );
 

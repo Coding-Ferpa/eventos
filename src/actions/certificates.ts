@@ -60,7 +60,7 @@ function recusarProblemas(problemas: RowIssue[]) {
 /** O banco normaliza o nome; partícula sozinha não passa no check (doc 04). */
 async function exigirNomeUtil(tx: Transaction, nome: string) {
   const [linha] = await tx.execute<{ normalizado: string }>(
-    sql`select public.normalize_person_name(${nome}) as normalizado`,
+    sql`select eventos.normalize_person_name(${nome}) as normalizado`,
   )
   if ((linha?.normalizado ?? '').length < 3) {
     throw new FalhaDaAction('validation_error', 'Confira os campos destacados.', {

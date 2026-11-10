@@ -15,45 +15,45 @@ select plan(22);
 -- normalize_person_name: a tabela de casos do doc 04
 -- ---------------------------------------------------------------------------
 
-select is(public.normalize_person_name('José Gonçalves de Assunção'),
+select is(eventos.normalize_person_name('José Gonçalves de Assunção'),
   'jose goncalves assuncao', 'acentos, cedilha e partícula');
-select is(public.normalize_person_name('  MARIA   EDUARDA dos Santos '),
+select is(eventos.normalize_person_name('  MARIA   EDUARDA dos Santos '),
   'maria eduarda santos', 'caixa, espaços nas pontas e no meio, partícula');
-select is(public.normalize_person_name('Ana-Clara D''Ávila'),
+select is(eventos.normalize_person_name('Ana-Clara D''Ávila'),
   'ana clara davila', 'hífen vira espaço; apóstrofo some sem virar espaço');
-select is(public.normalize_person_name('João e Maria'),
+select is(eventos.normalize_person_name('João e Maria'),
   'joao maria', 'o "e" entre nomes sai');
-select is(public.normalize_person_name('Müller'),
+select is(eventos.normalize_person_name('Müller'),
   'muller', 'trema');
-select is(public.normalize_person_name('de da do'),
+select is(eventos.normalize_person_name('de da do'),
   '', 'só partículas vira vazio, e o check de tamanho mínimo recusa');
 
 -- Casos além da tabela, cada um guardando um erro plausível.
-select is(public.normalize_person_name('Sant’Ana'),
+select is(eventos.normalize_person_name('Sant’Ana'),
   'santana', 'apóstrofo tipográfico, que o Excel e o celular produzem');
-select is(public.normalize_person_name('Andrade Dede'),
+select is(eventos.normalize_person_name('Andrade Dede'),
   'andrade dede', 'partícula só sai como palavra inteira, nunca dentro de outra');
-select is(public.normalize_person_name('Maria da de Souza'),
+select is(eventos.normalize_person_name('Maria da de Souza'),
   'maria souza', 'partículas seguidas saem todas');
-select is(public.normalize_person_name('Ñuñez ÝÿÇ'),
+select is(eventos.normalize_person_name('Ñuñez ÝÿÇ'),
   'nunez yyc', 'o mapa cobre maiúsculas e minúsculas, independente do locale');
-select is(public.normalize_person_name(null), null, 'nulo continua nulo');
+select is(eventos.normalize_person_name(null), null, 'nulo continua nulo');
 -- Escrito com chr() para nenhum editor recompor o acento sem ninguém ver.
 select is(
-  public.normalize_person_name('Conceic' || chr(807) || 'a' || chr(771) || 'o Arau' || chr(769) || 'jo'),
+  eventos.normalize_person_name('Conceic' || chr(807) || 'a' || chr(771) || 'o Arau' || chr(769) || 'jo'),
   'conceicao araujo',
   'acento decomposto (NFD, de arquivo vindo de Mac) casa com o composto');
 
 -- Os critérios de aceite do R2, na forma em que o banco os responde.
-select is(public.normalize_person_name('MARIA EDUARDA SANTOS'),
-  public.normalize_person_name('Maria Eduarda dos Santos'),
+select is(eventos.normalize_person_name('MARIA EDUARDA SANTOS'),
+  eventos.normalize_person_name('Maria Eduarda dos Santos'),
   'R2: "MARIA EDUARDA SANTOS" encontra quem está como "Maria Eduarda dos Santos"');
-select isnt(public.normalize_person_name('maria'),
-  public.normalize_person_name('Maria Eduarda Santos'),
+select isnt(eventos.normalize_person_name('maria'),
+  eventos.normalize_person_name('Maria Eduarda Santos'),
   'R2: "maria" não encontra "Maria Eduarda Santos"');
 
 select is(
-  (select provolatile from pg_proc where oid = 'public.normalize_person_name(text)'::regprocedure),
+  (select provolatile from pg_proc where oid = 'eventos.normalize_person_name(text)'::regprocedure),
   'i', 'é imutável de verdade, o que permite usá-la em coluna gerada'
 );
 
@@ -62,7 +62,7 @@ select is(
 -- ---------------------------------------------------------------------------
 
 create temporary table codigos on commit drop as
-  select public.generate_certificate_code() as codigo from generate_series(1, 5000);
+  select eventos.generate_certificate_code() as codigo from generate_series(1, 5000);
 
 select is(
   (select count(*) from codigos where codigo !~ '^[0-9A-HJKMNP-TV-Z]{10}$'),
@@ -88,7 +88,7 @@ select cmp_ok(
   '>', 1000::bigint, 'o primeiro também não');
 
 select is(
-  (select provolatile from pg_proc where oid = 'public.generate_certificate_code()'::regprocedure),
+  (select provolatile from pg_proc where oid = 'eventos.generate_certificate_code()'::regprocedure),
   'v', 'é volátil: duas chamadas na mesma linha não podem devolver o mesmo código');
 
 select * from finish();

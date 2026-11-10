@@ -15,7 +15,7 @@
 -- O modelo nasce em rascunho. Publicá-lo exige `base.pdf` no Storage, que um
 -- arquivo SQL não cria; isso acontece quando o motor existir.
 
-insert into public.events (
+insert into eventos.events (
   id, slug, title, description_md, starts_at, ends_at,
   location_name, city, state, status, search_by_name
 ) values (
@@ -27,13 +27,13 @@ insert into public.events (
   'Coding Ferpa', 'Fernandópolis', 'SP', 'archived', true
 ) on conflict (id) do nothing;
 
-insert into public.certificate_templates (id, event_id, name) values (
+insert into eventos.certificate_templates (id, event_id, name) values (
   '5e000000-0000-4000-8000-000000000002',
   '5e000000-0000-4000-8000-000000000001',
   'Demonstração'
 ) on conflict (id) do nothing;
 
-insert into public.participation_types (
+insert into eventos.participation_types (
   id, event_id, slug, label, default_hours, certificate_template_id
 ) values (
   '5e000000-0000-4000-8000-000000000003',
@@ -42,7 +42,7 @@ insert into public.participation_types (
   '5e000000-0000-4000-8000-000000000002'
 ) on conflict (id) do nothing;
 
-insert into public.participants (id, event_id, full_name) values (
+insert into eventos.participants (id, event_id, full_name) values (
   '5e000000-0000-4000-8000-000000000004',
   '5e000000-0000-4000-8000-000000000001',
   'Participante de Demonstração'
@@ -50,7 +50,7 @@ insert into public.participants (id, event_id, full_name) values (
 
 -- Código fixo, que vai na variável de repositório `SMOKE_VALIDATION_CODE`.
 -- Lido em voz alta: DEM0-CF2-026.
-insert into public.certificates (
+insert into eventos.certificates (
   id, event_id, participant_id, participation_type_id, code, issued_at
 ) values (
   '5e000000-0000-4000-8000-000000000005',

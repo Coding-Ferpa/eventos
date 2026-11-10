@@ -4,13 +4,13 @@ import {
   integer,
   jsonb,
   numeric,
-  pgTable,
   primaryKey,
   text,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core'
 
+import { eventos } from './eventos'
 import { importRowAction, importStatus } from './enums'
 import { events, participationTypes } from './events'
 import { profiles } from './profiles'
@@ -21,7 +21,7 @@ import { profiles } from './profiles'
  * CPF já em HMAC.
  */
 
-export const importBatches = pgTable('import_batches', {
+export const importBatches = eventos.table('import_batches', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id')
     .notNull()
@@ -53,7 +53,7 @@ export type ImportRowIssue = {
   detail?: string
 }
 
-export const importRows = pgTable(
+export const importRows = eventos.table(
   'import_rows',
   {
     batchId: uuid('batch_id')
@@ -67,7 +67,7 @@ export const importRows = pgTable(
 
     fullName: text('full_name'),
     fullNameNormalized: text('full_name_normalized').generatedAlwaysAs(
-      sql`public.normalize_person_name(full_name)`,
+      sql`eventos.normalize_person_name(full_name)`,
     ),
     cpfHash: text('cpf_hash'),
     cpfLast3: text('cpf_last3'),

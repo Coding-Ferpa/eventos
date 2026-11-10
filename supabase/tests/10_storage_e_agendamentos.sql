@@ -11,7 +11,7 @@ values
    'authenticated', 'authenticated', 'reader@teste.local', 'x', now(), now(), now(), '{}', '{}'),
   ('00000000-0000-0000-0000-000000000000', '33333333-3333-4333-8333-333333333333',
    'authenticated', 'authenticated', 'editor@teste.local', 'x', now(), now(), now(), '{}', '{}');
-update public.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
+update eventos.profiles set role = 'editor' where id = '33333333-3333-4333-8333-333333333333';
 
 insert into storage.objects (bucket_id, name) values
   ('templates', 'arte-existente.pdf'),

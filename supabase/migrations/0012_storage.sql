@@ -33,25 +33,25 @@ create policy storage_insert_editor on storage.objects
   for insert to authenticated
   with check (
     bucket_id in ('covers', 'previews', 'templates', 'fonts')
-    and public.authorize('editor')
+    and eventos.authorize('editor')
   );
 
 create policy storage_update_editor on storage.objects
   for update to authenticated
   using (
     bucket_id in ('covers', 'previews', 'templates', 'fonts')
-    and public.authorize('editor')
+    and eventos.authorize('editor')
   )
   with check (
     bucket_id in ('covers', 'previews', 'templates', 'fonts')
-    and public.authorize('editor')
+    and eventos.authorize('editor')
   );
 
 create policy storage_delete_editor on storage.objects
   for delete to authenticated
   using (
     bucket_id in ('covers', 'previews', 'templates', 'fonts')
-    and public.authorize('editor')
+    and eventos.authorize('editor')
   );
 
 -- Leitura por sessão: só fontes, que o editor de modelo baixa para medir e
@@ -60,4 +60,4 @@ create policy storage_delete_editor on storage.objects
 -- servidor lê.
 create policy storage_select_fonts_editor on storage.objects
   for select to authenticated
-  using (bucket_id = 'fonts' and public.authorize('editor'));
+  using (bucket_id = 'fonts' and eventos.authorize('editor'));

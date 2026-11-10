@@ -12,50 +12,50 @@
 -- ---------------------------------------------------------------------------
 
 -- Sem coluna para o valor buscado, de propósito: o que não existe não vaza.
-create table public.search_attempts (
+create table eventos.search_attempts (
   id bigint generated always as identity primary key,
   -- Nulo em "meus certificados", que não é de um evento só.
-  event_id uuid references public.events (id) on delete cascade,
-  method public.search_method not null,
-  outcome public.search_outcome not null,
+  event_id uuid references eventos.events (id) on delete cascade,
+  method eventos.search_method not null,
+  outcome eventos.search_outcome not null,
   ip_hash text not null,
   device_hash text not null,
   occurred_at timestamptz not null default now()
 );
 
-create index search_attempts_event_time_idx on public.search_attempts (event_id, occurred_at);
-create index search_attempts_time_brin on public.search_attempts using brin (occurred_at);
+create index search_attempts_event_time_idx on eventos.search_attempts (event_id, occurred_at);
+create index search_attempts_time_brin on eventos.search_attempts using brin (occurred_at);
 
-create table public.certificate_downloads (
+create table eventos.certificate_downloads (
   id bigint generated always as identity primary key,
-  certificate_id uuid not null references public.certificates (id) on delete cascade,
-  event_id uuid not null references public.events (id) on delete cascade,
-  source public.download_source not null,
+  certificate_id uuid not null references eventos.certificates (id) on delete cascade,
+  event_id uuid not null references eventos.events (id) on delete cascade,
+  source eventos.download_source not null,
   certificate_version integer not null,
   device_hash text,
   occurred_at timestamptz not null default now()
 );
 
 create index certificate_downloads_event_time_idx
-  on public.certificate_downloads (event_id, occurred_at);
+  on eventos.certificate_downloads (event_id, occurred_at);
 
-create table public.validation_checks (
+create table eventos.validation_checks (
   id bigint generated always as identity primary key,
   -- Nulo quando o código não existe ou está malformado.
-  certificate_id uuid references public.certificates (id) on delete set null,
-  outcome public.validation_outcome not null,
+  certificate_id uuid references eventos.certificates (id) on delete set null,
+  outcome eventos.validation_outcome not null,
   ip_hash text not null,
   occurred_at timestamptz not null default now()
 );
 
-create index validation_checks_certificate_idx on public.validation_checks (certificate_id);
-create index validation_checks_time_brin on public.validation_checks using brin (occurred_at);
+create index validation_checks_certificate_idx on eventos.validation_checks (certificate_id);
+create index validation_checks_time_brin on eventos.validation_checks using brin (occurred_at);
 
 -- Uma linha por dispositivo e dia: é o que dá a mediana de "tempo até o
 -- download" sem rastrear ninguém além do dia (doc 10). O `day` é o dia em que
 -- o HMAC do dispositivo gira, calculado pela aplicação.
-create table public.event_visits (
-  event_id uuid not null references public.events (id) on delete cascade,
+create table eventos.event_visits (
+  event_id uuid not null references eventos.events (id) on delete cascade,
   device_hash text not null,
   day date not null,
   first_seen_at timestamptz not null default now(),
@@ -68,8 +68,8 @@ create table public.event_visits (
 
 -- `pdf_failures` é incrementado pela rota de download no momento da falha, e o
 -- rollup nunca o reescreve: não existe log cru de falha para recalcular.
-create table public.event_stats_daily (
-  event_id uuid not null references public.events (id) on delete cascade,
+create table eventos.event_stats_daily (
+  event_id uuid not null references eventos.events (id) on delete cascade,
   day date not null,
   visits integer not null default 0,
   searches integer not null default 0,
@@ -89,9 +89,9 @@ create table public.event_stats_daily (
 -- Toda mutação do admin grava aqui, na mesma transação, pelo esqueleto
 -- `defineAction` (doc 07). O `diff` nunca carrega CPF (ele não existe) e, em
 -- operação em massa, carrega contadores e não nomes.
-create table public.audit_logs (
+create table eventos.audit_logs (
   id bigint generated always as identity primary key,
-  actor_id uuid references public.profiles (id) on delete set null,
+  actor_id uuid references eventos.profiles (id) on delete set null,
   -- `entidade.acao`: `certificate.revoke`, `import.apply`.
   action text not null check (action ~ '^[a-z][a-z_]*\.[a-z][a-z_]*$'),
   entity text not null,
@@ -100,32 +100,32 @@ create table public.audit_logs (
   created_at timestamptz not null default now()
 );
 
-create index audit_logs_entity_idx on public.audit_logs (entity, entity_id);
-create index audit_logs_time_idx on public.audit_logs (created_at desc);
+create index audit_logs_entity_idx on eventos.audit_logs (entity, entity_id);
+create index audit_logs_time_idx on eventos.audit_logs (created_at desc);
 
 -- ---------------------------------------------------------------------------
 -- RLS: editor e admin leem; ninguém reescreve nem apaga auditoria
 -- ---------------------------------------------------------------------------
 
-alter table public.search_attempts enable row level security;
-alter table public.certificate_downloads enable row level security;
-alter table public.validation_checks enable row level security;
-alter table public.event_visits enable row level security;
-alter table public.event_stats_daily enable row level security;
-alter table public.audit_logs enable row level security;
+alter table eventos.search_attempts enable row level security;
+alter table eventos.certificate_downloads enable row level security;
+alter table eventos.validation_checks enable row level security;
+alter table eventos.event_visits enable row level security;
+alter table eventos.event_stats_daily enable row level security;
+alter table eventos.audit_logs enable row level security;
 
-create policy search_attempts_select_editor on public.search_attempts
-  for select to authenticated using (public.authorize('editor'));
-create policy certificate_downloads_select_editor on public.certificate_downloads
-  for select to authenticated using (public.authorize('editor'));
-create policy validation_checks_select_editor on public.validation_checks
-  for select to authenticated using (public.authorize('editor'));
-create policy event_visits_select_editor on public.event_visits
-  for select to authenticated using (public.authorize('editor'));
-create policy event_stats_daily_select_editor on public.event_stats_daily
-  for select to authenticated using (public.authorize('editor'));
-create policy audit_logs_select_editor on public.audit_logs
-  for select to authenticated using (public.authorize('editor'));
+create policy search_attempts_select_editor on eventos.search_attempts
+  for select to authenticated using (eventos.authorize('editor'));
+create policy certificate_downloads_select_editor on eventos.certificate_downloads
+  for select to authenticated using (eventos.authorize('editor'));
+create policy validation_checks_select_editor on eventos.validation_checks
+  for select to authenticated using (eventos.authorize('editor'));
+create policy event_visits_select_editor on eventos.event_visits
+  for select to authenticated using (eventos.authorize('editor'));
+create policy event_stats_daily_select_editor on eventos.event_stats_daily
+  for select to authenticated using (eventos.authorize('editor'));
+create policy audit_logs_select_editor on eventos.audit_logs
+  for select to authenticated using (eventos.authorize('editor'));
 
 -- ---------------------------------------------------------------------------
 -- Views do dashboard
@@ -136,13 +136,13 @@ create policy audit_logs_select_editor on public.audit_logs
 -- servidor não carrega JWT, e um `authorize('editor')` aqui esconderia os
 -- dados justamente do dashboard. Quem fica de fora é `anon`, por revogação no
 -- fim do arquivo; para `reader`, a RLS das tabelas já zera tudo.
-create view public.v_event_summary with (security_invoker = true) as
+create view eventos.v_event_summary with (security_invoker = true) as
 select
   e.id as event_id,
   e.slug,
   e.title,
   e.status,
-  (select count(*) from public.participants p where p.event_id = e.id) as participants,
+  (select count(*) from eventos.participants p where p.event_id = e.id) as participants,
   count(c.id) filter (where c.status = 'active') as certificates_active,
   count(c.id) filter (where c.status = 'active' and c.issued_at is not null) as certificates_issued,
   count(c.id) filter (
@@ -155,31 +155,31 @@ select
     / nullif(count(c.id) filter (where c.status = 'active' and c.issued_at is not null), 0),
     4
   ) as download_rate,
-  (select count(*) from public.name_correction_requests r
-     join public.certificates rc on rc.id = r.certificate_id
+  (select count(*) from eventos.name_correction_requests r
+     join eventos.certificates rc on rc.id = r.certificate_id
     where rc.event_id = e.id and r.status = 'pending') as pending_corrections,
   -- Busca ambígua conta como sem resultado: para a pessoa, é a mesma resposta.
   (select round(
      count(*) filter (where s.outcome in ('not_found', 'ambiguous'))::numeric
      / nullif(count(*) filter (where s.outcome <> 'rate_limited'), 0), 4)
-     from public.search_attempts s
+     from eventos.search_attempts s
     where s.event_id = e.id and s.occurred_at > now() - interval '7 days') as not_found_rate_7d
-from public.events e
-left join public.certificates c on c.event_id = e.id
+from eventos.events e
+left join eventos.certificates c on c.event_id = e.id
 group by e.id;
 
-create view public.v_admin_overview with (security_invoker = true) as
+create view eventos.v_admin_overview with (security_invoker = true) as
 select
-  (select count(*) from public.events) as events,
-  (select count(*) from public.events where status = 'certificates_available') as events_available,
-  (select count(*) from public.certificates where status = 'active' and issued_at is not null)
+  (select count(*) from eventos.events) as events,
+  (select count(*) from eventos.events where status = 'certificates_available') as events_available,
+  (select count(*) from eventos.certificates where status = 'active' and issued_at is not null)
     as certificates_issued,
-  (select round(avg(download_rate), 4) from public.v_event_summary where download_rate is not null)
+  (select round(avg(download_rate), 4) from eventos.v_event_summary where download_rate is not null)
     as average_download_rate;
 
 -- Base da exportação "quem ainda não baixou" (doc 10). Tem nome e e-mail, e
 -- por isso só existe para quem a RLS deixa ver participantes.
-create view public.v_pending_downloads with (security_invoker = true) as
+create view eventos.v_pending_downloads with (security_invoker = true) as
 select
   c.id as certificate_id,
   c.event_id,
@@ -187,9 +187,9 @@ select
   pt.label as participation_label,
   p.full_name,
   p.email
-from public.certificates c
-join public.participants p on p.id = c.participant_id
-join public.participation_types pt on pt.id = c.participation_type_id
+from eventos.certificates c
+join eventos.participants p on p.id = c.participant_id
+join eventos.participation_types pt on pt.id = c.participation_type_id
 where c.status = 'active'
   and c.issued_at is not null
   and c.first_downloaded_at is null;
@@ -202,7 +202,7 @@ where c.status = 'active'
 -- UTC, porque o painel é lido por quem organiza, e o agendamento das 03:30
 -- UTC (00:30 local) só faz sentido assim. Idempotente: rodar de novo reescreve
 -- o dia. Devolve quantos eventos tiveram linha gravada.
-create function public.rollup_event_stats(p_day date)
+create function eventos.rollup_event_stats(p_day date)
 returns integer
 language plpgsql
 set search_path = ''
@@ -212,7 +212,7 @@ declare
 begin
   with
   visitas as (
-    select event_id, count(*) as n from public.event_visits
+    select event_id, count(*) as n from eventos.event_visits
      where (first_seen_at at time zone 'America/Sao_Paulo')::date = p_day
      group by event_id
   ),
@@ -220,32 +220,32 @@ begin
     select event_id,
            count(*) filter (where outcome <> 'rate_limited') as n,
            count(*) filter (where outcome in ('not_found', 'ambiguous')) as sem_resultado
-      from public.search_attempts
+      from eventos.search_attempts
      where event_id is not null
        and (occurred_at at time zone 'America/Sao_Paulo')::date = p_day
      group by event_id
   ),
   primeiros as (
-    select event_id, count(*) as n from public.certificates
+    select event_id, count(*) as n from eventos.certificates
      where (first_downloaded_at at time zone 'America/Sao_Paulo')::date = p_day
      group by event_id
   ),
   downloads as (
-    select event_id, count(*) as n from public.certificate_downloads
+    select event_id, count(*) as n from eventos.certificate_downloads
      where (occurred_at at time zone 'America/Sao_Paulo')::date = p_day
      group by event_id
   ),
   validacoes as (
     select c.event_id, count(*) as n
-      from public.validation_checks v
-      join public.certificates c on c.id = v.certificate_id
+      from eventos.validation_checks v
+      join eventos.certificates c on c.id = v.certificate_id
      where (v.occurred_at at time zone 'America/Sao_Paulo')::date = p_day
      group by c.event_id
   ),
   correcoes as (
     select c.event_id, count(*) as n
-      from public.name_correction_requests r
-      join public.certificates c on c.id = r.certificate_id
+      from eventos.name_correction_requests r
+      join eventos.certificates c on c.id = r.certificate_id
      where (r.created_at at time zone 'America/Sao_Paulo')::date = p_day
      group by c.event_id
   ),
@@ -254,7 +254,7 @@ begin
     union select event_id from primeiros union select event_id from downloads
     union select event_id from validacoes union select event_id from correcoes
   )
-  insert into public.event_stats_daily as s (
+  insert into eventos.event_stats_daily as s (
     event_id, day, visits, searches, searches_not_found,
     first_downloads, downloads, validations, correction_requests
   )
@@ -288,7 +288,7 @@ $$;
 -- Busca de "meus certificados" não é de um evento e não tem agregado: sai
 -- pelo prazo. `certificate_downloads` não é podado: é o histórico de retirada
 -- que a exportação usa (doc 10). Devolve quantas linhas saíram.
-create function public.prune_observability()
+create function eventos.prune_observability()
 returns integer
 language plpgsql
 set search_path = ''
@@ -297,12 +297,12 @@ declare
   removidas integer := 0;
   n integer;
 begin
-  delete from public.search_attempts s
+  delete from eventos.search_attempts s
    where s.occurred_at < now() - interval '90 days'
      and (
        s.event_id is null
        or exists (
-         select 1 from public.event_stats_daily d
+         select 1 from eventos.event_stats_daily d
           where d.event_id = s.event_id
             and d.day = (s.occurred_at at time zone 'America/Sao_Paulo')::date
        )
@@ -310,13 +310,13 @@ begin
   get diagnostics n = row_count;
   removidas := removidas + n;
 
-  delete from public.validation_checks v
+  delete from eventos.validation_checks v
    where v.occurred_at < now() - interval '90 days'
      and (
        v.certificate_id is null
        or exists (
-         select 1 from public.event_stats_daily d
-           join public.certificates c on c.event_id = d.event_id
+         select 1 from eventos.event_stats_daily d
+           join eventos.certificates c on c.event_id = d.event_id
           where c.id = v.certificate_id
             and d.day = (v.occurred_at at time zone 'America/Sao_Paulo')::date
        )
@@ -324,10 +324,10 @@ begin
   get diagnostics n = row_count;
   removidas := removidas + n;
 
-  delete from public.event_visits ev
+  delete from eventos.event_visits ev
    where ev.first_seen_at < now() - interval '90 days'
      and exists (
-       select 1 from public.event_stats_daily d
+       select 1 from eventos.event_stats_daily d
         where d.event_id = ev.event_id
           and d.day = (ev.first_seen_at at time zone 'America/Sao_Paulo')::date
      );
@@ -338,8 +338,8 @@ begin
 end;
 $$;
 
-revoke select on public.v_event_summary, public.v_admin_overview, public.v_pending_downloads
+revoke select on eventos.v_event_summary, eventos.v_admin_overview, eventos.v_pending_downloads
   from anon;
 
-revoke execute on function public.rollup_event_stats(date) from anon, authenticated, public;
-revoke execute on function public.prune_observability() from anon, authenticated, public;
+revoke execute on function eventos.rollup_event_stats(date) from anon, authenticated, public;
+revoke execute on function eventos.prune_observability() from anon, authenticated, public;

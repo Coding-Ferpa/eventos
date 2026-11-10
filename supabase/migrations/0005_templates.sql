@@ -7,7 +7,7 @@
 -- custom_fonts
 -- ---------------------------------------------------------------------------
 
-create table public.custom_fonts (
+create table eventos.custom_fonts (
   id uuid primary key default gen_random_uuid(),
   family text not null check (char_length(btrim(family)) between 1 and 80),
   weight smallint not null check (weight between 100 and 900 and weight % 100 = 0),
@@ -18,35 +18,35 @@ create table public.custom_fonts (
   -- ida e volta do subset é embutida inteira.
   subset_ok boolean not null,
   glyph_coverage_ok boolean not null,
-  uploaded_by uuid references public.profiles (id) on delete set null,
+  uploaded_by uuid references eventos.profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
-alter table public.custom_fonts enable row level security;
+alter table eventos.custom_fonts enable row level security;
 
-create policy custom_fonts_select_editor on public.custom_fonts
-  for select to authenticated using (public.authorize('editor'));
-create policy custom_fonts_insert_editor on public.custom_fonts
-  for insert to authenticated with check (public.authorize('editor'));
-create policy custom_fonts_update_editor on public.custom_fonts
+create policy custom_fonts_select_editor on eventos.custom_fonts
+  for select to authenticated using (eventos.authorize('editor'));
+create policy custom_fonts_insert_editor on eventos.custom_fonts
+  for insert to authenticated with check (eventos.authorize('editor'));
+create policy custom_fonts_update_editor on eventos.custom_fonts
   for update to authenticated
-  using (public.authorize('editor')) with check (public.authorize('editor'));
-create policy custom_fonts_delete_admin on public.custom_fonts
-  for delete to authenticated using (public.authorize('admin'));
+  using (eventos.authorize('editor')) with check (eventos.authorize('editor'));
+create policy custom_fonts_delete_admin on eventos.custom_fonts
+  for delete to authenticated using (eventos.authorize('admin'));
 
 -- ---------------------------------------------------------------------------
 -- certificate_templates
 -- ---------------------------------------------------------------------------
 
-create table public.certificate_templates (
+create table eventos.certificate_templates (
   id uuid primary key default gen_random_uuid(),
-  event_id uuid not null references public.events (id) on delete cascade,
+  event_id uuid not null references eventos.events (id) on delete cascade,
   name text not null check (char_length(btrim(name)) between 2 and 80),
-  status public.template_status not null default 'draft',
+  status eventos.template_status not null default 'draft',
   -- Incrementa a cada publicação e entra no ETag do PDF (doc 05).
   version integer not null default 0 check (version >= 0),
 
-  art_kind public.art_kind,
+  art_kind eventos.art_kind,
   art_original_path text,
   -- O `base.pdf` canônico (ADR-0008). O teto de 3 MB existe porque a resposta
   -- de uma Vercel Function é limitada a 4,5 MB, e o PDF final é o base.pdf
@@ -74,7 +74,7 @@ create table public.certificate_templates (
   -- Cópia imutável do que foi publicado. O motor só lê isto (doc 05).
   published_snapshot jsonb,
   published_at timestamptz,
-  cloned_from_template_id uuid references public.certificate_templates (id) on delete set null,
+  cloned_from_template_id uuid references eventos.certificate_templates (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
@@ -93,11 +93,11 @@ create table public.certificate_templates (
   )
 );
 
-create index certificate_templates_event_idx on public.certificate_templates (event_id);
+create index certificate_templates_event_idx on eventos.certificate_templates (event_id);
 
 create trigger certificate_templates_set_updated_at
-  before update on public.certificate_templates
-  for each row execute function public.set_updated_at();
+  before update on eventos.certificate_templates
+  for each row execute function eventos.set_updated_at();
 
 -- Implementa o "só rascunho sem tipos apontando" do `deleteTemplate` (doc 07),
 -- e a composição com `event_id` é a garantia de mesmo evento descrita acima.
@@ -106,21 +106,21 @@ create trigger certificate_templates_set_updated_at
 -- apagar um evento, a cascata remove modelos e tipos no mesmo comando, e com
 -- `restrict` o modelo poderia sair antes do tipo que aponta para ele. Apagar o
 -- modelo sozinho continua barrado do mesmo jeito.
-alter table public.participation_types
+alter table eventos.participation_types
   add constraint participation_types_template_fk
   foreign key (certificate_template_id, event_id)
-  references public.certificate_templates (id, event_id)
+  references eventos.certificate_templates (id, event_id)
   on delete no action;
 
-alter table public.certificate_templates enable row level security;
+alter table eventos.certificate_templates enable row level security;
 
-create policy certificate_templates_select_editor on public.certificate_templates
-  for select to authenticated using (public.authorize('editor'));
-create policy certificate_templates_insert_editor on public.certificate_templates
-  for insert to authenticated with check (public.authorize('editor'));
-create policy certificate_templates_update_editor on public.certificate_templates
+create policy certificate_templates_select_editor on eventos.certificate_templates
+  for select to authenticated using (eventos.authorize('editor'));
+create policy certificate_templates_insert_editor on eventos.certificate_templates
+  for insert to authenticated with check (eventos.authorize('editor'));
+create policy certificate_templates_update_editor on eventos.certificate_templates
   for update to authenticated
-  using (public.authorize('editor')) with check (public.authorize('editor'));
-create policy certificate_templates_delete_admin on public.certificate_templates
+  using (eventos.authorize('editor')) with check (eventos.authorize('editor'));
+create policy certificate_templates_delete_admin on eventos.certificate_templates
   for delete to authenticated
-  using (public.authorize('admin') and status = 'draft');
+  using (eventos.authorize('admin') and status = 'draft');

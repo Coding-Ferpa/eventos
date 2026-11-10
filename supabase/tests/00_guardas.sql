@@ -16,11 +16,11 @@ select is(
   (select coalesce(array_agg(c.relname::text order by c.relname), '{}')
      from pg_class c
      join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public'
+    where n.nspname = 'eventos'
       and c.relkind in ('r', 'p')
       and not c.relrowsecurity),
   '{}'::text[],
-  'toda tabela de public tem RLS habilitada');
+  'toda tabela do schema eventos tem RLS habilitada');
 
 -- O Postgres concede `execute` a `public` em toda função nova, e função
 -- `security definer` executável por `anon` vira endpoint pelo PostgREST,
@@ -30,7 +30,7 @@ select is(
   (select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}')
      from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
+    where n.nspname = 'eventos'
       and p.prosecdef
       and p.proname <> 'check_rate_limit'
       and (has_function_privilege('anon', p.oid, 'execute')
@@ -44,7 +44,7 @@ select is(
   (select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}')
      from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
+    where n.nspname = 'eventos'
       and p.prosecdef
       and not exists (
         select 1 from unnest(coalesce(p.proconfig, '{}')) cfg where cfg like 'search_path=%'

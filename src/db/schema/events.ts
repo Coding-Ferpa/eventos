@@ -4,13 +4,13 @@ import {
   char,
   integer,
   numeric,
-  pgTable,
   text,
   timestamp,
   uuid,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
+import { eventos } from './eventos'
 import { eventStatus, searchMode } from './enums'
 import { profiles } from './profiles'
 
@@ -19,7 +19,7 @@ import { profiles } from './profiles'
  * checks e FKs compostas vivem no SQL, que é a fonte da verdade (doc 04).
  */
 
-export const events = pgTable('events', {
+export const events = eventos.table('events', {
   id: uuid('id').primaryKey().defaultRandom(),
   slug: text('slug').notNull().unique(),
   title: text('title').notNull(),
@@ -61,7 +61,7 @@ export const events = pgTable('events', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const participationTypes = pgTable('participation_types', {
+export const participationTypes = eventos.table('participation_types', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id')
     .notNull()

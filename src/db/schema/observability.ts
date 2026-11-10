@@ -4,8 +4,6 @@ import {
   integer,
   jsonb,
   numeric,
-  pgTable,
-  pgView,
   primaryKey,
   text,
   timestamp,
@@ -19,6 +17,8 @@ import {
   searchOutcome,
   validationOutcome,
 } from './enums'
+
+import { eventos } from './eventos'
 import { events } from './events'
 import { certificates } from './participants'
 import { profiles } from './profiles'
@@ -28,7 +28,7 @@ import { profiles } from './profiles'
  * guarda dado pessoal: IP e dispositivo só entram como HMAC diário (doc 08).
  */
 
-export const searchAttempts = pgTable('search_attempts', {
+export const searchAttempts = eventos.table('search_attempts', {
   id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }),
   method: searchMethod('method').notNull(),
@@ -38,7 +38,7 @@ export const searchAttempts = pgTable('search_attempts', {
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const certificateDownloads = pgTable('certificate_downloads', {
+export const certificateDownloads = eventos.table('certificate_downloads', {
   id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
   certificateId: uuid('certificate_id')
     .notNull()
@@ -52,7 +52,7 @@ export const certificateDownloads = pgTable('certificate_downloads', {
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const validationChecks = pgTable('validation_checks', {
+export const validationChecks = eventos.table('validation_checks', {
   id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
   certificateId: uuid('certificate_id').references(() => certificates.id, {
     onDelete: 'set null',
@@ -62,7 +62,7 @@ export const validationChecks = pgTable('validation_checks', {
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const eventVisits = pgTable(
+export const eventVisits = eventos.table(
   'event_visits',
   {
     eventId: uuid('event_id')
@@ -77,7 +77,7 @@ export const eventVisits = pgTable(
   (table) => [primaryKey({ columns: [table.eventId, table.deviceHash, table.day] })],
 )
 
-export const eventStatsDaily = pgTable(
+export const eventStatsDaily = eventos.table(
   'event_stats_daily',
   {
     eventId: uuid('event_id')
@@ -96,7 +96,7 @@ export const eventStatsDaily = pgTable(
   (table) => [primaryKey({ columns: [table.eventId, table.day] })],
 )
 
-export const auditLogs = pgTable('audit_logs', {
+export const auditLogs = eventos.table('audit_logs', {
   id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
   actorId: uuid('actor_id').references(() => profiles.id, { onDelete: 'set null' }),
   action: text('action').notNull(),
@@ -108,32 +108,40 @@ export const auditLogs = pgTable('audit_logs', {
 
 // Views: `.existing()` porque quem as cria é a migration, em SQL.
 
-export const vEventSummary = pgView('v_event_summary', {
-  eventId: uuid('event_id').notNull(),
-  slug: text('slug').notNull(),
-  title: text('title').notNull(),
-  status: eventStatus('status').notNull(),
-  participants: bigint('participants', { mode: 'number' }).notNull(),
-  certificatesActive: bigint('certificates_active', { mode: 'number' }).notNull(),
-  certificatesIssued: bigint('certificates_issued', { mode: 'number' }).notNull(),
-  certificatesDownloaded: bigint('certificates_downloaded', { mode: 'number' }).notNull(),
-  downloadRate: numeric('download_rate'),
-  pendingCorrections: bigint('pending_corrections', { mode: 'number' }).notNull(),
-  notFoundRate7d: numeric('not_found_rate_7d'),
-}).existing()
+export const vEventSummary = eventos
+  .view('v_event_summary', {
+    eventId: uuid('event_id').notNull(),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    status: eventStatus('status').notNull(),
+    participants: bigint('participants', { mode: 'number' }).notNull(),
+    certificatesActive: bigint('certificates_active', { mode: 'number' }).notNull(),
+    certificatesIssued: bigint('certificates_issued', { mode: 'number' }).notNull(),
+    certificatesDownloaded: bigint('certificates_downloaded', {
+      mode: 'number',
+    }).notNull(),
+    downloadRate: numeric('download_rate'),
+    pendingCorrections: bigint('pending_corrections', { mode: 'number' }).notNull(),
+    notFoundRate7d: numeric('not_found_rate_7d'),
+  })
+  .existing()
 
-export const vAdminOverview = pgView('v_admin_overview', {
-  events: bigint('events', { mode: 'number' }).notNull(),
-  eventsAvailable: bigint('events_available', { mode: 'number' }).notNull(),
-  certificatesIssued: bigint('certificates_issued', { mode: 'number' }).notNull(),
-  averageDownloadRate: numeric('average_download_rate'),
-}).existing()
+export const vAdminOverview = eventos
+  .view('v_admin_overview', {
+    events: bigint('events', { mode: 'number' }).notNull(),
+    eventsAvailable: bigint('events_available', { mode: 'number' }).notNull(),
+    certificatesIssued: bigint('certificates_issued', { mode: 'number' }).notNull(),
+    averageDownloadRate: numeric('average_download_rate'),
+  })
+  .existing()
 
-export const vPendingDownloads = pgView('v_pending_downloads', {
-  certificateId: uuid('certificate_id').notNull(),
-  eventId: uuid('event_id').notNull(),
-  code: text('code').notNull(),
-  participationLabel: text('participation_label').notNull(),
-  fullName: text('full_name').notNull(),
-  email: text('email'),
-}).existing()
+export const vPendingDownloads = eventos
+  .view('v_pending_downloads', {
+    certificateId: uuid('certificate_id').notNull(),
+    eventId: uuid('event_id').notNull(),
+    code: text('code').notNull(),
+    participationLabel: text('participation_label').notNull(),
+    fullName: text('full_name').notNull(),
+    email: text('email'),
+  })
+  .existing()

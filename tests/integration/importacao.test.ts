@@ -426,21 +426,21 @@ describe('500 linhas', () => {
     const evento = await novoEvento()
     const { batchId, previewDigest } = await previa(evento, planilhaGrande(500))
     const [original] = await db().execute<{ definicao: string }>(
-      sql`select pg_get_functiondef('public.generate_certificate_code()'::regprocedure) as definicao`,
+      sql`select pg_get_functiondef('eventos.generate_certificate_code()'::regprocedure) as definicao`,
     )
     try {
-      await db().execute(sql`create sequence public.teste_colisao_de_codigo`)
+      await db().execute(sql`create sequence eventos.teste_colisao_de_codigo`)
       await db().execute(
-        sql.raw(`create or replace function public.generate_certificate_code() returns text
+        sql.raw(`create or replace function eventos.generate_certificate_code() returns text
           language sql volatile set search_path = '' as $$
-            select case when nextval('public.teste_colisao_de_codigo') = 400
-                        then (select code from public.certificates limit 1)
+            select case when nextval('eventos.teste_colisao_de_codigo') = 400
+                        then (select code from eventos.certificates limit 1)
                         else upper(substr(md5(random()::text), 1, 10)) end $$`),
       )
       expect(await aplicar(batchId, previewDigest)).toMatchObject({ status: 'failed' })
     } finally {
       await db().execute(sql.raw(original!.definicao))
-      await db().execute(sql`drop sequence if exists public.teste_colisao_de_codigo`)
+      await db().execute(sql`drop sequence if exists eventos.teste_colisao_de_codigo`)
     }
     expect(await nomesDoEvento(evento.eventoId)).toEqual([])
     const [lote] = await db()

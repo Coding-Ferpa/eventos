@@ -8,7 +8,7 @@
 -- events
 -- ---------------------------------------------------------------------------
 
-create table public.events (
+create table eventos.events (
   id uuid primary key default gen_random_uuid(),
 
   -- Editável só em rascunho (trigger abaixo): depois de publicado, o slug já
@@ -27,7 +27,7 @@ create table public.events (
   state char(2),
   external_url text check (external_url ~ '^https://'),
 
-  status public.event_status not null default 'draft',
+  status eventos.event_status not null default 'draft',
 
   -- Chaves independentes da busca pública (doc 08).
   search_by_cpf boolean not null default false,
@@ -36,7 +36,7 @@ create table public.events (
   -- Data de nascimento nunca é chave sozinha (ADR-0009): em `any` ela é
   -- segundo fator do nome; em `all`, mais um campo exigido.
   search_birth_date boolean not null default false,
-  search_mode public.search_mode not null default 'any',
+  search_mode eventos.search_mode not null default 'any',
 
   -- Sal do HMAC do CPF (ADR-0005). O default garante que nenhum caminho crie
   -- evento sem sal, e que o clone do M11 receba um novo. Nunca sai do
@@ -50,8 +50,8 @@ create table public.events (
   contact_url text,
 
   certificates_released_at timestamptz,
-  cloned_from_event_id uuid references public.events (id) on delete set null,
-  created_by uuid references public.profiles (id) on delete set null,
+  cloned_from_event_id uuid references eventos.events (id) on delete set null,
+  created_by uuid references eventos.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
@@ -62,13 +62,13 @@ create table public.events (
   )
 );
 
-create index events_status_starts_at_idx on public.events (status, starts_at desc);
+create index events_status_starts_at_idx on eventos.events (status, starts_at desc);
 
 create trigger events_set_updated_at
-  before update on public.events
-  for each row execute function public.set_updated_at();
+  before update on eventos.events
+  for each row execute function eventos.set_updated_at();
 
-create function public.events_protect_slug()
+create function eventos.events_protect_slug()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -83,37 +83,37 @@ end;
 $$;
 
 create trigger events_protect_slug
-  before update of slug on public.events
-  for each row execute function public.events_protect_slug();
+  before update of slug on eventos.events
+  for each row execute function eventos.events_protect_slug();
 
-alter table public.events enable row level security;
+alter table eventos.events enable row level security;
 
-create policy events_select_public on public.events
+create policy events_select_public on eventos.events
   for select to anon, authenticated
-  using (status <> 'draft' or public.authorize('editor'));
+  using (status <> 'draft' or eventos.authorize('editor'));
 
-create policy events_insert_editor on public.events
+create policy events_insert_editor on eventos.events
   for insert to authenticated
-  with check (public.authorize('editor'));
+  with check (eventos.authorize('editor'));
 
-create policy events_update_editor on public.events
+create policy events_update_editor on eventos.events
   for update to authenticated
-  using (public.authorize('editor'))
-  with check (public.authorize('editor'));
+  using (eventos.authorize('editor'))
+  with check (eventos.authorize('editor'));
 
 -- "Só rascunho sem certificados" (doc 04): o "sem certificados" é garantido
 -- pela FK de `certificates.event_id` com `on delete restrict` (0006).
-create policy events_delete_admin on public.events
+create policy events_delete_admin on eventos.events
   for delete to authenticated
-  using (public.authorize('admin') and status = 'draft');
+  using (eventos.authorize('admin') and status = 'draft');
 
 -- ---------------------------------------------------------------------------
 -- participation_types
 -- ---------------------------------------------------------------------------
 
-create table public.participation_types (
+create table eventos.participation_types (
   id uuid primary key default gen_random_uuid(),
-  event_id uuid not null references public.events (id) on delete cascade,
+  event_id uuid not null references eventos.events (id) on delete cascade,
   slug text not null
     check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(slug) between 2 and 40),
   label text not null check (char_length(btrim(label)) between 2 and 60),
@@ -129,12 +129,12 @@ create table public.participation_types (
 );
 
 create trigger participation_types_set_updated_at
-  before update on public.participation_types
-  for each row execute function public.set_updated_at();
+  before update on eventos.participation_types
+  for each row execute function eventos.set_updated_at();
 
-alter table public.participation_types enable row level security;
+alter table eventos.participation_types enable row level security;
 
-create policy participation_types_all_editor on public.participation_types
+create policy participation_types_all_editor on eventos.participation_types
   for all to authenticated
-  using (public.authorize('editor'))
-  with check (public.authorize('editor'));
+  using (eventos.authorize('editor'))
+  with check (eventos.authorize('editor'));

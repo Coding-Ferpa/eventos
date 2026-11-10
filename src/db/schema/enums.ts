@@ -1,10 +1,10 @@
-import { pgEnum } from 'drizzle-orm/pg-core'
+import { eventos } from './eventos'
 
 /** Espelha os enums da migration 0002. */
 
-export const userRole = pgEnum('user_role', ['admin', 'editor', 'reader'])
+export const userRole = eventos.enum('user_role', ['admin', 'editor', 'reader'])
 
-export const eventStatus = pgEnum('event_status', [
+export const eventStatus = eventos.enum('event_status', [
   'draft',
   'registration_open',
   'registration_closed',
@@ -14,16 +14,16 @@ export const eventStatus = pgEnum('event_status', [
   'archived',
 ])
 
-export const searchMode = pgEnum('search_mode', ['any', 'all'])
-export const templateStatus = pgEnum('template_status', ['draft', 'published'])
-export const artKind = pgEnum('art_kind', ['pdf', 'image'])
-export const certificateStatus = pgEnum('certificate_status', [
+export const searchMode = eventos.enum('search_mode', ['any', 'all'])
+export const templateStatus = eventos.enum('template_status', ['draft', 'published'])
+export const artKind = eventos.enum('art_kind', ['pdf', 'image'])
+export const certificateStatus = eventos.enum('certificate_status', [
   'active',
   'revoked',
   'erased',
 ])
 
-export const importStatus = pgEnum('import_status', [
+export const importStatus = eventos.enum('import_status', [
   'staged',
   'applied',
   'discarded',
@@ -31,7 +31,7 @@ export const importStatus = pgEnum('import_status', [
   'expired',
 ])
 
-export const importRowAction = pgEnum('import_row_action', [
+export const importRowAction = eventos.enum('import_row_action', [
   'create',
   'update',
   'unchanged',
@@ -40,13 +40,13 @@ export const importRowAction = pgEnum('import_row_action', [
   'skipped',
 ])
 
-export const correctionStatus = pgEnum('correction_status', [
+export const correctionStatus = eventos.enum('correction_status', [
   'pending',
   'approved',
   'rejected',
 ])
 
-export const searchMethod = pgEnum('search_method', [
+export const searchMethod = eventos.enum('search_method', [
   'cpf',
   'email',
   'name',
@@ -55,7 +55,7 @@ export const searchMethod = pgEnum('search_method', [
   'my_certificates',
 ])
 
-export const searchOutcome = pgEnum('search_outcome', [
+export const searchOutcome = eventos.enum('search_outcome', [
   'found',
   'not_found',
   'ambiguous',
@@ -63,14 +63,14 @@ export const searchOutcome = pgEnum('search_outcome', [
   'event_unavailable',
 ])
 
-export const downloadSource = pgEnum('download_source', [
+export const downloadSource = eventos.enum('download_source', [
   'search',
   'email_link',
   'my_certificates',
   'admin',
 ])
 
-export const validationOutcome = pgEnum('validation_outcome', [
+export const validationOutcome = eventos.enum('validation_outcome', [
   'valid',
   'revoked',
   'erased',

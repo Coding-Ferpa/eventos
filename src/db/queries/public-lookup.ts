@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 
 import { db, type Transaction } from '@/db/client'
 import {
@@ -117,7 +118,7 @@ export async function findParticipant(
           ? eq(participants.email, criterios.email)
           : undefined,
         criterios.fullName !== undefined
-          ? sql`${participants.fullNameNormalized} = public.normalize_person_name(${criterios.fullName})`
+          ? sql`${participants.fullNameNormalized} = eventos.normalize_person_name(${criterios.fullName})`
           : undefined,
         criterios.birthDate !== undefined
           ? eq(participants.birthDate, criterios.birthDate)
@@ -222,7 +223,7 @@ export async function getRetrieval(
       ordem: participationTypes.sortOrder,
       snapshot: certificateTemplates.publishedSnapshot,
       pendente: sql<boolean>`exists (
-        select 1 from public.name_correction_requests r
+        select 1 from eventos.name_correction_requests r
          where r.certificate_id = ${certificates.id} and r.status = 'pending')`,
     })
     .from(participants)
@@ -303,25 +304,29 @@ export async function createCorrectionRequest(
   pids: string[],
   pedido: { requestedName: string; contact: string; message: string | null },
 ): Promise<PedidoDeCorrecao> {
+  // Com alias: fora do `public`, o Drizzle escreveria `for update of
+  // "eventos"."certificates"`, e o Postgres só aceita o nome sem schema ali.
+  // O lock fica só no certificado, e não no evento de todo mundo.
+  const certificado = alias(certificates, 'certificado')
   const [alvo] = await tx
     .select({
-      certificateId: certificates.id,
+      certificateId: certificado.id,
       nomeAtual: participants.fullName,
       eventId: events.id,
       evento: events.title,
       contato: events.contactEmail,
     })
-    .from(certificates)
-    .innerJoin(participants, eq(participants.id, certificates.participantId))
-    .innerJoin(events, eq(events.id, certificates.eventId))
+    .from(certificado)
+    .innerJoin(participants, eq(participants.id, certificado.participantId))
+    .innerJoin(events, eq(events.id, certificado.eventId))
     .where(
       and(
-        eq(certificates.code, code),
-        inArray(certificates.participantId, pids),
-        eq(certificates.status, 'active'),
+        eq(certificado.code, code),
+        inArray(certificado.participantId, pids),
+        eq(certificado.status, 'active'),
       ),
     )
-    .for('update', { of: certificates })
+    .for('update', { of: certificado })
   if (!alvo) return { outcome: 'not_found' }
 
   const [pendente] = await tx
@@ -499,9 +504,9 @@ export async function recordPdfFailure(code: string): Promise<void> {
     template_id: alvo.templateId,
   })
   await db().execute(sql`
-    insert into public.event_stats_daily (event_id, day, pdf_failures)
+    insert into eventos.event_stats_daily (event_id, day, pdf_failures)
     values (${alvo.eventId}, (now() at time zone 'America/Sao_Paulo')::date, 1)
-    on conflict (event_id, day) do update set pdf_failures = public.event_stats_daily.pdf_failures + 1`)
+    on conflict (event_id, day) do update set pdf_failures = eventos.event_stats_daily.pdf_failures + 1`)
 }
 
 // --- Validação ----------------------------------------------------------------

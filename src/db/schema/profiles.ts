@@ -1,9 +1,10 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
+import { eventos } from './eventos'
 import { userRole } from './enums'
 
 /** Espelha `profiles`, da migration 0003. O `id` é o de `auth.users`. */
-export const profiles = pgTable('profiles', {
+export const profiles = eventos.table('profiles', {
   id: uuid('id').primaryKey(),
   displayName: text('display_name').notNull(),
   avatarUrl: text('avatar_url'),

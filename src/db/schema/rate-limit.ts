@@ -1,10 +1,12 @@
-import { integer, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+import { integer, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+
+import { eventos } from './eventos'
 
 /**
  * Espelha `rate_limits`, da migration 0010. A aplicação nunca lê nem escreve
  * aqui diretamente: tudo passa por `check_rate_limit` (doc 08).
  */
-export const rateLimits = pgTable(
+export const rateLimits = eventos.table(
   'rate_limits',
   {
     key: text('key').notNull(),

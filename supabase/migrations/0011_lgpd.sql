@@ -16,41 +16,41 @@
 -- Devolve quantos certificados viraram lápide. Pessoa inexistente é erro: o
 -- runbook precisa saber se ela estava lá. Tokens de acesso e entregas de
 -- e-mail entram nesta limpeza no M11, junto com as tabelas.
-create function public.erase_participant(p_participant uuid)
+create function eventos.erase_participant(p_participant uuid)
 returns integer
 language plpgsql
 set search_path = ''
 as $$
 declare
-  alvo public.participants%rowtype;
+  alvo eventos.participants%rowtype;
   certificados uuid[];
   pedidos uuid[];
   lapides integer;
 begin
-  select * into alvo from public.participants where id = p_participant for update;
+  select * into alvo from eventos.participants where id = p_participant for update;
   if not found then
     raise exception 'Participante % não encontrado.', p_participant using errcode = 'P0002';
   end if;
 
   select coalesce(array_agg(id), '{}') into certificados
-    from public.certificates where participant_id = p_participant;
+    from eventos.certificates where participant_id = p_participant;
   select coalesce(array_agg(id), '{}') into pedidos
-    from public.name_correction_requests where certificate_id = any (certificados);
+    from eventos.name_correction_requests where certificate_id = any (certificados);
 
   -- A auditoria fica, porque ela prova que houve operação; o conteúdo que cita
   -- a pessoa sai.
-  update public.audit_logs
+  update eventos.audit_logs
      set diff = '{"scrubbed": true}'
    where (entity = 'participants' and entity_id = p_participant)
       or (entity = 'certificates' and entity_id = any (certificados))
       or (entity = 'name_correction_requests' and entity_id = any (pedidos));
 
-  delete from public.name_correction_requests where id = any (pedidos);
+  delete from eventos.name_correction_requests where id = any (pedidos);
 
   -- Linha de staging que casou com a pessoa, e qualquer outra do mesmo evento
   -- com o mesmo nome ou o mesmo CPF, que ainda não tenha sido conciliada.
-  delete from public.import_rows r
-   using public.import_batches b
+  delete from eventos.import_rows r
+   using eventos.import_batches b
    where r.batch_id = b.id
      and b.event_id = alvo.event_id
      and (
@@ -59,7 +59,7 @@ begin
        or (alvo.cpf_hash is not null and r.cpf_hash = alvo.cpf_hash)
      );
 
-  update public.certificates
+  update eventos.certificates
      set status = 'erased',
          participant_id = null,
          data = '{}',
@@ -69,13 +69,13 @@ begin
    where id = any (certificados);
   get diagnostics lapides = row_count;
 
-  delete from public.participants where id = p_participant;
+  delete from eventos.participants where id = p_participant;
 
   return lapides;
 end;
 $$;
 
-revoke execute on function public.erase_participant(uuid) from anon, authenticated, public;
+revoke execute on function eventos.erase_participant(uuid) from anon, authenticated, public;
 
 -- ---------------------------------------------------------------------------
 -- Minimização por prazo (agendada em 0013)
@@ -86,7 +86,7 @@ revoke execute on function public.erase_participant(uuid) from anon, authenticat
 -- horas complementares são lançadas (doc 08). O nome fica, porque é o que o
 -- certificado afirma, e o certificado segue validável pelo código. Devolve
 -- quantas pessoas foram minimizadas.
-create function public.minimize_old_participants()
+create function eventos.minimize_old_participants()
 returns integer
 language plpgsql
 set search_path = ''
@@ -94,12 +94,12 @@ as $$
 declare
   minimizadas integer;
 begin
-  update public.participants p
+  update eventos.participants p
      set cpf_hash = null,
          cpf_last3 = null,
          birth_date = null,
          email = null
-    from public.events e
+    from eventos.events e
    where e.id = p.event_id
      and coalesce(e.ends_at, e.starts_at) < now() - interval '5 years'
      and (p.cpf_hash is not null or p.birth_date is not null or p.email is not null);
@@ -109,4 +109,4 @@ begin
 end;
 $$;
 
-revoke execute on function public.minimize_old_participants() from anon, authenticated, public;
+revoke execute on function eventos.minimize_old_participants() from anon, authenticated, public;

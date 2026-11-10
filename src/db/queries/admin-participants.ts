@@ -34,7 +34,7 @@ export async function listarCertificadosDoEvento(
     eq(certificates.eventId, eventId),
     filtros.lote ? eq(certificates.createdByBatchId, filtros.lote) : undefined,
     filtros.busca
-      ? sql`${participants.fullNameNormalized} like '%' || public.normalize_person_name(${filtros.busca}) || '%'`
+      ? sql`${participants.fullNameNormalized} like '%' || eventos.normalize_person_name(${filtros.busca}) || '%'`
       : undefined,
   )
 

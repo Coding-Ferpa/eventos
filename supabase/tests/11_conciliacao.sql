@@ -7,14 +7,14 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(39);
 
-insert into public.events (id, slug, title, starts_at) values
+insert into eventos.events (id, slug, title, starts_at) values
   ('e0000000-0000-4000-8000-0000000000c1', 'conciliacao', 'Conciliação', now());
-insert into public.participation_types (id, event_id, slug, label, default_hours) values
+insert into eventos.participation_types (id, event_id, slug, label, default_hours) values
   ('70000000-0000-4000-8000-0000000000c1', 'e0000000-0000-4000-8000-0000000000c1', 'participante', 'Participante', 8),
   ('70000000-0000-4000-8000-0000000000c2', 'e0000000-0000-4000-8000-0000000000c1', 'palestrante', 'Palestrante', 2);
 
 -- Quem já está no evento.
-insert into public.participants (id, event_id, full_name, cpf_hash, cpf_last3, birth_date, email) values
+insert into eventos.participants (id, event_id, full_name, cpf_hash, cpf_last3, birth_date, email) values
   ('a0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-0000000000c1',
    'José Gonçalves de Assunção', repeat('1', 64), '725', '1990-09-12', 'jose@exemplo.org'),
   ('a0000000-0000-4000-8000-000000000002', 'e0000000-0000-4000-8000-0000000000c1',
@@ -32,7 +32,7 @@ insert into public.participants (id, event_id, full_name, cpf_hash, cpf_last3, b
   ('a0000000-0000-4000-8000-000000000009', 'e0000000-0000-4000-8000-0000000000c1',
    'Beatriz Souza', null, null, null, 'souza@exemplo.org');
 
-insert into public.certificates (id, event_id, participant_id, participation_type_id, hours, data) values
+insert into eventos.certificates (id, event_id, participant_id, participation_type_id, hours, data) values
   ('c0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-0000000000c1',
    'a0000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-0000000000c1', 8, '{}'),
   ('c0000000-0000-4000-8000-000000000002', 'e0000000-0000-4000-8000-0000000000c1',
@@ -45,7 +45,7 @@ insert into public.certificates (id, event_id, participant_id, participation_typ
    'a0000000-0000-4000-8000-000000000008', '70000000-0000-4000-8000-0000000000c1', 8, '{}'),
   ('c0000000-0000-4000-8000-000000000009', 'e0000000-0000-4000-8000-0000000000c1',
    'a0000000-0000-4000-8000-000000000009', '70000000-0000-4000-8000-0000000000c1', 8, '{}');
-insert into public.certificates (id, event_id, participant_id, participation_type_id, hours,
+insert into eventos.certificates (id, event_id, participant_id, participation_type_id, hours,
   status, revoked_at, revoked_reason) values
   ('c0000000-0000-4000-8000-000000000004', 'e0000000-0000-4000-8000-0000000000c1',
    'a0000000-0000-4000-8000-000000000004', '70000000-0000-4000-8000-0000000000c1', 8,
@@ -55,11 +55,11 @@ insert into public.certificates (id, event_id, participant_id, participation_typ
 -- Lote de tipo único: uma linha por caso
 -- ---------------------------------------------------------------------------
 
-insert into public.import_batches (id, event_id, participation_type_id) values
+insert into eventos.import_batches (id, event_id, participation_type_id) values
   ('b0000000-0000-4000-8000-0000000000c1', 'e0000000-0000-4000-8000-0000000000c1',
    '70000000-0000-4000-8000-0000000000c1');
 
-insert into public.import_rows (batch_id, row_number, participation_type_id,
+insert into eventos.import_rows (batch_id, row_number, participation_type_id,
   full_name, cpf_hash, cpf_last3, birth_date, email, hours, data, issues)
 select 'b0000000-0000-4000-8000-0000000000c1', n, '70000000-0000-4000-8000-0000000000c1',
        nome, cpf, case when cpf is null then null else '000' end, nasc::date, mail, horas, dados::jsonb, problemas::jsonb
@@ -99,13 +99,13 @@ from (values
   (16, 'Fora do Arquivo', repeat('f', 64), null, null, null, '{}', '[]')
 ) as linhas (n, nome, cpf, nasc, mail, horas, dados, problemas);
 
-select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c1') as resumo \gset
+select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c1') as resumo \gset
 
 create temporary table linha on commit drop as
   select row_number, action::text as acao, match_rule, matched_participant_id, matched_certificate_id,
          (select coalesce(jsonb_agg(p->>'code' order by p->>'code'), '[]') from jsonb_array_elements(issues || computed_issues) p) as codigos,
          computed_issues
-    from public.import_rows where batch_id = 'b0000000-0000-4000-8000-0000000000c1';
+    from eventos.import_rows where batch_id = 'b0000000-0000-4000-8000-0000000000c1';
 
 select is((select row(acao, match_rule)::text from linha where row_number = 2), '(unchanged,cpf)',
   'CPF igual, nada mudou: inalterado');
@@ -151,67 +151,67 @@ select is(:'resumo'::jsonb - 'warnings',
 select is((:'resumo'::jsonb)->'warnings',
   '{"HOMONYM_IN_EVENT": 3, "NAME_SINGLE_WORD": 1, "CERTIFICATE_REVOKED": 1}'::jsonb,
   'avisos contados só nas linhas que vão para o banco: o da linha 13, que tem erro, fica de fora');
-select ok((select preview_digest ~ '^[0-9a-f]{64}$' from public.import_batches
+select ok((select preview_digest ~ '^[0-9a-f]{64}$' from eventos.import_batches
             where id = 'b0000000-0000-4000-8000-0000000000c1'), 'o digest do plano fica no lote');
 
 -- ---------------------------------------------------------------------------
 -- Recalcular é determinístico, e as decisões do admin valem
 -- ---------------------------------------------------------------------------
 
-select preview_digest as digest_1 from public.import_batches
+select preview_digest as digest_1 from eventos.import_batches
  where id = 'b0000000-0000-4000-8000-0000000000c1' \gset
-select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c1');
-select is((select preview_digest from public.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
+select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c1');
+select is((select preview_digest from eventos.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
   :'digest_1', 'recalcular sem mudança nenhuma dá o mesmo digest');
 
-update public.import_rows set resolution = 'same_person'
+update eventos.import_rows set resolution = 'same_person'
  where batch_id = 'b0000000-0000-4000-8000-0000000000c1' and row_number = 9;
-update public.import_rows set resolution = 'different_person'
+update eventos.import_rows set resolution = 'different_person'
  where batch_id = 'b0000000-0000-4000-8000-0000000000c1' and row_number = 10;
-update public.import_rows set resolution = 'skip'
+update eventos.import_rows set resolution = 'skip'
  where batch_id = 'b0000000-0000-4000-8000-0000000000c1' and row_number = 15;
-select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c1') as resumo_2 \gset
+select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c1') as resumo_2 \gset
 
-select is((select row(action, matched_certificate_id)::text from public.import_rows
+select is((select row(action, matched_certificate_id)::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c1' and row_number = 9),
   '(update,c0000000-0000-4000-8000-000000000009)', '"é a mesma pessoa": casa com a candidata e atualiza o nome');
-select is((select row(action, matched_participant_id)::text from public.import_rows
+select is((select row(action, matched_participant_id)::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c1' and row_number = 10),
   '(create,)', '"é outra pessoa": cria');
-select is((select action::text from public.import_rows
+select is((select action::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c1' and row_number = 15),
   'skipped', '"pular linha": pula');
 select is((:'resumo_2'::jsonb)->>'needs_decision', '0', 'com as três decididas, nada pede decisão');
-select isnt((select preview_digest from public.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
+select isnt((select preview_digest from eventos.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
   :'digest_1', 'as decisões mudam o plano, e o digest muda junto');
 
 -- Prévia desatualizada (CSV-I6 no banco): alguém edita a Ana entre a prévia e
 -- a aplicação, e a linha dela deixa de ser inalterada.
-select preview_digest as digest_2 from public.import_batches
+select preview_digest as digest_2 from eventos.import_batches
  where id = 'b0000000-0000-4000-8000-0000000000c1' \gset
-update public.participants set email = 'ana@exemplo.org' where id = 'a0000000-0000-4000-8000-000000000003';
-select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c1');
-select isnt((select preview_digest from public.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
+update eventos.participants set email = 'ana@exemplo.org' where id = 'a0000000-0000-4000-8000-000000000003';
+select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c1');
+select isnt((select preview_digest from eventos.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
   :'digest_2', 'participante editado depois da prévia muda o digest');
 
 -- Mais estrito que o doc 06: o digest leva também o participante casado. Alguém
 -- cadastra o Pedro à mão entre a prévia e a aplicação; a linha continua
 -- "criar" (agora só o certificado), e mesmo assim a prévia fica velha.
-select preview_digest as digest_3 from public.import_batches
+select preview_digest as digest_3 from eventos.import_batches
  where id = 'b0000000-0000-4000-8000-0000000000c1' \gset
-insert into public.participants (event_id, full_name, cpf_hash, cpf_last3)
+insert into eventos.participants (event_id, full_name, cpf_hash, cpf_last3)
 values ('e0000000-0000-4000-8000-0000000000c1', 'Pedro Novo', repeat('7', 64), '777');
-select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c1');
-select isnt((select preview_digest from public.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
+select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c1');
+select isnt((select preview_digest from eventos.import_batches where id = 'b0000000-0000-4000-8000-0000000000c1'),
   :'digest_3', 'a mesma ação com outro participante também deixa a prévia velha');
 
 -- ---------------------------------------------------------------------------
 -- Lote com coluna de tipo: a mesma pessoa em dois tipos
 -- ---------------------------------------------------------------------------
 
-insert into public.import_batches (id, event_id, participation_type_id) values
+insert into eventos.import_batches (id, event_id, participation_type_id) values
   ('b0000000-0000-4000-8000-0000000000c2', 'e0000000-0000-4000-8000-0000000000c1', null);
-insert into public.import_rows (batch_id, row_number, participation_type_id, full_name, cpf_hash, cpf_last3, birth_date, email)
+insert into eventos.import_rows (batch_id, row_number, participation_type_id, full_name, cpf_hash, cpf_last3, birth_date, email)
 values
   ('b0000000-0000-4000-8000-0000000000c2', 2, '70000000-0000-4000-8000-0000000000c2',
    'José Gonçalves de Assunção', repeat('1', 64), '725', null, 'jose.novo@exemplo.org'),
@@ -223,18 +223,18 @@ values
   -- linha 2, que casou por CPF, e herda o participante dela.
   ('b0000000-0000-4000-8000-0000000000c2', 5, '70000000-0000-4000-8000-0000000000c1',
    'José Gonçalves de Assunção', null, null, null, 'jose.novo@exemplo.org');
-select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c2') as resumo_3 \gset
+select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c2') as resumo_3 \gset
 
-select is((select row(action, matched_participant_id)::text from public.import_rows
+select is((select row(action, matched_participant_id)::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c2' and row_number = 2),
   '(create,a0000000-0000-4000-8000-000000000001)', 'quem já existe ganha o certificado do outro tipo');
-select is((select array_agg(person_row order by row_number)::text from public.import_rows
+select is((select array_agg(person_row order by row_number)::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c2' and row_number in (3, 4)),
   '{3,3}', 'a mesma pessoa nova nos dois tipos é um grupo só, encabeçado pela primeira linha');
-select is((select array_agg(action::text order by row_number)::text from public.import_rows
+select is((select array_agg(action::text order by row_number)::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c2' and row_number <= 4),
   '{create,create,create}', 'tipos diferentes não são duplicata');
-select is((select row(action, matched_participant_id, match_rule)::text from public.import_rows
+select is((select row(action, matched_participant_id, match_rule)::text from eventos.import_rows
             where batch_id = 'b0000000-0000-4000-8000-0000000000c2' and row_number = 5),
   '(update,a0000000-0000-4000-8000-000000000001,cpf)',
   'linha que só casa com outra linha herda o participante dela, e atualiza o e-mail');
@@ -249,22 +249,22 @@ select is((:'resumo_3'::jsonb)->>'absent', '0', 'ausentes só contam no modo tip
 -- época em que a tabela tinha poucas linhas: sem o ANALYZE do começo da
 -- função, o plano ficou quadrático, passou de 36 s e esgotou a memória da VM.
 -- O limite de tempo derruba o teste antes disso.
-insert into public.import_batches (id, event_id, participation_type_id) values
+insert into eventos.import_batches (id, event_id, participation_type_id) values
   ('b0000000-0000-4000-8000-0000000000c9', 'e0000000-0000-4000-8000-0000000000c1',
    '70000000-0000-4000-8000-0000000000c1');
-insert into public.import_rows (batch_id, row_number, participation_type_id, full_name, cpf_hash, cpf_last3)
+insert into eventos.import_rows (batch_id, row_number, participation_type_id, full_name, cpf_hash, cpf_last3)
 select 'b0000000-0000-4000-8000-0000000000c9', n + 1, '70000000-0000-4000-8000-0000000000c1',
        'Participante Numero ' || n || ' Teste', encode(sha256(n::text::bytea), 'hex'), '123'
   from generate_series(1, 5000) n;
 set local statement_timeout = '20s';
 select lives_ok(
-  $$ select public.compute_import_diff('b0000000-0000-4000-8000-0000000000c9') $$,
+  $$ select eventos.compute_import_diff('b0000000-0000-4000-8000-0000000000c9') $$,
   '5.000 linhas recém-inseridas: o diff termina dentro do limite');
 reset statement_timeout;
 
 select ok(
-  not has_function_privilege('anon', 'public.compute_import_diff(uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'public.compute_import_diff(uuid)', 'execute'),
+  not has_function_privilege('anon', 'eventos.compute_import_diff(uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'eventos.compute_import_diff(uuid)', 'execute'),
   'o diff só roda pelo servidor, depois do defineAction');
 
 select * from finish();

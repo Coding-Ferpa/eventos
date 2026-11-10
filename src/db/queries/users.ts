@@ -25,7 +25,7 @@ export async function listarContas(): Promise<ContaDoAdmin[]> {
     role: string
   }>(sql`
     select p.id, p.display_name, u.email, p.role
-      from public.profiles p
+      from eventos.profiles p
       join auth.users u on u.id = p.id
      order by p.role = 'reader', p.created_at
   `)

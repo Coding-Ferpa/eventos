@@ -8,7 +8,7 @@
 -- Funções de apoio
 -- ---------------------------------------------------------------------------
 
-create function public.set_updated_at()
+create function eventos.set_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -19,7 +19,7 @@ begin
 end;
 $$;
 
-create function public.role_rank(role public.user_role)
+create function eventos.role_rank(role eventos.user_role)
 returns integer
 language sql
 immutable
@@ -38,16 +38,16 @@ $$;
 --
 -- Papel desconhecido no claim é erro de conversão de enum, e não `false`: a
 -- falha fica visível em vez de virar negação silenciosa difícil de depurar.
-create function public.authorize(min_role public.user_role)
+create function eventos.authorize(min_role eventos.user_role)
 returns boolean
 language sql
 stable
 set search_path = ''
 as $$
   select coalesce(
-    public.role_rank(
-      nullif(auth.jwt() ->> 'user_role', '')::public.user_role
-    ) >= public.role_rank(min_role),
+    eventos.role_rank(
+      nullif(auth.jwt() ->> 'user_role', '')::eventos.user_role
+    ) >= eventos.role_rank(min_role),
     false
   );
 $$;
@@ -56,50 +56,50 @@ $$;
 -- profiles (espelho de auth.users)
 -- ---------------------------------------------------------------------------
 
-create table public.profiles (
+create table eventos.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text not null check (char_length(btrim(display_name)) between 1 and 120),
   avatar_url text,
-  role public.user_role not null default 'reader',
+  role eventos.user_role not null default 'reader',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create trigger profiles_set_updated_at
-  before update on public.profiles
-  for each row execute function public.set_updated_at();
+  before update on eventos.profiles
+  for each row execute function eventos.set_updated_at();
 
-alter table public.profiles enable row level security;
+alter table eventos.profiles enable row level security;
 
-create policy profiles_select_own_or_admin on public.profiles
+create policy profiles_select_own_or_admin on eventos.profiles
   for select to authenticated
-  using (id = auth.uid() or public.authorize('admin'));
+  using (id = auth.uid() or eventos.authorize('admin'));
 
 -- A pessoa edita o próprio nome e avatar, nunca o próprio papel. A comparação
 -- é com o claim do JWT porque uma subconsulta na própria tabela causaria
 -- recursão de policy.
-create policy profiles_update_own on public.profiles
+create policy profiles_update_own on eventos.profiles
   for update to authenticated
   using (id = auth.uid())
   with check (role::text = coalesce(auth.jwt() ->> 'user_role', 'reader'));
 
-create policy profiles_update_admin on public.profiles
+create policy profiles_update_admin on eventos.profiles
   for update to authenticated
-  using (public.authorize('admin'))
-  with check (public.authorize('admin'));
+  using (eventos.authorize('admin'))
+  with check (eventos.authorize('admin'));
 
 -- ---------------------------------------------------------------------------
 -- Novo usuário ganha perfil `reader`
 -- ---------------------------------------------------------------------------
 
-create function public.handle_new_user()
+create function eventos.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  insert into public.profiles (id, display_name, avatar_url)
+  insert into eventos.profiles (id, display_name, avatar_url)
   values (
     new.id,
     coalesce(
@@ -118,17 +118,17 @@ $$;
 
 -- Função `security definer` vira endpoint pelo PostgREST se ninguém revogar,
 -- porque o Postgres concede `execute` a `public` em toda função nova (doc 08).
-revoke execute on function public.handle_new_user() from anon, authenticated, public;
+revoke execute on function eventos.handle_new_user() from anon, authenticated, public;
 
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute function public.handle_new_user();
+  for each row execute function eventos.handle_new_user();
 
 -- ---------------------------------------------------------------------------
 -- Custom Access Token Hook: injeta `user_role` nos claims
 -- ---------------------------------------------------------------------------
 
-create function public.custom_access_token(event jsonb)
+create function eventos.custom_access_token(event jsonb)
 returns jsonb
 language plpgsql
 stable
@@ -137,17 +137,17 @@ set search_path = ''
 as $$
 declare
   claims jsonb;
-  profile_role public.user_role;
+  profile_role eventos.user_role;
 begin
   select role into profile_role
-    from public.profiles
+    from eventos.profiles
    where id = (event ->> 'user_id')::uuid;
 
   claims := coalesce(event -> 'claims', '{}'::jsonb);
   claims := jsonb_set(
     claims,
     '{user_role}',
-    to_jsonb(coalesce(profile_role, 'reader'::public.user_role))
+    to_jsonb(coalesce(profile_role, 'reader'::eventos.user_role))
   );
 
   return jsonb_set(event, '{claims}', claims);
@@ -155,6 +155,6 @@ end;
 $$;
 
 -- O hook é chamado pelo serviço de auth, e por mais ninguém.
-grant usage on schema public to supabase_auth_admin;
-grant execute on function public.custom_access_token(jsonb) to supabase_auth_admin;
-revoke execute on function public.custom_access_token(jsonb) from anon, authenticated, public;
+grant usage on schema eventos to supabase_auth_admin;
+grant execute on function eventos.custom_access_token(jsonb) to supabase_auth_admin;
+revoke execute on function eventos.custom_access_token(jsonb) from anon, authenticated, public;
