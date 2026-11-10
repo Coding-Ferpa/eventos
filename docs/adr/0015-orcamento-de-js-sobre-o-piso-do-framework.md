@@ -40,11 +40,11 @@ Tripwire, cada linha com nome:
 
 | Linha | `/` | `/eventos/[slug]` | `/validar` |
 |---|---|---|---|
-| Piso do framework | 130,6 KB | 130,6 KB | 130,6 KB |
+| Piso do framework | 132,6 KB (135.796 B) | 132,6 KB | 132,6 KB |
 | Nosso código, medido no M3 | 21,8 KB | 20,9 KB | 21,8 KB |
 | Busca do certificado, medida no M8 | | 5,3 KB (5.401 B) | |
 | Folga de feature | 5 KB | 5 KB | 5 KB |
-| **Tripwire** | **157,4 KB** (161.190 B) | **161,7 KB** (165.591 B) | **157,4 KB** (161.190 B) |
+| **Tripwire** | **159,4 KB** (163.273 B) | **163,7 KB** (167.674 B) | **159,4 KB** (163.273 B) |
 
 A **folga de feature** é de 5 KB porque um commit de feature normal acrescenta 1 a 3 KB de componente cliente, e a menor biblioteca que já pegamos, o `tailwind-merge`, tem 9 KB. O `react-hook-form` tem uns 9 KB, e o Zod, mais de 13. Nenhuma biblioteca nova passa sem disparar.
 
@@ -58,6 +58,7 @@ Quando o tripwire dispara, o PR mostra a medição, diz o porquê e acrescenta a
 - **Primeiro disparo, no M4.** O LCP de `/` passou a 2,56 s, sem mudança no JavaScript público. No celular, o elemento do LCP é a capa do primeiro card, que carregava `lazy`. Num A/B na mesma sessão, com 5 execuções de cada variante, o `lazy` deu mediana de 2,47 s (2,47 a 2,65 s) e 2,56 s (2,47 a 2,63 s). Com `priority` só no primeiro card, a mediana foi a 2,40 s, com todas as execuções abaixo de 2,5 s (2,40 a 2,49 s). O primeiro card passou a ter `priority`, e os demais seguem `lazy`. O mesmo A/B mostrou que o ruído entre sessões mexe a mediana em até 90 ms, então o Lighthouse passou de 3 para 5 execuções.
 - **Segundo disparo, no M8, o previsto.** Com o formulário de busca, a página do evento passou a 160.471 B, 281 B acima do tripwire de 160.190 B; as outras duas ficaram em 156.410 B, abaixo dos 161.190 B delas. A linha nova é a diferença medida sobre o código do M3: 5.401 B, quase tudo o chunk da página do evento (6.326 B, contra o que `/validar` carrega), com o formulário, as máscaras, o dígito verificador do CPF, o aviso de navegador embutido e a marca de hidratação, que passou ao layout raiz (uns 350 B, os mesmos que `/` e `/validar` cresceram desde o M3). Nenhuma biblioteca nova. O que o aluno sente seguiu dentro: na página do evento, LCP de 2,32 a 2,55 s com mediana 2,48 s, TBT de 7,5 ms e CLS 0, desempenho 0,97 e acessibilidade 1 (5 execuções no build de produção, mesma máquina das medições do M3). A folga de 5 KB continua por cima, para a próxima feature.
 - **O LCP chegou à beira, e não foi o M8.** Em três execuções seguidas do `lhci autorun` no mesmo build, a primeira passou inteira e as outras duas reprovaram o LCP de `/validar` (mediana 2,61 s), e uma delas também o de `/`, páginas cujo JavaScript o M8 não mudou. As execuções lentas têm as mesmas 27 requisições, os mesmos bytes e o mesmo elemento de LCP das rápidas; só o FCP e o LCP andam juntos, uns 150 e 300 ms, o que é CPU observada e multiplicada pelo throttling simulado. Num A/B na mesma sessão, alternando 7 execuções de cada, `/validar` deu a mesma distribuição no M7 e no M8: 2,31 a 2,33 s ou 2,61 a 2,64 s, mediana 2,325 s nos dois, com 95 B de diferença de JavaScript. É a consequência negativa de cima acontecendo: o job do Lighthouse no CI pode reprovar por ruído. Quando reprovar de forma consistente, o trabalho continua sendo tirar bytes do caminho do LCP.
+- **O piso subiu na atualização para o Node 26 (2026-11-10).** Com o Next 16.4.6 e o React 19.3.1, as três páginas cresceram exatamente 2.083 B cada, sem uma linha nossa mudar: é o piso, e não o nosso código. A linha do piso subiu de 133.713 para 135.796 B, e os três tripwires subiram o mesmo, para a folga de feature continuar sendo 5 KB e não ser gasta em silêncio pelo framework. Medido com `lhci autorun`, 5 execuções no build de produção: `/` com 158.493 B, LCP de 2,27 a 2,50 s; a página do evento com 162.549 B, LCP de 2,33 a 2,36 s; `/validar` com 158.493 B, LCP de 0,90 a 0,91 s e TBT de 43 ms. Nesta medição, o LCP de `/validar` não oscilou entre dois patamares: ficou em 0,9 s. A causa não foi investigada; se voltar a oscilar, a consequência de cima continua valendo.
 - Rever quando o piso do framework cair (numa major do React ou do Next) e apertar a linha do piso no mesmo PR.
 
 ## Alternativas consideradas

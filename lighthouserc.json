@@ -67,7 +67,7 @@
             "resource-summary:script:size": [
               "error",
               {
-                "maxNumericValue": 161190,
+                "maxNumericValue": 163273,
                 "aggregationMethod": "median"
               }
             ]
@@ -128,7 +128,7 @@
             "resource-summary:script:size": [
               "error",
               {
-                "maxNumericValue": 165591,
+                "maxNumericValue": 167674,
                 "aggregationMethod": "median"
               }
             ]
@@ -189,7 +189,7 @@
             "resource-summary:script:size": [
               "error",
               {
-                "maxNumericValue": 161190,
+                "maxNumericValue": 163273,
                 "aggregationMethod": "median"
               }
             ]
