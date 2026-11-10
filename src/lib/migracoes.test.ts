@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { embrulhar, historicoAusente, lerNome, planejar, sha256 } from './migracoes'
+import {
+  embrulhar,
+  historicoAusente,
+  lerNome,
+  linhasDaConsulta,
+  planejar,
+  sha256,
+} from './migracoes'
 
 describe('lerNome', () => {
   it('separa versão e nome', () => {
@@ -152,5 +159,33 @@ describe('historicoAusente', () => {
     expect(historicoAusente('permission denied for schema eventos')).toBe(false)
     expect(historicoAusente('relation "eventos.events" does not exist')).toBe(false)
     expect(historicoAusente('connection refused')).toBe(false)
+  })
+})
+
+describe('linhasDaConsulta', () => {
+  // Os dois formatos medidos na CLI 3.1: ela muda a saída conforme acha que
+  // quem roda é uma pessoa ou um agente.
+  const linhas = [
+    { version: '0000', sha256: 'a' },
+    { version: '0001', sha256: 'b' },
+  ]
+
+  it('lê a lista pura, que é o que a pessoa no terminal recebe', () => {
+    expect(linhasDaConsulta(JSON.stringify(linhas, null, 2))).toEqual(linhas)
+  })
+
+  it('lê o envelope com rows, que é o que um agente recebe', () => {
+    const envelope = { boundary: 'x', rows: linhas, warning: 'dados não confiáveis' }
+    expect(linhasDaConsulta(JSON.stringify(envelope, null, 2))).toEqual(linhas)
+  })
+
+  it('aceita texto antes do JSON e lista vazia', () => {
+    expect(linhasDaConsulta('Aviso qualquer\n[]')).toEqual([])
+    expect(linhasDaConsulta('{"rows": []}')).toEqual([])
+  })
+
+  it('recusa o que não é resultado de consulta, em vez de seguir sem histórico', () => {
+    expect(() => linhasDaConsulta('sem json nenhum')).toThrow(/resposta/)
+    expect(() => linhasDaConsulta('{"_tag":"Error"}')).toThrow(/resposta/)
   })
 })

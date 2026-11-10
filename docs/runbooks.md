@@ -47,7 +47,7 @@ Veja o plano antes. Sem `--yes`, o comando só lê o histórico numa transação
 pnpm db:migrar --remote
 ```
 
-Esperado na primeira vez: `Target: project cf-jobs-core (dculmejrmmgrqfmybijp) · production` e `0 aplicada(s), 14 pendente(s)`, de `0000_schema` a `0013_cron`. Confira o alvo e aplique, junto com o seed do sentinela:
+**A primeira aplicação já foi feita em 2026-11-10**, com o sentinela. Hoje o esperado é `Target: project cf-jobs-core (dculmejrmmgrqfmybijp) · production` e `14 aplicada(s), 0 pendente(s)`, e não há nada a aplicar. Num banco sem o Eventos, o plano mostraria `0 aplicada(s), 14 pendente(s)`, de `0000_schema` a `0013_cron`, e a aplicação, com o seed do sentinela, seria:
 
 ```bash
 pnpm db:migrar --remote --yes --seed-producao

@@ -26,6 +26,7 @@ import {
   embrulhar,
   historicoAusente,
   lerNome,
+  linhasDaConsulta,
   planejar,
   sha256,
   type Aplicada,
@@ -80,6 +81,10 @@ function consultar(nome: string, sql: string, extra: string[] = []): Resposta {
     arquivo,
     '--output-format',
     'json',
+    // A CLI muda o formato da resposta conforme acha que quem roda é uma
+    // pessoa ou um agente. Fixado, o executor se comporta igual para os dois.
+    '--agent',
+    'no',
   ]
   const r = spawnSync(process.execPath, argumentos, { encoding: 'utf8' })
   const alvo = /Target: [^\n]+/.exec(r.stderr ?? '')?.[0] ?? ''
@@ -114,8 +119,7 @@ function lerAplicadas(): { aplicadas: Aplicada[]; alvo: string } {
     }
     falhar(`Não deu para ler o histórico: ${mensagem}`)
   }
-  const json = JSON.parse(r.saida.slice(r.saida.indexOf('{'))) as { rows: Aplicada[] }
-  return { aplicadas: json.rows, alvo: r.alvo }
+  return { aplicadas: linhasDaConsulta<Aplicada>(r.saida), alvo: r.alvo }
 }
 
 function lerArquivos(): Array<Migracao & { sql: string }> {

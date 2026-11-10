@@ -122,3 +122,33 @@ export function historicoAusente(mensagem: string): boolean {
     /schema \\?"eventos\\?" does not exist/.test(mensagem)
   )
 }
+
+/**
+ * As linhas de um `supabase db query --output-format json`. A CLI 3.1 muda o
+ * formato conforme acha que quem roda é uma pessoa (lista pura) ou um agente
+ * (envelope com `rows`): o mesmo comando quebrou no terminal do mantenedor e
+ * passou no do agente. Os dois valem aqui, e qualquer outra coisa é erro, e
+ * não um histórico vazio.
+ */
+export function linhasDaConsulta<T = Record<string, unknown>>(saida: string): T[] {
+  const inicio = [saida.indexOf('['), saida.indexOf('{')]
+    .filter((i) => i >= 0)
+    .sort((a, b) => a - b)[0]
+  let json: unknown
+  try {
+    json = inicio === undefined ? undefined : JSON.parse(saida.slice(inicio).trim())
+  } catch {
+    json = undefined
+  }
+  if (Array.isArray(json)) return json as T[]
+  if (
+    json &&
+    typeof json === 'object' &&
+    Array.isArray((json as { rows?: unknown }).rows)
+  ) {
+    return (json as { rows: T[] }).rows
+  }
+  throw new Error(
+    `A CLI devolveu uma resposta que não é resultado de consulta: ${saida.trim().slice(0, 200)}`,
+  )
+}
