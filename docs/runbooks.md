@@ -61,7 +61,7 @@ Migration nova, depois da ida ao ar: o mesmo par de comandos, **antes** do deplo
 
 ### 1.3 Auth
 
-Em Authentication, **URL Configuration**, acrescente em Redirect URLs:
+No painel do projeto `cf-jobs-core`, menu lateral **Authentication**, **URL Configuration**, acrescente em Redirect URLs. Não é a página **OAuth Apps** das configurações da organização: aquela publica um app com acesso à API de gerenciamento do Supabase, e o Eventos não precisa de nenhum.
 
 - `https://eventos.codingferpa.org/auth/callback`
 
