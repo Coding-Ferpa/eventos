@@ -50,7 +50,7 @@ não guardam nome, e-mail nem CPF; e a eliminação a pedido da pessoa é a fun�
 
 ## Telas
 
-Capturas do ambiente local, com os dados fictícios do seed.
+Capturas do ambiente local no tema escuro, com os dados fictícios do seed. O certificado é o PDF em si, por isso continua claro.
 
 | Catálogo                                             | Página do evento, com a busca                   |
 | ---------------------------------------------------- | ----------------------------------------------- |
