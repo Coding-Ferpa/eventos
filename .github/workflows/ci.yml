@@ -18,10 +18,17 @@ env:
 #
 # Nenhum job usa secret: tudo fala com o ambiente local, então PR de fork roda
 # a bateria inteira.
+#
+# Runner fixo em ubuntu-24.04, e não ubuntu-latest: desde 2026-10-19 o latest é
+# o Ubuntu 26, e nele o `playwright install --with-deps` ficou 1h11 baixando a
+# 11 kB/s até falhar, sem resolver security.ubuntu.com. O Playwright 1.65
+# suporta o 24.04. Trocar de imagem é decisão de PR, e não surpresa do runner.
+# O timeout de cada job faz uma rede travada falhar em minutos, e não em 1h15.
 jobs:
   quality:
     name: Lint, tipos e formatação
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -64,7 +71,8 @@ jobs:
 
   commitlint:
     name: Conventional Commits
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7
@@ -85,7 +93,8 @@ jobs:
 
   test:
     name: Testes unitários
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -106,7 +115,8 @@ jobs:
 
   db:
     name: Banco de dados
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -148,7 +158,8 @@ jobs:
 
   lighthouse:
     name: Lighthouse
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -189,11 +200,16 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci/
+          # A pasta começa com ponto, e o upload-artifact ignora pasta oculta
+          # por padrão: sem isto o job dizia "No files were found" e os
+          # relatórios do runner nunca chegavam a quem ia investigar.
+          include-hidden-files: true
           retention-days: 7
 
   e2e:
     name: Testes E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

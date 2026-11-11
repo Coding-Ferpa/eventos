@@ -31,7 +31,7 @@ Configs com os nomes do CF Jobs (`commitlint.config.mjs`, `eslint.config.mjs`, `
 
 ## 4. CI: `ci.yml`
 
-Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigatórios.
+Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigatórios. Todos rodam em `ubuntu-24.04` fixo, e não em `ubuntu-latest`: a troca do latest para o Ubuntu 26, em 2026-10-19, quebrou a instalação das dependências do Playwright, e trocar de imagem passa a ser decisão de PR. Cada job tem `timeout-minutes`, para rede travada falhar em minutos.
 
 | Job | Roda, e bloqueia o merge se falhar |
 |---|---|
@@ -40,7 +40,7 @@ Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigat
 | `test` | `pnpm test:gate:pdf`, `pnpm test:gate:csv`, `pnpm test:coverage` (Vitest, limites do [doc 11](11-qualidade.md)) |
 | `db` | `pnpm db:start`, `pnpm db:reset` (migrations do zero mais seed), `pnpm db:test` (pgTAP da matriz de RLS do [doc 04](04-banco-de-dados.md)), `pnpm check:schema`, `pnpm test:integration` (contra o Postgres do Supabase CLI) |
 | `e2e` | Supabase local, `pnpm test:e2e` (Playwright, Chromium e WebKit; fluxos públicos em viewport de celular) |
-| `lighthouse` | Supabase local, `pnpm build`, `pnpm exec lhci autorun` em `/`, `/eventos/{slug-do-seed}` e `/validar` (as rotas dinâmicas ficam fora: dependem de cookie e de banco, [doc 09](09-frontend-e-seo.md)). LCP, CLS e TBT como asserção principal e os KB de JavaScript como tripwire ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Relatórios como artefato do job, sem armazenamento público |
+| `lighthouse` | Supabase local, `pnpm build`, `pnpm exec lhci autorun` em `/`, `/eventos/{slug-do-seed}` e `/validar` (as rotas dinâmicas ficam fora: dependem de cookie e de banco, [doc 09](09-frontend-e-seo.md)). LCP, CLS e TBT como asserção principal e os KB de JavaScript como tripwire ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Relatórios como artefato do job (com `include-hidden-files`, porque a pasta `.lighthouseci` é oculta), sem armazenamento público |
 
 **Dois gates inegociáveis**, em passos nomeados para o PR mostrar o que quebrou. Os scripts filtram por nome de arquivo (`vitest run pdf-accents`, `vitest run csv-encoding`), onde quer que o doc 02 ponha os testes.
 
