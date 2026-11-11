@@ -108,7 +108,7 @@ Notas do M7, onde estas actions nasceram (com `revokeCertificate` e `restoreCert
 
 ## Route Handlers públicos
 
-Convenções: JSON em `snake_case`; erros em **RFC 9457 Problem Details** com `code` adicional e `detail` em pt-BR pronto para exibir; `Cache-Control: no-store` em todos; conferência de `Origin` igual ao site nos `POST`; runtime Node; região `gru1`. O rate limit roda **antes** de qualquer consulta a pessoa.
+Convenções: JSON em `snake_case`; erros em **RFC 9457 Problem Details** com `code` adicional e `detail` em pt-BR pronto para exibir; `Cache-Control: no-store` em todos; conferência de `Origin` nos `POST`: vale o endereço do `NEXT_PUBLIC_SITE_URL` ou o host por onde o pedido chegou (o critério do Next nas Server Actions; é o que deixa o `*.vercel.app` do projeto funcionar junto do domínio, e outro site nunca passa, porque a origem dele não é o host do pedido); runtime Node; região `gru1`. O rate limit roda **antes** de qualquer consulta a pessoa.
 
 ### `POST /api/certificados/buscar`
 

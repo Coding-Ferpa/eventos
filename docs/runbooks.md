@@ -65,7 +65,7 @@ No painel do projeto `cf-jobs-core`, menu lateral **Authentication**, **URL Conf
 
 - `https://eventos.codingferpa.org/auth/callback`
 
-Se for testar o login pelo endereço `*.vercel.app` antes do domínio, acrescente também `https://<o-endereço>.vercel.app/auth/callback`: o login volta para o endereço de onde saiu.
+Se for testar o login pelo endereço `*.vercel.app` antes do domínio, acrescente também `https://<o-endereço>.vercel.app/auth/callback`: o login volta para o endereço de onde saiu. A busca e o pedido de correção funcionam pelos dois endereços: a trava de origem aceita o domínio e o próprio `*.vercel.app` (doc 07). O QR do PDF aponta sempre para o domínio, que precisa estar no ar antes da liberação.
 
 Não troque a Site URL. Em **Sign In / Providers**, veja o que já está ligado (é configuração do CF Jobs). O Eventos entra por dois caminhos:
 

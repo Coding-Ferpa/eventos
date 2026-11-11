@@ -56,13 +56,21 @@ const dispositivo = () =>
 
 function buscar(
   corpo: Record<string, unknown>,
-  opcoes: { ip?: string; cookie?: string; origin?: string | null; url?: string } = {},
+  opcoes: {
+    ip?: string
+    cookie?: string
+    origin?: string | null
+    url?: string
+    host?: string
+  } = {},
 ) {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
     'x-forwarded-for': opcoes.ip ?? '203.0.113.10',
   }
   if (opcoes.origin !== null) headers.origin = opcoes.origin ?? 'http://localhost:3000'
+  // Como a Vercel entrega o host que a pessoa abriu.
+  if (opcoes.host !== undefined) headers['x-forwarded-host'] = opcoes.host
   if (opcoes.cookie !== undefined) headers.cookie = opcoes.cookie
   return POST(
     new NextRequest(opcoes.url ?? 'http://localhost:3000/api/certificados/buscar', {
@@ -249,6 +257,31 @@ describe('as outras portas fechadas', () => {
         )
       ).status,
     ).toBe(403)
+  })
+
+  it('pelo outro endereço do próprio site (o vercel.app) a busca funciona', async () => {
+    const vercel = 'https://eventos-chi-eight.vercel.app'
+    const aceita = await buscar(
+      { method: 'cpf', cpf: '52998224725' },
+      { origin: vercel, host: 'eventos-chi-eight.vercel.app', ip: '203.0.113.61' },
+    )
+    expect(aceita.status).not.toBe(403)
+    // A mesma origem, com o pedido chegando por outro host, continua de fora.
+    const recusa = await buscar(
+      { method: 'cpf', cpf: '52998224725' },
+      { origin: vercel, host: 'eventos.codingferpa.org', ip: '203.0.113.62' },
+    )
+    expect(recusa.status).toBe(403)
+    // E outro projeto do vercel.app nunca passa.
+    const golpe = await buscar(
+      { method: 'cpf', cpf: '52998224725' },
+      {
+        origin: 'https://golpe.vercel.app',
+        host: 'eventos-chi-eight.vercel.app',
+        ip: '203.0.113.63',
+      },
+    )
+    expect(golpe.status).toBe(403)
   })
 
   it('evento que não liberou os certificados responde como inexistente', async () => {
