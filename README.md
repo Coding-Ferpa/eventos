@@ -9,8 +9,67 @@ baixa o PDF gerado na hora, com QR que leva a uma página pública de validaçã
 `eventos.codingferpa.org` · licença MIT · segundo projeto da casa, depois do
 [CF Jobs](https://github.com/Coding-Ferpa/cf-jobs).
 
-> **Em construção.** A arquitetura está fechada e documentada; a
-> implementação avança por milestones ([doc 13](docs/13-roadmap.md)).
+> **Em produção.** A fase 1 do [PRD](docs/spec-produto.md) está completa e no
+> ar desde novembro de 2026. O primeiro evento atendido foi o Ferpa Tech Day
+> 2026: 102 certificados para 54 participantes, o do evento e o de cada oficina.
+> O que vem depois está no [roteiro](docs/13-roadmap.md).
+
+## O que faz
+
+**Para quem participou**
+
+- Busca o certificado sem cadastro, pelo que o evento escolher: CPF, e-mail ou
+  nome completo, com limite de tentativas contra varredura.
+- Confere os dados na tela e baixa o PDF, gerado na hora, com código e QR de
+  validação.
+- Recebe mais de um certificado no mesmo evento, um por tipo de participação:
+  o do evento e o da oficina, por exemplo, cada um com a sua arte.
+- Valida qualquer certificado em `/validar/<código>`, que mostra os dados
+  atuais e avisa quando foi revogado.
+- Pede a correção do nome pela própria tela, sem sair da plataforma.
+
+**Para a organização**
+
+- Cadastra eventos, capa, tipos de participação com carga horária e as chaves
+  da busca.
+- Monta o modelo sobre a arte em PDF: nome, código, QR e textos com dados do
+  evento, posicionados por número, com prévia ao vivo e o teste do nome mais
+  longo.
+- Importa a planilha como ela vem do Excel em português: acha a codificação e o
+  separador, sugere o que é cada coluna e mostra o que vai mudar antes de
+  aplicar. Reconhece a mesma pessoa entre importações, então o certificado da
+  oficina cai na pessoa que já tinha o do evento.
+- Libera os certificados depois de conferir o que falta, e revoga ou restaura
+  quando precisa.
+- Trabalha com três papéis: admin, editor e leitor.
+
+**Privacidade (LGPD):** o CPF nunca fica gravado em claro, só um HMAC; os logs
+não guardam nome, e-mail nem CPF; e a eliminação a pedido da pessoa é a função
+`erase_participant` do banco, que apaga tudo o que a reconhece
+([doc 08](docs/08-seguranca-e-lgpd.md)).
+
+## Telas
+
+Capturas do ambiente local, com os dados fictícios do seed.
+
+| Catálogo                                             | Página do evento, com a busca                   |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| ![Catálogo de eventos](docs/imagens/01-catalogo.png) | ![Página do evento](docs/imagens/02-evento.png) |
+
+| Retirada no celular                                                                            | Certificado gerado                                                |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| <img src="docs/imagens/03-retirada-celular.png" alt="Tela de retirada no celular" width="260"> | ![Certificado de exemplo em PDF](docs/imagens/04-certificado.png) |
+
+| Validação pública                                     | Evento no admin                                                |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| ![Página de validação](docs/imagens/05-validacao.png) | ![Evento no painel do admin](docs/imagens/06-admin-evento.png) |
+
+| Editor de modelo, com a prévia ao vivo                    | Prévia da importação, antes de aplicar                  |
+| --------------------------------------------------------- | ------------------------------------------------------- |
+| ![Editor de modelo](docs/imagens/07-editor-de-modelo.png) | ![Prévia da importação](docs/imagens/08-importacao.png) |
+
+O certificado de exemplo sai da rota `/api/dev/certificado-exemplo`, que só
+existe fora da produção; por isso o endereço de validação nele é o local.
 
 ## Documentação
 
@@ -20,7 +79,8 @@ sistema em meia hora lê a [visão geral](docs/00-visao-geral.md), a
 [arquitetura](docs/02-arquitetura.md) e o
 [motor de certificados](docs/05-motor-de-certificados.md).
 
-O documento de produto é o [PRD](docs/spec-produto.md).
+O documento de produto é o [PRD](docs/spec-produto.md). A operação (ida ao ar,
+primeiro admin, primeiro evento) está no [runbook](docs/runbooks.md).
 
 ## Stack
 
@@ -29,6 +89,10 @@ shadcn/ui · Drizzle ORM · Supabase (Postgres, Auth, Storage) · Zod 4 ·
 pnpm 11 · Node 26 LTS · Vitest, Testing Library, Playwright e pgTAP · deploy
 na Vercel. O porquê de cada escolha, e de cada dependência nova, está no
 [doc 01](docs/01-stack.md).
+
+Os testes cobrem quatro camadas: unidade, integração com o banco, o próprio
+banco (pgTAP, com a matriz de RLS) e ponta a ponta em quatro navegadores
+(Chrome e Safari, no desktop e no celular).
 
 ## Rodando localmente
 
@@ -55,6 +119,20 @@ com a senha `cfeventos-local`, que só existe localmente: `admin@cfeventos.local
 `editor@cfeventos.local` e `reader@cfeventos.local`, esta sem acesso ao
 painel, como todo cadastro novo.
 
+## Produção
+
+- **Aplicação:** Vercel, na região `gru1`. Cada push na `main` vira deploy de
+  produção.
+- **Banco:** o projeto Supabase do CF Jobs, com o Eventos inteiro no schema
+  `eventos`, sem tocar no `public` ([ADR-0018](docs/adr/0018-schema-proprio-no-projeto-do-cf-jobs.md)).
+  O papel de cada pessoa vem de `eventos.profiles`, e não do token.
+- **Migrations:** só pelo `pnpm db:migrar`. Com `--remote` ele mostra o plano;
+  com `--remote --yes`, aplica. **Nunca rode `supabase db push` neste
+  repositório:** o histórico de migrations da CLI é do CF Jobs.
+
+O passo a passo, com os caminhos exatos nos painéis, está no
+[runbook](docs/runbooks.md).
+
 ## Scripts
 
 | Comando                                             | O que faz                                                   |
@@ -72,6 +150,18 @@ painel, como todo cadastro novo.
 | `pnpm db:test`                                      | pgTAP: matriz de RLS, funções e guardas                     |
 | `pnpm check:schema`                                 | confere o schema Drizzle contra o banco, nas duas direções  |
 | `pnpm check:migrations`                             | gate de expand/contract nas migrations                      |
+
+## Próximos passos
+
+Com a fase 1 no ar, os próximos milestones são entregues em produção, por PR
+([doc 13](docs/13-roadmap.md)):
+
+- **M10:** arrastar e redimensionar os campos sobre a prévia do modelo.
+- **M11:** aviso por e-mail de que os certificados estão prontos, com link
+  direto (Resend, disparo sempre pelo admin), fila de correção de nome, "Meus
+  certificados" por CPF e clonar evento.
+- **M12:** painel com as métricas do evento, exportações e o botão de
+  adicionar ao LinkedIn.
 
 ## Contribuindo
 
