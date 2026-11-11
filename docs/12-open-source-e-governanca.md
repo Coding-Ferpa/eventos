@@ -31,7 +31,7 @@ Configs com os nomes do CF Jobs (`commitlint.config.mjs`, `eslint.config.mjs`, `
 
 ## 4. CI: `ci.yml`
 
-Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigatórios. Todos rodam em `ubuntu-24.04` fixo, e não em `ubuntu-latest`: a troca do latest para o Ubuntu 26, em 2026-10-19, quebrou a instalação das dependências do Playwright, e trocar de imagem passa a ser decisão de PR. Cada job tem `timeout-minutes`, para rede travada falhar em minutos.
+Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigatórios. Todos rodam em `ubuntu-26.04` fixo, a LTS atual, e não em `ubuntu-latest`, que migra aos poucos: trocar de imagem é decisão de PR. O Node é o 26 mais novo a cada execução (`check-latest`), sem fixar a menor. Cada job tem `timeout-minutes`, para rede travada falhar em minutos, e a instalação do Playwright tenta até três vezes, porque o apt do Ubuntu 26 já ficou mais de uma hora sem resolver `security.ubuntu.com`.
 
 | Job | Roda, e bloqueia o merge se falhar |
 |---|---|

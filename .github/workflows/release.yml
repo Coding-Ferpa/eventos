@@ -28,7 +28,8 @@ permissions:
 # padrão quando não existe, sem exigir que cada fork configure segredo.
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - uses: googleapis/release-please-action@v5
         with:
