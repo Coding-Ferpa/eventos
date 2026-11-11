@@ -130,8 +130,12 @@ describe('buildBasePdf: a página canônica', () => {
     expect((await PDFDocument.load(base.bytes)).getPageCount()).toBe(2)
   })
 
+  // O teste é da orientação de cada arquivo, e não do tamanho: a menor arte
+  // aceita (1.200 px no lado maior, na proporção do A4) basta. Com 2480 × 1754
+  // px, as duas imagens somavam o mesmo peso da arte de 300 dpi e passavam dos
+  // 5 s no runner do CI, com a cobertura ligada.
   it('frente e verso em imagem são dois arquivos', async () => {
-    const base = await buildBasePdf([artePng(2480, 1754), artePng(1754, 2480)])
+    const base = await buildBasePdf([artePng(1200, 849), artePng(849, 1200)])
     expect(base.pages.map((pagina) => pagina.width_pt > pagina.height_pt)).toEqual([
       true,
       false,
