@@ -1,6 +1,6 @@
 {
   "name": "cf-eventos",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Plataforma open source de certificados de eventos da comunidade Coding Ferpa",
   "license": "MIT",
