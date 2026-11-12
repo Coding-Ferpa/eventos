@@ -31,7 +31,7 @@ Configs com os nomes do CF Jobs (`commitlint.config.mjs`, `eslint.config.mjs`, `
 
 ## 4. CI: `ci.yml`
 
-Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigatórios.
+Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigatórios. Todos rodam em `ubuntu-26.04` fixo, a LTS atual, e não em `ubuntu-latest`, que migra aos poucos: trocar de imagem é decisão de PR. O Node é o 26 mais novo a cada execução (`check-latest`), sem fixar a menor. Cada job tem `timeout-minutes`, para rede travada falhar em minutos, e a instalação do Playwright tenta até três vezes, porque o apt do Ubuntu 26 já ficou mais de uma hora sem resolver `security.ubuntu.com`.
 
 | Job | Roda, e bloqueia o merge se falhar |
 |---|---|
@@ -40,7 +40,7 @@ Em todo PR e em push na `main`. Seis jobs paralelos, todos status checks obrigat
 | `test` | `pnpm test:gate:pdf`, `pnpm test:gate:csv`, `pnpm test:coverage` (Vitest, limites do [doc 11](11-qualidade.md)) |
 | `db` | `pnpm db:start`, `pnpm db:reset` (migrations do zero mais seed), `pnpm db:test` (pgTAP da matriz de RLS do [doc 04](04-banco-de-dados.md)), `pnpm check:schema`, `pnpm test:integration` (contra o Postgres do Supabase CLI) |
 | `e2e` | Supabase local, `pnpm test:e2e` (Playwright, Chromium e WebKit; fluxos públicos em viewport de celular) |
-| `lighthouse` | Supabase local, `pnpm build`, `pnpm exec lhci autorun` em `/`, `/eventos/{slug-do-seed}` e `/validar` (as rotas dinâmicas ficam fora: dependem de cookie e de banco, [doc 09](09-frontend-e-seo.md)). LCP, CLS e TBT como asserção principal e os KB de JavaScript como tripwire ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Relatórios como artefato do job, sem armazenamento público |
+| `lighthouse` | Supabase local, `pnpm build`, `pnpm exec lhci autorun` em `/`, `/eventos/{slug-do-seed}` e `/validar` (as rotas dinâmicas ficam fora: dependem de cookie e de banco, [doc 09](09-frontend-e-seo.md)). LCP, CLS e TBT como asserção principal e os KB de JavaScript como tripwire ([ADR-0015](adr/0015-orcamento-de-js-sobre-o-piso-do-framework.md)). Relatórios como artefato do job (com `include-hidden-files`, porque a pasta `.lighthouseci` é oculta), sem armazenamento público |
 
 **Dois gates inegociáveis**, em passos nomeados para o PR mostrar o que quebrou. Os scripts filtram por nome de arquivo (`vitest run pdf-accents`, `vitest run csv-encoding`), onde quer que o doc 02 ponha os testes.
 

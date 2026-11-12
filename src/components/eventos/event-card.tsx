@@ -6,6 +6,7 @@ import type { EventoDoCatalogo } from '@/db/queries/events'
 import { srcDaCapa } from '@/lib/capa'
 import { formatarLocal, formatarPeriodo } from '@/lib/format'
 
+import { ForaDaPrimeiraTela } from './fora-da-primeira-tela'
 import { StatusBadge } from './status-badge'
 
 /**
@@ -21,14 +22,24 @@ export function EventCard({
   evento: EventoDoCatalogo
   /**
    * No celular, a capa do primeiro card é o maior elemento da primeira tela, e
-   * portanto o LCP: ela vem com prioridade, e as demais continuam `lazy`
-   * (ADR-0015, medido com A/B).
+   * portanto o LCP: ela vem com prioridade, e as demais ficam fora da disputa
+   * de banda até o `load` (ADR-0015, medido com A/B).
    */
   primeiro?: boolean
 }) {
   const periodo = formatarPeriodo(
     new Date(evento.startsAt),
     evento.endsAt ? new Date(evento.endsAt) : null,
+  )
+  const capa = (
+    <Image
+      alt=""
+      className="object-cover"
+      fill
+      priority={primeiro}
+      sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+      src={srcDaCapa(evento)}
+    />
   )
 
   return (
@@ -38,14 +49,7 @@ export function EventCard({
         href={`/eventos/${evento.slug}`}
       >
         <div className="bg-surface relative aspect-video">
-          <Image
-            alt=""
-            className="object-cover"
-            fill
-            priority={primeiro}
-            sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            src={srcDaCapa(evento)}
-          />
+          {primeiro ? capa : <ForaDaPrimeiraTela>{capa}</ForaDaPrimeiraTela>}
         </div>
 
         <div className="flex flex-col gap-3 p-5">

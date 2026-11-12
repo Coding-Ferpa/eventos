@@ -10,6 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # A linha 26 LTS, sempre a versão mais nova dela: com `check-latest`, o
+  # setup-node não reaproveita um 26 antigo do cache do runner.
   NODE_VERSION: '26'
 
 # O doc 12 descreve o CI completo. Os jobs chegam junto com o que eles
@@ -18,16 +20,22 @@ env:
 #
 # Nenhum job usa secret: tudo fala com o ambiente local, então PR de fork roda
 # a bateria inteira.
+#
+# Runner fixo em ubuntu-26.04, a LTS atual, e não ubuntu-latest, que migra aos
+# poucos: trocar de imagem é decisão de PR, e não surpresa do runner. O
+# timeout de cada job faz uma rede travada falhar em minutos, e não em 1h15.
 jobs:
   quality:
     name: Lint, tipos e formatação
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -64,7 +72,8 @@ jobs:
 
   commitlint:
     name: Conventional Commits
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7
@@ -74,6 +83,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Valida as mensagens de commit do PR
@@ -85,13 +95,15 @@ jobs:
 
   test:
     name: Testes unitários
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Os dois gates inegociáveis do doc 12 entram aqui como passos
@@ -106,13 +118,15 @@ jobs:
 
   db:
     name: Banco de dados
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Sobe o Supabase local
@@ -148,13 +162,15 @@ jobs:
 
   lighthouse:
     name: Lighthouse
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # O orçamento é medido contra a área pública com os eventos do seed.
@@ -189,23 +205,37 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci/
+          # A pasta começa com ponto, e o upload-artifact ignora pasta oculta
+          # por padrão: sem isto o job dizia "No files were found" e os
+          # relatórios do runner nunca chegavam a quem ia investigar.
+          include-hidden-files: true
           retention-days: 7
 
   e2e:
     name: Testes E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Chromium para o desktop e o celular Android; WebKit para o iPhone, que
       # roda os fluxos de `e2e/publico/` (doc 11).
+      # No Ubuntu 26, o apt já ficou 1h11 baixando a 11 kB/s sem resolver
+      # security.ubuntu.com: até três tentativas de no máximo 10 minutos.
       - name: Instala o Chromium e o WebKit do Playwright
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: |
+          for tentativa in 1 2 3; do
+            timeout 10m pnpm exec playwright install --with-deps chromium webkit && exit 0
+            echo "::warning::A instalação do Playwright falhou na tentativa $tentativa."
+            sleep 15
+          done
+          exit 1
       # Login, papéis e o guarda do admin precisam de banco e de auth de
       # verdade. O `db:start` sobe a pilha e aplica migrations e seeds pelo
       # `db:migrar` (ADR-0018), o mesmo caminho de produção.

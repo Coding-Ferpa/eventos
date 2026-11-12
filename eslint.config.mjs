@@ -33,6 +33,8 @@ export default tseslint.config(
       'out/**',
       'playwright-report/**',
       'test-results/**',
+      // Fora do Git: planilhas reais e roteiros de operação de cada evento.
+      'local/**',
       'next-env.d.ts',
     ],
   },
